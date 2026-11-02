@@ -90,12 +90,16 @@ export async function getPartnerOverview(actor: Actor) {
       financedAmount: sumPaise(financed.map((r) => r.approvedAmountPaise)),
       receivedCount: received.length,
       receivedAmount: sumPaise(received.map((r) => r.netPayablePaise)),
+      builderCount: new Set(invoices.map((inv) => inv.builderId)).size,
+      inFlightCount: requests.filter((r) => ["PENDING_APPROVAL", "APPROVED", "DISBURSEMENT_INITIATED"].includes(r.status)).length,
+      inFlightAmount: sumPaise(requests.filter((r) => ["PENDING_APPROVAL", "APPROVED", "DISBURSEMENT_INITIATED"].includes(r.status)).map((r) => r.netPayablePaise)),
     },
     clarifications: invoices.filter((inv) => inv.status === "CLARIFICATION_REQUESTED"),
     openOffers,
     eligibleWithoutOffer: eligible.filter((inv) => !offeredInvoiceIds.has(inv.id)),
     eligibility,
     recentInvoices: invoices.slice(0, 6),
+    recentRequests: requests.slice(0, 4),
     monthly: monthlySeries(invoices, now),
   };
 }

@@ -1,21 +1,30 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, ExternalLink, FileText, FolderOpen } from "lucide-react";
-import { DataTable, Td, Th, Tr } from "@/components/common/data-table";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
-import { StatusBadge, ToneBadge } from "@/components/common/status-badge";
+import { Download, Eye, FileText, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DEMO_ORGANISATIONS, DEMO_PROJECTS, SAMPLE_INVOICES } from "@/lib/demo/catalogue";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { formatINR } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import { requireWorkspace } from "@/server/auth/session";
 import { listPartnerDocuments } from "@/server/queries/partner";
+import { Money } from "../_components/money";
+import { RefCell, Table, Td, Th, Tr } from "../_components/table";
+import { EmptyNote, PageIntro, Panel, StatusMark } from "../_components/ui";
 
 export const metadata: Metadata = { title: "Documents" };
 
 function formatBytes(bytes: number): string {
   return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function PdfGlyph({ className }: { className?: string }) {
+  return (
+    <span className={cn("relative flex h-11 w-9 shrink-0 flex-col items-center justify-end rounded-[4px] border border-[#d9d2c2] bg-card pb-1 shadow-[0_2px_0_#ece6d8]", className)}>
+      <span aria-hidden="true" className="absolute top-0 right-0 size-2.5 rounded-bl-[3px] border-b border-l border-[#d9d2c2] bg-[#f6f3ec]" />
+      <FileText className="mb-0.5 size-3.5 text-navy/60" strokeWidth={1.5} />
+      <span className="text-[0.5rem] font-bold tracking-wider text-[#93342a]">PDF</span>
+    </span>
+  );
 }
 
 export default async function DocumentsPage() {
@@ -31,25 +40,25 @@ export default async function DocumentsPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Account" title="Documents" description="Sample invoices for the demonstration and every invoice PDF your organisation has uploaded." />
+      <PageIntro eyebrow="Account" title="Documents" description="Sample invoices for the demonstration, and every invoice PDF your organisation has uploaded." />
 
       <div className="flex flex-col gap-6">
-        <Section title="Sample documents" description="Fictional GST brokerage invoices — use them to try the upload and extraction flow">
-          <ul className="grid gap-4 md:grid-cols-3">
+        <Panel eyebrow="Try the upload flow" title="Sample documents" description="Fictional GST brokerage invoices for extraction and submission">
+          <ul className="grid gap-5 md:grid-cols-3">
             {SAMPLE_INVOICES.map((sample) => {
               const builder = DEMO_ORGANISATIONS[sample.builder];
               const project = DEMO_PROJECTS.find((p) => p.key === sample.project);
               return (
-                <li key={sample.slug} className="flex flex-col rounded-lg border border-border bg-ivory/40 p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-navy text-gold">
-                      <FileText className="size-4.5" strokeWidth={1.6} />
-                    </span>
-                    <ToneBadge meta={{ label: "Sample", tone: "gold" }} />
+                <li key={sample.slug} className="group flex flex-col overflow-hidden rounded-[12px] border border-[#e6e0d2] bg-card transition-shadow hover:shadow-[0_20px_40px_-28px_rgba(20,43,67,0.35)]">
+                  <div className="relative border-b border-[#ece6d8] bg-[#faf8f3] px-5 pt-5 pb-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <PdfGlyph />
+                      <span className="rounded-full border border-gold/40 px-2 py-0.5 text-[0.5625rem] font-semibold tracking-[0.16em] text-[#7d6235] uppercase">Sample</span>
+                    </div>
+                    <p className="mt-4 font-display text-[1.25rem] leading-snug font-semibold text-navy">{sample.invoiceNumber}</p>
+                    <p className="mt-0.5 line-clamp-2 text-[0.8125rem] text-slate-ink">{sample.title}</p>
                   </div>
-                  <p className="mt-4 font-display text-lg leading-snug font-semibold text-navy">{sample.invoiceNumber}</p>
-                  <p className="mt-1 text-sm text-slate-ink">{sample.title}</p>
-                  <dl className="mt-4 grid gap-1.5 text-xs">
+                  <dl className="grid gap-2 px-5 py-4 text-xs">
                     <div className="flex justify-between gap-3">
                       <dt className="text-muted-foreground">Bill to</dt>
                       <dd className="text-right text-navy">{builder.name}</dd>
@@ -62,20 +71,22 @@ export default async function DocumentsPage() {
                       <dt className="text-muted-foreground">Invoice date</dt>
                       <dd className="text-right text-navy">{formatDate(new Date(`${sample.invoiceDate}T00:00:00.000Z`))}</dd>
                     </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted-foreground">Total (incl. GST)</dt>
-                      <dd className="tabular text-right font-semibold text-navy">{formatINR(sample.amountPaise)}</dd>
+                    <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-[#ece6d8] pt-3">
+                      <dt className="text-muted-foreground">Total incl. GST</dt>
+                      <dd>
+                        <Money paise={sample.amountPaise} className="text-sm font-semibold text-navy" />
+                      </dd>
                     </div>
                   </dl>
-                  <div className="mt-5 flex gap-2 pt-1">
-                    <Button variant="outline" size="sm" asChild className="flex-1">
-                      <a href={`/api/documents/samples/${sample.slug}`} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink />
+                  <div className="mt-auto grid grid-cols-2 gap-2 px-5 pb-5">
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={`/api/documents/samples/${sample.slug}`} target="_blank" rel="noopener noreferrer" aria-label={`View sample ${sample.invoiceNumber}`}>
+                        <Eye />
                         View
                       </a>
                     </Button>
-                    <Button size="sm" asChild className="flex-1">
-                      <a href={`/api/documents/samples/${sample.slug}?download=1`} download>
+                    <Button size="sm" asChild>
+                      <a href={`/api/documents/samples/${sample.slug}?download=1`} download aria-label={`Download sample ${sample.invoiceNumber}`}>
                         <Download />
                         Download
                       </a>
@@ -85,74 +96,80 @@ export default async function DocumentsPage() {
               );
             })}
           </ul>
-        </Section>
+        </Panel>
 
-        <Section title="Uploaded invoice documents" description={`${documents.length} ${documents.length === 1 ? "file" : "files"} across your invoices`} bodyClassName="py-0">
+        <Panel
+          eyebrow="Secure storage"
+          title="Uploaded invoice documents"
+          description={`${documents.length} ${documents.length === 1 ? "file" : "files"} across your invoices`}
+          bodyClassName="pb-0"
+        >
           {documents.length === 0 ? (
-            <EmptyState
-              icon={FolderOpen}
-              title="No documents uploaded yet"
-              description="Invoice PDFs you upload are stored securely and listed here."
-              action={
-                <Button size="sm" asChild>
-                  <Link href="/partner/invoices/new">Upload invoice</Link>
-                </Button>
-              }
-            />
+            <div className="-mx-5 border-t border-[#ece6d8] sm:-mx-7">
+              <EmptyNote
+                icon={FolderOpen}
+                title="No documents uploaded yet"
+                description="Invoice PDFs you upload are stored securely and listed here."
+                action={
+                  <Button size="sm" asChild>
+                    <Link href="/partner/invoices/new">Upload invoice</Link>
+                  </Button>
+                }
+              />
+            </div>
           ) : (
-            <DataTable minWidth={960}>
+            <Table minWidth={940}>
               <thead>
                 <tr>
                   <Th>File</Th>
                   <Th>Invoice</Th>
                   <Th>Builder · Project</Th>
-                  <Th>Invoice status</Th>
+                  <Th>Status</Th>
                   <Th>Uploaded</Th>
-                  <Th align="right">Actions</Th>
+                  <Th align="right">
+                    <span className="sr-only">Actions</span>
+                  </Th>
                 </tr>
               </thead>
               <tbody>
                 {documents.map((doc) => (
                   <Tr key={doc.id}>
                     <Td>
-                      <div className="flex items-center gap-3">
-                        <FileText className="size-4 shrink-0 text-gold-600" />
+                      <div className="flex items-center gap-3.5">
+                        <PdfGlyph className="h-10 w-8" />
                         <div className="min-w-0">
-                          <p className="max-w-[16rem] truncate font-medium text-navy" title={doc.fileName}>
+                          <p className="max-w-[15rem] truncate font-medium text-navy" title={doc.fileName}>
                             {doc.fileName}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatBytes(doc.sizeBytes)} · {current.has(doc.id) ? "Current version" : "Previous version"}
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {formatBytes(doc.sizeBytes)} ·{" "}
+                            <span className={current.has(doc.id) ? "text-heritage" : undefined}>{current.has(doc.id) ? "Current version" : "Previous version"}</span>
                           </p>
                         </div>
                       </div>
                     </Td>
                     <Td>
-                      <Link href={`/partner/invoices/${doc.invoice.id}`} className="text-navy hover:underline">
-                        {doc.invoice.invoiceNumber}
-                      </Link>
-                      <p className="text-xs whitespace-nowrap text-muted-foreground">{doc.invoice.reference}</p>
+                      <RefCell href={`/partner/invoices/${doc.invoice.id}`} primary={doc.invoice.invoiceNumber} secondary={doc.invoice.reference} />
                     </Td>
                     <Td>
-                      <p>{doc.invoice.builder.name}</p>
-                      <p className="text-xs text-muted-foreground">{doc.invoice.project.name}</p>
+                      <p className="text-[0.8125rem] text-navy">{doc.invoice.builder.name}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{doc.invoice.project.name}</p>
                     </Td>
                     <Td>
-                      <StatusBadge kind="invoice" status={doc.invoice.status} />
+                      <StatusMark kind="invoice" status={doc.invoice.status} />
                     </Td>
-                    <Td className="whitespace-nowrap">{formatDateTime(doc.createdAt)}</Td>
+                    <Td className="text-[0.8125rem] whitespace-nowrap">{formatDateTime(doc.createdAt)}</Td>
                     <Td align="right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" asChild>
+                      <div className="flex justify-end gap-1.5">
+                        <Button variant="outline" size="sm" asChild className="bg-card">
                           <a href={`/api/documents/invoices/${doc.id}`} target="_blank" rel="noopener noreferrer" aria-label={`View ${doc.fileName}`}>
-                            <ExternalLink />
+                            <Eye />
                             View
                           </a>
                         </Button>
-                        <Button variant="ghost" size="sm" asChild>
+                        <Button variant="ghost" size="icon-sm" asChild className="text-muted-foreground hover:text-navy">
                           <a href={`/api/documents/invoices/${doc.id}?download=1`} download aria-label={`Download ${doc.fileName}`}>
                             <Download />
-                            Download
                           </a>
                         </Button>
                       </div>
@@ -160,9 +177,9 @@ export default async function DocumentsPage() {
                   </Tr>
                 ))}
               </tbody>
-            </DataTable>
+            </Table>
           )}
-        </Section>
+        </Panel>
       </div>
     </>
   );
