@@ -1,0 +1,24 @@
+name: brickflow
+
+services:
+  app:
+    build:
+      context: .
+    image: brickflow:local
+    init: true
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: file:/app/data/brickflow.db
+      STORAGE_DRIVER: local
+      STORAGE_DIR: /app/data/storage
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (at least 32 random characters) in your shell or .env}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-BrickFlow@2026}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      SEED_ON_START: ${SEED_ON_START:-false}
+    volumes:
+      - brickflow-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  brickflow-data:
