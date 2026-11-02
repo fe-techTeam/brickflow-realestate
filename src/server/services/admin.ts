@@ -195,11 +195,21 @@ export type ProgrammeListItem = Awaited<ReturnType<typeof listProgrammes>>[numbe
  * Organisations & users
  * -------------------------------------------------------------------------------------------- */
 
+/** Organisations a financier may see: builders on its programmes and channel partners empanelled with them. */
+function financierCounterpartyScope(financierId: string): Prisma.OrganisationWhereInput {
+  return {
+    OR: [
+      { type: "BUILDER", builderProgrammes: { some: { financierId } } },
+      { type: "CHANNEL_PARTNER", cpRelationships: { some: { builder: { builderProgrammes: { some: { financierId } } } } } },
+    ],
+  };
+}
+
 export async function listOrganisations(actor: Actor, filters: { type?: OrganisationType; search?: string } = {}) {
   if (actor.orgType !== "PLATFORM" && actor.orgType !== "FINANCIER") throw forbidden();
   const where: Prisma.OrganisationWhereInput = {
     ...(filters.type ? { type: filters.type } : {}),
-    ...(actor.orgType === "FINANCIER" ? { type: filters.type ?? { in: ["BUILDER", "CHANNEL_PARTNER"] } } : {}),
+    ...(actor.orgType === "FINANCIER" ? { AND: [financierCounterpartyScope(actor.orgId)] } : {}),
     ...(filters.search?.trim()
       ? { OR: [{ name: { contains: filters.search.trim() } }, { legalName: { contains: filters.search.trim() } }, { gstin: { contains: filters.search.trim() } }] }
       : {}),
@@ -217,10 +227,14 @@ export async function listOrganisations(actor: Actor, filters: { type?: Organisa
 export type OrganisationListItem = Awaited<ReturnType<typeof listOrganisations>>[number];
 
 export async function getOrganisation(actor: Actor, organisationId: string) {
-  const allowed = actor.orgType === "PLATFORM" || actor.orgType === "FINANCIER" || actor.orgId === organisationId;
-  if (!allowed) throw notFound("Organisation not found.");
-  const org = await db.organisation.findUnique({
-    where: { id: organisationId },
+  const scope: Prisma.OrganisationWhereInput =
+    actor.orgType === "PLATFORM" || actor.orgId === organisationId
+      ? {}
+      : actor.orgType === "FINANCIER"
+        ? financierCounterpartyScope(actor.orgId)
+        : { id: actor.orgId };
+  const org = await db.organisation.findFirst({
+    where: { AND: [{ id: organisationId }, scope] },
     include: {
       members: { include: { user: { select: { id: true, name: true, email: true, status: true, lastLoginAt: true } }, role: true } },
       projects: { orderBy: { name: "asc" } },
