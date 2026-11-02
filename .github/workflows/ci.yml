@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: file:./prisma/ci.db
+  AUTH_SECRET: ci-only-secret-value-that-is-at-least-32-characters-long
+  DEMO_PASSWORD: BrickFlow@2026
+  STORAGE_DIR: ./storage
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  verify:
+    name: Lint, type-check, test, audit, build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Dependency audit (production, high+)
+        run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Prepare database
+        run: npx prisma migrate deploy && npx prisma db seed
+      - run: npm test -- --passWithNoTests
+      - run: npm run build

@@ -1,0 +1,457 @@
+// BrickFlow data model.
+// Money is stored as BigInt minor units (paise); percentages as integer basis points (1% = 100 bps).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum OrganisationType {
+  PLATFORM
+  FINANCIER
+  BUILDER
+  CHANNEL_PARTNER
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RoleKey {
+  SUPER_ADMIN
+  FINANCE_OPS
+  BUILDER_ACCOUNTS
+  CP_ADMIN
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  CLARIFICATION_REQUESTED
+  REJECTED
+  ACCEPTED
+}
+
+enum FinancingStatus {
+  NOT_REQUESTED
+  REQUESTED
+  OFFER_GENERATED
+  ACCEPTED_BY_CP
+  PENDING_APPROVAL
+  APPROVED
+  DISBURSEMENT_INITIATED
+  DISBURSED
+  REJECTED
+}
+
+enum SettlementStatus {
+  NOT_DUE
+  DUE
+  SETTLED
+  OVERDUE
+}
+
+enum ProgrammeStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum OfferStatus {
+  OFFERED
+  ACCEPTED
+  EXPIRED
+  SUPERSEDED
+}
+
+enum ApprovalAction {
+  SUBMITTED
+  UNDER_REVIEW
+  CLARIFICATION_REQUESTED
+  RESUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum DisbursementStatus {
+  INITIATED
+  SUCCESS
+  FAILED
+}
+
+model Organisation {
+  id                String           @id @default(cuid())
+  type              OrganisationType
+  name              String
+  legalName         String
+  status            RecordStatus     @default(ACTIVE)
+  gstin             String?
+  pan               String?
+  reraNumber        String?
+  addressLine       String?
+  city              String?
+  state             String?
+  pincode           String?
+  contactName       String?
+  contactEmail      String?
+  contactPhone      String?
+  bankName          String?
+  bankAccountNumber String?
+  bankIfsc          String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  members              OrganisationUser[]
+  projects             Project[]
+  cpRelationships      CpBuilderRelationship[] @relation("CpRelationships")
+  builderRelationships CpBuilderRelationship[] @relation("BuilderRelationships")
+  builderProgrammes    FinancingProgramme[]    @relation("ProgrammeBuilder")
+  financierProgrammes  FinancingProgramme[]    @relation("ProgrammeFinancier")
+  cpInvoices           Invoice[]               @relation("InvoiceCp")
+  builderInvoices      Invoice[]               @relation("InvoiceBuilder")
+  cpRequests           FinancingRequest[]      @relation("RequestCp")
+  builderRequests      FinancingRequest[]      @relation("RequestBuilder")
+  financierRequests    FinancingRequest[]      @relation("RequestFinancier")
+
+  @@index([type, status])
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  status       RecordStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  memberships OrganisationUser[]
+}
+
+model Role {
+  id          String  @id @default(cuid())
+  key         RoleKey @unique
+  name        String
+  description String
+
+  members OrganisationUser[]
+}
+
+model OrganisationUser {
+  id             String   @id @default(cuid())
+  userId         String
+  organisationId String
+  roleId         String
+  designation    String?
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, organisationId])
+  @@index([organisationId])
+}
+
+model Project {
+  id         String       @id @default(cuid())
+  builderId  String
+  code       String
+  name       String
+  city       String
+  location   String?
+  reraNumber String?
+  status     RecordStatus @default(ACTIVE)
+  createdAt  DateTime     @default(now())
+
+  builder  Organisation @relation(fields: [builderId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@unique([builderId, code])
+  @@index([builderId, status])
+}
+
+model CpBuilderRelationship {
+  id               String       @id @default(cuid())
+  cpId             String
+  builderId        String
+  status           RecordStatus @default(ACTIVE)
+  empanelmentCode  String
+  creditPeriodDays Int          @default(60)
+  empanelledAt     DateTime     @default(now())
+
+  cp      Organisation @relation("CpRelationships", fields: [cpId], references: [id], onDelete: Cascade)
+  builder Organisation @relation("BuilderRelationships", fields: [builderId], references: [id], onDelete: Cascade)
+
+  @@unique([cpId, builderId])
+  @@index([builderId])
+}
+
+model FinancingProgramme {
+  id                String          @id @default(cuid())
+  code              String          @unique
+  name              String
+  builderId         String
+  financierId       String
+  discountRateBps   Int
+  status            ProgrammeStatus @default(DRAFT)
+  effectiveFrom     DateTime
+  effectiveTo       DateTime?
+  offerValidityDays Int             @default(7)
+  terms             String
+  createdById       String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  builder   Organisation       @relation("ProgrammeBuilder", fields: [builderId], references: [id])
+  financier Organisation       @relation("ProgrammeFinancier", fields: [financierId], references: [id])
+  offers    FinancingOffer[]
+  requests  FinancingRequest[]
+
+  @@index([builderId, status, effectiveFrom])
+}
+
+model Invoice {
+  id                  String           @id @default(cuid())
+  reference           String           @unique
+  invoiceNumber       String
+  cpId                String
+  builderId           String
+  projectId           String
+  invoiceDate         DateTime
+  dueDate             DateTime?
+  amountPaise         BigInt
+  gstAmountPaise      BigInt?
+  approvedAmountPaise BigInt?
+  description         String?
+  status              InvoiceStatus    @default(DRAFT)
+  financingStatus     FinancingStatus  @default(NOT_REQUESTED)
+  latestReviewNote    String?
+  submittedAt         DateTime?
+  decidedAt           DateTime?
+  createdById         String
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  cp               Organisation      @relation("InvoiceCp", fields: [cpId], references: [id])
+  builder          Organisation      @relation("InvoiceBuilder", fields: [builderId], references: [id])
+  project          Project           @relation(fields: [projectId], references: [id])
+  documents        InvoiceDocument[]
+  approvals        InvoiceApproval[]
+  offers           FinancingOffer[]
+  financingRequest FinancingRequest?
+
+  @@unique([cpId, builderId, invoiceNumber])
+  @@index([builderId, status])
+  @@index([cpId, status])
+  @@index([financingStatus])
+}
+
+model InvoiceDocument {
+  id           String   @id @default(cuid())
+  invoiceId    String
+  fileName     String
+  storageKey   String   @unique
+  mimeType     String
+  sizeBytes    Int
+  sha256       String
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([sha256])
+}
+
+model InvoiceApproval {
+  id          String         @id @default(cuid())
+  invoiceId   String
+  action      ApprovalAction
+  fromStatus  InvoiceStatus?
+  toStatus    InvoiceStatus
+  comment     String?
+  actorUserId String
+  actorName   String
+  actorOrgId  String
+  createdAt   DateTime       @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, createdAt])
+}
+
+model FinancingOffer {
+  id                  String      @id @default(cuid())
+  reference           String      @unique
+  invoiceId           String
+  programmeId         String
+  invoiceAmountPaise  BigInt
+  approvedAmountPaise BigInt
+  discountRateBps     Int
+  discountAmountPaise BigInt
+  chargesPaise        BigInt      @default(0)
+  netPayablePaise     BigInt
+  termsSnapshot       String
+  status              OfferStatus @default(OFFERED)
+  generatedById       String
+  generatedAt         DateTime    @default(now())
+  validUntil          DateTime
+  acceptedById        String?
+  acceptedAt          DateTime?
+  consentText         String?
+
+  invoice   Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  programme FinancingProgramme @relation(fields: [programmeId], references: [id])
+  request   FinancingRequest?
+
+  @@index([invoiceId, status])
+}
+
+model FinancingRequest {
+  id                  String          @id @default(cuid())
+  reference           String          @unique
+  invoiceId           String          @unique
+  offerId             String          @unique
+  programmeId         String
+  cpId                String
+  builderId           String
+  financierId         String
+  approvedAmountPaise BigInt
+  discountRateBps     Int
+  discountAmountPaise BigInt
+  chargesPaise        BigInt          @default(0)
+  netPayablePaise     BigInt
+  status              FinancingStatus @default(PENDING_APPROVAL)
+  acceptedById        String
+  acceptedAt          DateTime
+  decidedById         String?
+  decidedAt           DateTime?
+  decisionNote        String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  invoice      Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  offer        FinancingOffer     @relation(fields: [offerId], references: [id])
+  programme    FinancingProgramme @relation(fields: [programmeId], references: [id])
+  cp           Organisation       @relation("RequestCp", fields: [cpId], references: [id])
+  builder      Organisation       @relation("RequestBuilder", fields: [builderId], references: [id])
+  financier    Organisation       @relation("RequestFinancier", fields: [financierId], references: [id])
+  comments     InternalComment[]
+  events       FinancingEvent[]
+  disbursement Disbursement?
+  settlement   Settlement?
+
+  @@index([financierId, status])
+  @@index([builderId, status])
+  @@index([cpId, status])
+}
+
+model FinancingEvent {
+  id          String           @id @default(cuid())
+  requestId   String
+  fromStatus  FinancingStatus?
+  toStatus    FinancingStatus
+  note        String?
+  actorUserId String?
+  actorName   String
+  createdAt   DateTime         @default(now())
+
+  request FinancingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+}
+
+model InternalComment {
+  id          String   @id @default(cuid())
+  requestId   String
+  body        String
+  authorId    String
+  authorName  String
+  createdAt   DateTime @default(now())
+
+  request FinancingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+}
+
+model Disbursement {
+  id                 String             @id @default(cuid())
+  requestId          String             @unique
+  reference          String             @unique
+  amountPaise        BigInt
+  status             DisbursementStatus @default(INITIATED)
+  mode               String             @default("DEMO_SIMULATED")
+  beneficiaryName    String
+  beneficiaryAccount String
+  beneficiaryIfsc    String
+  utr                String?
+  initiatedById      String
+  initiatedAt        DateTime           @default(now())
+  completedById      String?
+  completedAt        DateTime?
+
+  request FinancingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model Settlement {
+  id          String           @id @default(cuid())
+  requestId   String           @unique
+  builderId   String
+  financierId String
+  amountPaise BigInt
+  dueDate     DateTime
+  status      SettlementStatus @default(NOT_DUE)
+  reference   String?
+  settledAt   DateTime?
+  settledById String?
+  note        String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  request FinancingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([builderId, status])
+  @@index([financierId, status])
+  @@index([dueDate])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actorName   String
+  actorOrgId  String?
+  actorRole   String?
+  action      String
+  entityType  String
+  entityId    String
+  summary     String
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorOrgId, createdAt])
+  @@index([createdAt])
+}
+
+model Sequence {
+  name  String @id
+  value Int    @default(0)
+}
+
+model PlatformSetting {
+  key         String   @id
+  value       String
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
