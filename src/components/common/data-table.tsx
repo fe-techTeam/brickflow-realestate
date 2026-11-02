@@ -3,11 +3,31 @@ import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Table frame with horizontal scroll on small screens. Use with the th/td helpers below. */
-export function DataTable({ children, className, minWidth = 880 }: { children: ReactNode; className?: string; minWidth?: number }) {
+/**
+ * Table frame with horizontal scroll on small screens. Use with the Th/Td/Tr helpers below.
+ * Bleeds to the edges of a Section body. `zebra` tints alternate rows; `dense` tightens row height.
+ */
+export function DataTable({
+  children,
+  className,
+  minWidth = 880,
+  zebra = false,
+  dense = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  minWidth?: number;
+  zebra?: boolean;
+  dense?: boolean;
+}) {
   return (
     <div className={cn("-mx-5 overflow-x-auto sm:-mx-6", className)}>
-      <table className="w-full border-collapse text-sm" style={{ minWidth }}>
+      <table
+        data-zebra={zebra || undefined}
+        data-dense={dense || undefined}
+        className="group/table w-full border-separate border-spacing-0 text-sm"
+        style={{ minWidth }}
+      >
         {children}
       </table>
     </div>
@@ -19,7 +39,8 @@ export function Th({ children, align = "left", className }: { children?: ReactNo
     <th
       scope="col"
       className={cn(
-        "border-b border-border bg-ivory/60 px-4 py-2.5 text-[0.6875rem] font-semibold tracking-[0.08em] whitespace-nowrap text-muted-foreground uppercase first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6",
+        "border-b border-border bg-ivory-100 px-4 py-3 text-[0.65rem] font-semibold tracking-[0.11em] whitespace-nowrap text-slate-ink-soft/85 uppercase first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6",
+        "group-data-dense/table:py-2.5",
         align === "left" && "text-left",
         align === "right" && "text-right",
         align === "center" && "text-center",
@@ -35,8 +56,9 @@ export function Td({ children, align = "left", className }: { children?: ReactNo
   return (
     <td
       className={cn(
-        "border-b border-border/70 px-4 py-3.5 align-middle text-slate-ink first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6",
-        align === "right" && "tabular text-right",
+        "border-b hairline px-4 py-3.5 align-middle text-slate-ink transition-[background-color,box-shadow] duration-200 first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6",
+        "group-data-dense/table:py-2.5",
+        align === "right" && "figure text-right",
         align === "center" && "text-center",
         className,
       )}
@@ -47,7 +69,16 @@ export function Td({ children, align = "left", className }: { children?: ReactNo
 }
 
 export function Tr({ children, className }: { children: ReactNode; className?: string }) {
-  return <tr className={cn("transition-colors last:[&>td]:border-b-0 hover:bg-ivory/50", className)}>{children}</tr>;
+  return (
+    <tr
+      className={cn(
+        "group/row last:[&>td]:border-b-0 group-data-zebra/table:even:[&>td]:bg-ivory-100/60 hover:[&>td]:bg-gold-50 hover:[&>td:first-child]:shadow-[inset_2px_0_0_var(--color-gold)]",
+        className,
+      )}
+    >
+      {children}
+    </tr>
+  );
 }
 
 export type SortDirection = "asc" | "desc";
@@ -109,11 +140,11 @@ export function SortTh({
       <Link
         href={`${pathname}?${params.toString()}`}
         scroll={false}
-        className={cn("inline-flex items-center gap-1 hover:text-navy", active && "text-navy")}
+        className={cn("inline-flex items-center gap-1.5 transition-colors hover:text-navy", active && "text-navy")}
         aria-label={`Sort by ${label}`}
       >
         {label}
-        <Icon className="size-3" />
+        <Icon className={cn("size-3", active ? "text-gold-600" : "opacity-50")} />
       </Link>
     </Th>
   );
