@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Ban, Loader2, Pause, Play } from "lucide-react";
+import { AlertTriangle, Ban, Loader2, Pause, Play, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import type { ProgrammeStatus } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
@@ -74,30 +74,40 @@ export function ProgrammeStatusAction({ programme, target }: { programme: Progra
       }}
     >
       <DialogTrigger asChild>
-        <Button variant={copy.variant} size="sm" aria-label={`${label} ${programme.code}`}>
+        <Button variant={copy.variant} size="sm" aria-label={`${label} ${programme.code}`} className={copy.variant === "outline" ? "bg-card" : undefined}>
           <Icon className="size-3.5" />
           {label}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-display text-2xl font-semibold text-navy">
+      <DialogContent className="gap-5 p-6 sm:max-w-lg sm:p-7">
+        <DialogHeader className="gap-0 text-left">
+          <p className="flex items-center gap-2.5 text-[0.625rem] font-semibold tracking-[0.22em] text-gold-600 uppercase">
+            <span aria-hidden="true" className="h-px w-5 bg-gold" />
+            Programme status
+          </p>
+          <DialogTitle className="mt-2.5 font-display text-[1.75rem] leading-tight font-semibold text-navy">
             {label} {programme.code}?
           </DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed">
-            {programme.builderName} · {formatBps(programme.discountRateBps)} agreed discount. {copy.effect}
+          <DialogDescription className="mt-2 text-[0.8125rem] leading-relaxed">
+            {programme.builderName} · <span className="tabular font-medium text-navy">{formatBps(programme.discountRateBps)}</span> agreed discount. {copy.effect}
           </DialogDescription>
         </DialogHeader>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-ink">
-          <li>Accepted financing requests ({programme.requests}) keep their agreed terms.</li>
-          <li>
-            {programme.openOffers > 0
-              ? `${programme.openOffers} open offer${programme.openOffers === 1 ? "" : "s"} will be withdrawn; partners can regenerate if the builder still has an active programme.`
-              : "There are no open offers on this programme."}
+        <ul className="divide-y divide-border/70 rounded-lg border border-border/80 bg-ivory/50 text-[0.8125rem] text-slate-ink">
+          <li className="flex gap-3 px-4 py-3">
+            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-heritage" strokeWidth={1.6} aria-hidden="true" />
+            <span>Accepted financing requests ({programme.requests}) keep their agreed terms.</span>
+          </li>
+          <li className="flex gap-3 px-4 py-3">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-gold-600" strokeWidth={1.6} aria-hidden="true" />
+            <span>
+              {programme.openOffers > 0
+                ? `${programme.openOffers} open offer${programme.openOffers === 1 ? "" : "s"} will be withdrawn; partners can regenerate if the builder still has an active programme.`
+                : "There are no open offers on this programme."}
+            </span>
           </li>
         </ul>
         {error && (
-          <div role="alert" className="flex gap-3 rounded-lg border border-[#efd9ae] bg-[#fbf1df] px-4 py-3 text-sm text-[#6d4710]">
+          <div role="alert" className="flex gap-3 rounded-lg border-l-2 border-[#c48a2c] bg-[#fbf1df] px-4 py-3 text-sm text-[#6d4710]">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <div>
               <p className="font-medium">{/already has an active programme/i.test(error) ? "Only one active programme per builder" : "Status not changed"}</p>
@@ -105,7 +115,7 @@ export function ProgrammeStatusAction({ programme, target }: { programme: Progra
             </div>
           </div>
         )}
-        <DialogFooter>
+        <DialogFooter className="-mx-6 -mb-6 bg-card px-6 sm:-mx-7 sm:-mb-7 sm:px-7">
           <DialogClose asChild>
             <Button variant="outline" disabled={pending}>
               Cancel
