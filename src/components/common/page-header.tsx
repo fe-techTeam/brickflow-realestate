@@ -1,8 +1,14 @@
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Editorial page header: gold-ruled eyebrow, serif display title, description, actions.
+ * `kicker` adds an italic accent after the eyebrow (e.g. "As of 2 November").
+ * `meta` renders a row of small facts under the description; pass an array to get dividers.
+ * `divider` draws the hairline with a gold lead-in under the header (on by default).
+ */
 export function PageHeader({
   eyebrow,
   title,
@@ -10,6 +16,9 @@ export function PageHeader({
   actions,
   back,
   className,
+  kicker,
+  meta,
+  divider = true,
 }: {
   eyebrow?: string;
   title: ReactNode;
@@ -17,23 +26,57 @@ export function PageHeader({
   actions?: ReactNode;
   back?: { href: string; label: string };
   className?: string;
+  kicker?: ReactNode;
+  meta?: ReactNode;
+  divider?: boolean;
 }) {
+  const metaItems = Array.isArray(meta) ? Children.toArray(meta) : meta ? [meta] : [];
   return (
-    <div className={cn("mb-8 animate-fade-up", className)}>
+    <header className={cn("mb-8 animate-fade-up sm:mb-10", className)}>
       {back && (
-        <Link href={back.href} className="mb-4 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-navy">
-          <ChevronLeft className="size-3.5" />
+        <Link
+          href={back.href}
+          className="group/back mb-5 inline-flex items-center gap-1.5 text-[0.75rem] font-medium text-muted-foreground transition-colors hover:text-navy"
+        >
+          <span className="flex size-5 items-center justify-center rounded-full border border-border bg-card transition-colors group-hover/back:border-gold/60">
+            <ChevronLeft className="size-3" />
+          </span>
           {back.label}
         </Link>
       )}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-8">
         <div className="min-w-0">
-          {eyebrow && <p className="eyebrow mb-2 text-gold-600">{eyebrow}</p>}
-          <h1 className="text-[2rem] leading-[1.1] font-semibold sm:text-[2.375rem]">{title}</h1>
-          {description && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
+          {(eyebrow || kicker) && (
+            <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+              {eyebrow && (
+                <p className="eyebrow flex items-center gap-3 text-gold-700">
+                  <span aria-hidden="true" className="h-px w-7 bg-gold" />
+                  {eyebrow}
+                </p>
+              )}
+              {kicker && <span className="kicker text-[0.95rem] leading-none">{kicker}</span>}
+            </div>
+          )}
+          <h1 className="display-title">{title}</h1>
+          {description && <p className="mt-3 max-w-2xl text-[0.9375rem] leading-relaxed text-pretty text-muted-foreground">{description}</p>}
+          {metaItems.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-ink-soft">
+              {metaItems.map((item, i) => (
+                <span key={i} className="flex items-center gap-4">
+                  {i > 0 && <span aria-hidden="true" className="h-3 w-px bg-border" />}
+                  {item}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2 md:pb-1">{actions}</div>}
       </div>
-    </div>
+      {divider && (
+        <div aria-hidden="true" className="relative mt-7 h-px bg-hairline">
+          <span className="absolute top-0 left-0 h-px w-20 bg-gold" />
+        </div>
+      )}
+    </header>
   );
 }
