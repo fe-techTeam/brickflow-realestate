@@ -20,6 +20,7 @@ export function Th({ children, align = "left", className }: { children?: ReactNo
       scope="col"
       className={cn(
         "border-b border-border bg-ivory/60 px-4 py-2.5 text-[0.6875rem] font-semibold tracking-[0.08em] whitespace-nowrap text-muted-foreground uppercase first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6",
+        align === "left" && "text-left",
         align === "right" && "text-right",
         align === "center" && "text-center",
         className,
