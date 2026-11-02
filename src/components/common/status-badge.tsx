@@ -12,22 +12,22 @@ import {
 } from "@/lib/status";
 
 const TONE_CLASSES: Record<StatusTone, string> = {
-  neutral: "bg-muted text-slate-ink/80 ring-border",
-  info: "bg-[#e8eff6] text-[#25507a] ring-[#c9d9ea]",
-  navy: "bg-navy/[0.07] text-navy ring-navy/15",
-  warning: "bg-[#fbf1df] text-[#8a5a12] ring-[#efd9ae]",
-  success: "bg-sage text-heritage ring-heritage/20",
-  danger: "bg-[#f8e7e4] text-[#93342a] ring-[#ecc6bf]",
-  gold: "bg-gold-100 text-gold-600 ring-gold/30",
+  neutral: "bg-ivory-100 text-slate-ink-soft ring-ivory-300",
+  info: "bg-info-soft text-info ring-[#cddcea]",
+  navy: "bg-navy-50 text-navy ring-navy-200",
+  warning: "bg-warning-soft text-warning ring-[#ecd6a8]",
+  success: "bg-heritage-50 text-heritage ring-heritage-200",
+  danger: "bg-danger-soft text-danger ring-[#e9c7bf]",
+  gold: "bg-gold-50 text-gold-700 ring-gold-300/70",
 };
 
 const DOT_CLASSES: Record<StatusTone, string> = {
-  neutral: "bg-slate-ink/40",
-  info: "bg-[#3b6ea0]",
+  neutral: "bg-slate-ink/35",
+  info: "bg-info",
   navy: "bg-navy",
   warning: "bg-[#c48a2c]",
-  success: "bg-heritage",
-  danger: "bg-[#b5473a]",
+  success: "bg-heritage-500",
+  danger: "bg-danger",
   gold: "bg-gold",
 };
 
@@ -48,12 +48,12 @@ export function ToneBadge({ meta, className }: { meta: StatusMeta; className?: s
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold whitespace-nowrap ring-1 ring-inset",
+        "inline-flex h-[1.375rem] items-center gap-1.5 rounded-full pr-2.5 pl-2 text-[0.6875rem] leading-none font-medium tracking-[0.01em] whitespace-nowrap ring-1 ring-inset",
         TONE_CLASSES[meta.tone],
         className,
       )}
     >
-      <span aria-hidden="true" className={cn("size-1.5 rounded-full", DOT_CLASSES[meta.tone])} />
+      <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", DOT_CLASSES[meta.tone])} />
       {meta.label}
     </span>
   );
