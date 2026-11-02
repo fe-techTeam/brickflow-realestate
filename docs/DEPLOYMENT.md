@@ -383,6 +383,67 @@ Vercel works only after the production-path changes: its serverless functions ha
 
 ---
 
+## 5. Dev environment (App Runner → Lightsail Container Service)
+
+A single-container dev server for product demos in `ap-south-1`, with HTTPS on an AWS-provided hostname.
+
+**URL:** https://brickflow-dev.qgy1q4z4fmedy.ap-south-1.cs.amazonlightsail.com (sign in with any demo account, password `BrickFlow@2026`).
+
+**Why not App Runner:** App Runner was the first choice, but `CreateService` fails with `Account 870551426015 can't create new App Runner services` because App Runner is closed to new customers. The dev environment therefore runs on Lightsail Container Service, which also provides HTTPS without a custom domain.
+
+> **Data is ephemeral.** The SQLite file and uploaded documents live inside the container (`/app/data`). `SEED_ON_START=true` wipes and reseeds the demo data on every start, so each deployment, restart or node replacement resets everything. Do not keep anything there that matters. The persistent path is EFS (section 1) or PostgreSQL + S3 (section 3).
+
+### Resources
+
+All resources are tagged `Project=brickflow`, `Environment=dev`.
+
+| Resource | Identifier |
+| --- | --- |
+| ECR repository (scan on push, mutable tags) | `arn:aws:ecr:ap-south-1:870551426015:repository/brickflow` |
+| ECR repository policy | Pull only (`ecr:BatchGetImage`, `ecr:GetDownloadUrlForLayer`) for the service's Lightsail private-registry principal |
+| Lightsail container service `brickflow-dev` (power `small`: 0.5 vCPU / 1 GB, scale 1) | `arn:aws:lightsail:ap-south-1:870551426015:ContainerService/428a44bb-7fee-4749-b01b-313572c0141d` |
+| Secrets Manager secret `brickflow/dev/auth-secret` (48 random bytes, base64url) | `arn:aws:secretsmanager:ap-south-1:870551426015:secret:brickflow/dev/auth-secret-Jmsq5K` |
+
+The container listens on port 3000. The public endpoint health check is `GET /api/health` (expects 200). Environment variables: `NODE_ENV=production`, `DATABASE_URL=file:/app/data/brickflow.db`, `STORAGE_DIR=/app/data/storage`, `STORAGE_DRIVER=local`, `SEED_ON_START=true`, `DEMO_PASSWORD=BrickFlow@2026`, `NEXT_TELEMETRY_DISABLED=1`, `APP_URL=<service URL>` and `AUTH_SECRET`.
+
+Lightsail containers cannot reference Secrets Manager or assume an IAM role. `AUTH_SECRET` is therefore read from Secrets Manager at deploy time and passed as a container environment variable. Anyone with `lightsail:GetContainerServiceDeployments` can read it. That is acceptable for a demo with seeded data, but it is not acceptable for production.
+
+### Redeploy
+
+Lightsail resolves `:dev` when a deployment is created. Pushing a new image alone does nothing, so always create a new deployment. Build without attestations so ECR stores a plain single-platform manifest:
+
+```bash
+export AWS_REGION=ap-south-1
+REPO=870551426015.dkr.ecr.ap-south-1.amazonaws.com/brickflow
+SHA=$(git rev-parse --short HEAD)
+
+aws ecr get-login-password | docker login --username AWS --password-stdin "${REPO%%/*}"
+docker build --platform linux/amd64 --provenance=false --sbom=false -t "$REPO:dev" -t "$REPO:$SHA" .
+docker push "$REPO:dev" && docker push "$REPO:$SHA"
+
+# Re-create the deployment from the current one, injecting AUTH_SECRET without printing it.
+aws lightsail get-container-services --service-name brickflow-dev \
+  --query 'containerServices[0].currentDeployment' --output json > current.json
+aws secretsmanager get-secret-value --secret-id brickflow/dev/auth-secret --query SecretString --output text \
+  | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=require("./current.json");
+      d.containers.app.environment.AUTH_SECRET=s.trim();
+      require("fs").writeFileSync("containers.json",JSON.stringify(d.containers));
+      require("fs").writeFileSync("endpoint.json",JSON.stringify(d.publicEndpoint));})'
+aws lightsail create-container-service-deployment --service-name brickflow-dev \
+  --containers file://containers.json --public-endpoint file://endpoint.json
+rm -f current.json containers.json endpoint.json
+```
+
+On Windows Git Bash, set `MSYS_NO_PATHCONV=1` first. Otherwise `/app/...` values are rewritten into Windows paths. A rollout takes about 3 minutes. Follow it with `aws lightsail get-container-services --service-name brickflow-dev --query 'containerServices[0].[state,currentDeployment.state,nextDeployment.state]'`, and read the logs with `aws lightsail get-container-log --service-name brickflow-dev --container-name app`.
+
+To roll back, deploy an earlier `:<sha>` tag instead of `:dev`.
+
+### Cost and teardown
+
+About **$15/month**: the Lightsail `small` power includes the HTTPS endpoint and 500 GB of data transfer. Secrets Manager costs about $0.40/month, and ECR storage costs about $0.10 per GB-month for images over the free tier. There is no NAT gateway, load balancer or database. To tear down, run `aws lightsail delete-container-service --service-name brickflow-dev`, `aws ecr delete-repository --repository-name brickflow --force` and `aws secretsmanager delete-secret --secret-id brickflow/dev/auth-secret`.
+
+---
+
 ## Security checklist
 
 - HTTPS only: the load balancer redirects HTTP to HTTPS and uses a TLS 1.2/1.3 policy; `APP_URL` starts with `https://` so cookies are `Secure`.
