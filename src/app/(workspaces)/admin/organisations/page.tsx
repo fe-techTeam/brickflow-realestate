@@ -1,20 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Info, Landmark } from "lucide-react";
+import { Info, Landmark, ShieldCheck } from "lucide-react";
 import type { OrganisationType, RecordStatus } from "@/generated/prisma/enums";
-import { DataTable, Td, Th, Tr } from "@/components/common/data-table";
 import { ListToolbar } from "@/components/common/list-toolbar";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import { requireWorkspace } from "@/server/auth/session";
 import { listOrganisations } from "@/server/services/admin";
-import { ORG_TYPE_META, ORG_TYPE_OPTIONS, param } from "../_components/labels";
+import { AdminHeader, Empty, FilterChips, Monogram, Note, Panel, SummaryStrip } from "../_components/editorial";
+import { Count } from "../_components/figures";
+import { ORG_TYPE_META, param } from "../_components/labels";
+import { Ledger, LTd, LTh, LTr } from "../_components/ledger";
 import { OrgTypeBadge } from "../_components/org-type-badge";
 import { RecordStatusToggle } from "../_components/record-status-toggle";
 
 export const metadata: Metadata = { title: "Organisations" };
+
+const TYPE_ORDER: OrganisationType[] = ["BUILDER", "CHANNEL_PARTNER", "FINANCIER", "PLATFORM"];
+const TYPE_PLURAL: Record<OrganisationType, string> = { BUILDER: "Builders", CHANNEL_PARTNER: "Channel partners", FINANCIER: "Financiers", PLATFORM: "Platform" };
 
 export default async function OrganisationsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await requireWorkspace("admin");
@@ -25,35 +28,58 @@ export default async function OrganisationsPage({ searchParams }: { searchParams
   const status = statusParam === "ACTIVE" || statusParam === "INACTIVE" ? (statusParam as RecordStatus) : undefined;
   const q = param(sp.q);
 
-  const organisations = (await listOrganisations(actor, { type, search: q })).filter((o) => !status || o.status === status);
-  const inactive = organisations.filter((o) => o.status === "INACTIVE").length;
+  const [all, matching] = await Promise.all([listOrganisations(actor, {}), listOrganisations(actor, { search: q })]);
+  const statusMatched = matching.filter((o) => !status || o.status === status);
+  const organisations = statusMatched.filter((o) => !type || o.type === type);
+  const inactiveTotal = all.filter((o) => o.status === "INACTIVE").length;
+  const memberTotal = all.reduce((n, o) => n + o._count.members, 0);
 
   return (
     <>
-      <PageHeader
+      <AdminHeader
         eyebrow="Directory"
         title="Organisations"
-        description="Every organisation on the platform: the operator, the financier, builders and channel partners."
+        lede="Every institution on BrickFlow: the operator, the financier, the builders and the channel partners who invoice them."
       />
 
-      <div className="mb-6 flex animate-fade-up gap-3 rounded-lg border border-gold/30 bg-gold-100/50 px-4 py-3 text-sm text-slate-ink">
-        <Info className="mt-0.5 size-4 shrink-0 text-gold-600" aria-hidden="true" />
-        <p>
-          Deactivating an organisation signs out all of its users and blocks new sign-ins. A deactivated builder cannot receive new invoices and
-          stops producing financing offers; existing invoices, financing requests and settlements are kept. The platform organisation cannot be
-          deactivated.
-        </p>
-      </div>
+      <SummaryStrip
+        items={[
+          { label: "Organisations", value: <Count value={all.length} size="lg" />, hint: `${all.length - inactiveTotal} active` },
+          {
+            label: "Builders",
+            value: <Count value={all.filter((o) => o.type === "BUILDER").length} size="lg" />,
+            hint: "Developers raising receivables",
+            href: "/admin/builders",
+            accent: "navy",
+          },
+          {
+            label: "Channel partners",
+            value: <Count value={all.filter((o) => o.type === "CHANNEL_PARTNER").length} size="lg" />,
+            hint: "Brokerages invoicing builders",
+            href: "/admin/partners",
+            accent: "heritage",
+          },
+          { label: "Members", value: <Count value={memberTotal} size="lg" />, hint: inactiveTotal ? `${inactiveTotal} organisation(s) inactive` : "All organisations active", accent: "gold" },
+        ]}
+      />
 
-      <Section
+      <Panel
+        eyebrow="Register"
         title={`${organisations.length} organisation${organisations.length === 1 ? "" : "s"}`}
-        description={inactive ? `${inactive} inactive in this view` : "All shown organisations are active"}
+        description={type ? `Showing ${TYPE_PLURAL[type].toLowerCase()} only.` : "All organisation types."}
         bodyClassName="space-y-5"
       >
+        <FilterChips
+          label="Organisation type"
+          param="type"
+          pathname="/admin/organisations"
+          searchParams={sp}
+          allCount={statusMatched.length}
+          options={TYPE_ORDER.map((t) => ({ value: t, label: TYPE_PLURAL[t], count: statusMatched.filter((o) => o.type === t).length }))}
+        />
         <ListToolbar
           searchPlaceholder="Search name, legal name or GSTIN…"
           filters={[
-            { param: "type", label: "Types", options: ORG_TYPE_OPTIONS },
             {
               param: "status",
               label: "Statuses",
@@ -65,56 +91,73 @@ export default async function OrganisationsPage({ searchParams }: { searchParams
           ]}
         />
         {organisations.length === 0 ? (
-          <EmptyState icon={Landmark} title="No organisations match" description="Try a different search term or clear the filters." />
+          <Empty icon={Landmark} title="No organisations match" description="Try a different search term, another type or clear the filters." />
         ) : (
-          <DataTable minWidth={960}>
+          <Ledger minWidth={960}>
             <thead>
               <tr>
-                <Th>Organisation</Th>
-                <Th>Type</Th>
-                <Th>GSTIN</Th>
-                <Th>City</Th>
-                <Th align="right">Members</Th>
-                <Th>Status</Th>
-                <Th align="right">Actions</Th>
+                <LTh>Organisation</LTh>
+                <LTh>Type</LTh>
+                <LTh>GSTIN</LTh>
+                <LTh>City</LTh>
+                <LTh align="right">Members</LTh>
+                <LTh>Status</LTh>
+                <LTh align="right">
+                  <span className="sr-only">Actions</span>
+                </LTh>
               </tr>
             </thead>
             <tbody>
               {organisations.map((org) => (
-                <Tr key={org.id}>
-                  <Td>
-                    <Link href={`/admin/organisations/${org.id}`} className="font-medium text-navy hover:underline">
-                      {org.name}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">{org.legalName}</p>
-                  </Td>
-                  <Td>
+                <LTr key={org.id} className={org.status === "INACTIVE" ? "bg-muted/30" : undefined}>
+                  <LTd>
+                    <div className="flex items-center gap-3.5">
+                      <Monogram name={org.name} size="sm" tone={org.type === "PLATFORM" ? "navy" : org.status === "INACTIVE" ? "muted" : "ivory"} />
+                      <div className="min-w-0">
+                        <Link href={`/admin/organisations/${org.id}`} className="font-medium text-navy hover:underline">
+                          {org.name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">{org.legalName}</p>
+                      </div>
+                    </div>
+                  </LTd>
+                  <LTd>
                     <OrgTypeBadge type={org.type} />
-                  </Td>
-                  <Td className="font-mono text-xs">{org.gstin ?? "—"}</Td>
-                  <Td>{org.city ?? "—"}</Td>
-                  <Td align="right">{org._count.members}</Td>
-                  <Td>
+                  </LTd>
+                  <LTd className="font-mono text-xs tracking-tight">{org.gstin ?? "—"}</LTd>
+                  <LTd>{org.city ?? "—"}</LTd>
+                  <LTd align="right" className="font-medium text-navy">
+                    {org._count.members}
+                  </LTd>
+                  <LTd>
                     <StatusBadge kind="record" status={org.status} />
-                  </Td>
-                  <Td align="right">
+                  </LTd>
+                  <LTd align="right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="sm" asChild>
                         <Link href={`/admin/organisations/${org.id}`}>View</Link>
                       </Button>
                       {org.type === "PLATFORM" ? (
-                        <span className="inline-flex h-8 items-center px-3 text-xs text-muted-foreground">Protected</span>
+                        <span className="inline-flex h-8 items-center gap-1.5 px-3 text-xs text-muted-foreground">
+                          <ShieldCheck className="size-3.5 text-gold-600" strokeWidth={1.6} aria-hidden="true" />
+                          Protected
+                        </span>
                       ) : (
                         <RecordStatusToggle kind="organisation" id={org.id} name={org.name} status={org.status} orgType={org.type} />
                       )}
                     </div>
-                  </Td>
-                </Tr>
+                  </LTd>
+                </LTr>
               ))}
             </tbody>
-          </DataTable>
+          </Ledger>
         )}
-      </Section>
+      </Panel>
+
+      <Note icon={Info} className="mt-6">
+        Deactivating an organisation signs out all of its users and blocks new sign-ins. A deactivated builder cannot receive new invoices and stops producing
+        financing offers; existing invoices, financing requests and settlements are kept. The platform organisation cannot be deactivated.
+      </Note>
     </>
   );
 }

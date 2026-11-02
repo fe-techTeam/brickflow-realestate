@@ -2,21 +2,29 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Users } from "lucide-react";
 import type { OrganisationType } from "@/generated/prisma/enums";
-import { DataTable, readSort, SortTh, sortRows, Td, Th, Tr } from "@/components/common/data-table";
+import { readSort, sortRows } from "@/components/common/data-table";
 import { ListToolbar } from "@/components/common/list-toolbar";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
 import { StatusBadge, ToneBadge } from "@/components/common/status-badge";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { requireWorkspace } from "@/server/auth/session";
 import { listUsers } from "@/server/services/admin";
-import { ORG_TYPE_META, ORG_TYPE_OPTIONS, param, ROLE_LABELS } from "../_components/labels";
+import { AdminHeader, Empty, FilterChips, Monogram, Panel, SummaryStrip } from "../_components/editorial";
+import { Count } from "../_components/figures";
+import { ORG_TYPE_META, param, ROLE_LABELS } from "../_components/labels";
+import { Ledger, LSortTh, LTd, LTh, LTr } from "../_components/ledger";
 import { OrgTypeBadge } from "../_components/org-type-badge";
 import { RecordStatusToggle } from "../_components/record-status-toggle";
 
 export const metadata: Metadata = { title: "Users" };
 
 const SORT_KEYS = ["name", "organisation", "lastLogin", "created"] as const;
+const TYPE_ORDER: OrganisationType[] = ["BUILDER", "CHANNEL_PARTNER", "FINANCIER", "PLATFORM"];
+const TYPE_PLURAL: Record<OrganisationType, string> = { BUILDER: "Builders", CHANNEL_PARTNER: "Channel partners", FINANCIER: "Financier", PLATFORM: "Platform" };
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function signedInWithinWeek(lastLoginAt: Date | null): boolean {
+  return lastLoginAt !== null && lastLoginAt.getTime() >= Date.now() - WEEK_MS;
+}
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await requireWorkspace("admin");
@@ -27,28 +35,52 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const sort = readSort(sp, SORT_KEYS, { key: "organisation", dir: "asc" });
 
   const all = await listUsers(actor, { search: param(sp.q) });
-  const filtered = all.filter((m) => (!type || m.organisation.type === type) && (!status || m.user.status === status));
+  const statusMatched = all.filter((m) => !status || m.user.status === status);
+  const filtered = statusMatched.filter((m) => !type || m.organisation.type === type);
   const rows = sortRows(filtered, sort, {
     name: (m) => m.user.name,
     organisation: (m) => `${m.organisation.name} ${m.user.name}`,
     lastLogin: (m) => m.user.lastLoginAt,
     created: (m) => m.user.createdAt,
   });
-  const active = filtered.filter((m) => m.user.status === "ACTIVE").length;
+  const active = all.filter((m) => m.user.status === "ACTIVE").length;
+  const recent = all.filter((m) => signedInWithinWeek(m.user.lastLoginAt)).length;
+  const blockedByOrg = all.filter((m) => m.user.status === "ACTIVE" && m.organisation.status === "INACTIVE").length;
 
   return (
     <>
-      <PageHeader
+      <AdminHeader
         eyebrow="Directory"
         title="Users"
-        description="Everyone with access to BrickFlow. A user can sign in only while both the user and their organisation are active."
+        lede="Everyone with access to BrickFlow. A user can sign in only while both the user and their organisation are active."
       />
 
-      <Section title={`${rows.length} user${rows.length === 1 ? "" : "s"}`} description={`${active} active · ${rows.length - active} inactive`} bodyClassName="space-y-5">
+      <SummaryStrip
+        items={[
+          { label: "Accounts", value: <Count value={all.length} size="lg" />, hint: "Across every workspace" },
+          { label: "Active", value: <Count value={active} size="lg" />, hint: `${all.length - active} deactivated`, accent: "heritage" },
+          { label: "Signed in this week", value: <Count value={recent} size="lg" />, hint: "Last seven days", accent: "navy" },
+          {
+            label: "Blocked by organisation",
+            value: <Count value={blockedByOrg} size="lg" />,
+            hint: blockedByOrg ? "Active users of inactive organisations" : "None at the moment",
+            accent: "gold",
+          },
+        ]}
+      />
+
+      <Panel eyebrow="Register" title={`${rows.length} user${rows.length === 1 ? "" : "s"}`} bodyClassName="space-y-5">
+        <FilterChips
+          label="Organisation type"
+          param="type"
+          pathname="/admin/users"
+          searchParams={sp}
+          allCount={statusMatched.length}
+          options={TYPE_ORDER.map((t) => ({ value: t, label: TYPE_PLURAL[t], count: statusMatched.filter((m) => m.organisation.type === t).length }))}
+        />
         <ListToolbar
           searchPlaceholder="Search name, email or organisation…"
           filters={[
-            { param: "type", label: "Organisation types", options: ORG_TYPE_OPTIONS },
             {
               param: "status",
               label: "Statuses",
@@ -60,34 +92,40 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           ]}
         />
         {rows.length === 0 ? (
-          <EmptyState icon={Users} title="No users match" description="Try a different search term or clear the filters." />
+          <Empty icon={Users} title="No users match" description="Try a different search term, another organisation type or clear the filters." />
         ) : (
-          <DataTable minWidth={1100}>
+          <Ledger minWidth={1100}>
             <thead>
               <tr>
-                <SortTh label="User" sortKey="name" sort={sort} searchParams={sp} pathname="/admin/users" />
-                <SortTh label="Organisation" sortKey="organisation" sort={sort} searchParams={sp} pathname="/admin/users" />
-                <Th>Role</Th>
-                <Th>Designation</Th>
-                <Th>Status</Th>
-                <SortTh label="Last sign-in" sortKey="lastLogin" sort={sort} searchParams={sp} pathname="/admin/users" />
-                <SortTh label="Created" sortKey="created" sort={sort} searchParams={sp} pathname="/admin/users" />
-                <Th align="right">Actions</Th>
+                <LSortTh label="User" sortKey="name" sort={sort} searchParams={sp} pathname="/admin/users" />
+                <LSortTh label="Organisation" sortKey="organisation" sort={sort} searchParams={sp} pathname="/admin/users" />
+                <LTh>Role</LTh>
+                <LTh>Status</LTh>
+                <LSortTh label="Last sign-in" sortKey="lastLogin" sort={sort} searchParams={sp} pathname="/admin/users" />
+                <LSortTh label="Created" sortKey="created" sort={sort} searchParams={sp} pathname="/admin/users" />
+                <LTh align="right">
+                  <span className="sr-only">Actions</span>
+                </LTh>
               </tr>
             </thead>
             <tbody>
               {rows.map((m) => {
                 const self = m.user.id === actor.userId;
                 return (
-                  <Tr key={m.id}>
-                    <Td>
-                      <p className="font-medium text-navy">
-                        {m.user.name}
-                        {self && <span className="ml-2 text-xs font-normal text-muted-foreground">(you)</span>}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{m.user.email}</p>
-                    </Td>
-                    <Td>
+                  <LTr key={m.id} className={m.user.status === "INACTIVE" ? "bg-muted/30" : undefined}>
+                    <LTd>
+                      <div className="flex items-center gap-3">
+                        <Monogram name={m.user.name} size="sm" tone={self ? "navy" : m.user.status === "ACTIVE" ? "ivory" : "muted"} className="rounded-full" />
+                        <div className="min-w-0">
+                          <p className="font-medium text-navy">
+                            {m.user.name}
+                            {self && <span className="ml-2 text-xs font-normal text-gold-600">(you)</span>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{m.user.email}</p>
+                        </div>
+                      </div>
+                    </LTd>
+                    <LTd>
                       <Link href={`/admin/organisations/${m.organisation.id}`} className="text-navy hover:underline">
                         {m.organisation.name}
                       </Link>
@@ -95,28 +133,30 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                         <OrgTypeBadge type={m.organisation.type} />
                         {m.organisation.status === "INACTIVE" && <ToneBadge meta={{ label: "Organisation inactive", tone: "warning" }} />}
                       </div>
-                    </Td>
-                    <Td>{ROLE_LABELS[m.role.key] ?? m.role.name}</Td>
-                    <Td>{m.designation ?? "—"}</Td>
-                    <Td>
+                    </LTd>
+                    <LTd>
+                      <p>{ROLE_LABELS[m.role.key] ?? m.role.name}</p>
+                      {m.designation && <p className="text-xs text-muted-foreground">{m.designation}</p>}
+                    </LTd>
+                    <LTd>
                       <StatusBadge kind="record" status={m.user.status} />
-                    </Td>
-                    <Td className="text-xs whitespace-nowrap">{m.user.lastLoginAt ? formatDateTime(m.user.lastLoginAt) : "Never"}</Td>
-                    <Td className="text-xs whitespace-nowrap">{formatDate(m.user.createdAt)}</Td>
-                    <Td align="right">
+                    </LTd>
+                    <LTd className="tabular text-xs whitespace-nowrap">{m.user.lastLoginAt ? formatDateTime(m.user.lastLoginAt) : <span className="text-muted-foreground">Never</span>}</LTd>
+                    <LTd className="tabular text-xs whitespace-nowrap">{formatDate(m.user.createdAt)}</LTd>
+                    <LTd align="right">
                       {self ? (
                         <span className="text-xs text-muted-foreground">Your account</span>
                       ) : (
                         <RecordStatusToggle kind="user" id={m.user.id} name={m.user.name} status={m.user.status} />
                       )}
-                    </Td>
-                  </Tr>
+                    </LTd>
+                  </LTr>
                 );
               })}
             </tbody>
-          </DataTable>
+          </Ledger>
         )}
-      </Section>
+      </Panel>
     </>
   );
 }
