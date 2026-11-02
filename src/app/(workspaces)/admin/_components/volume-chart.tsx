@@ -10,9 +10,11 @@ export interface VolumePoint {
 }
 
 const SERIES = [
-  { key: "invoiced", label: "Invoices submitted", color: "#2f6a9e" },
-  { key: "financed", label: "Early payment accepted", color: "#b8862f" },
+  { key: "invoiced", label: "Invoices submitted", color: "#142b43" },
+  { key: "financed", label: "Accepted for early payment", color: "#c4a46a" },
 ] as const;
+
+const TICK = { fontSize: 11, fill: "#7a8592", fontFamily: "var(--font-inter), ui-sans-serif, system-ui", fontVariantNumeric: "tabular-nums" };
 
 /** Rupees as a chart number; display values are always formatted from the exact paise strings. */
 function toRupees(paise: string): number {
@@ -20,8 +22,11 @@ function toRupees(paise: string): number {
 }
 
 function axisTick(rupees: number): string {
-  if (rupees === 0) return "₹0";
-  return formatINRCompact(BigInt(Math.round(rupees)) * 100n).replace(".00", "");
+  const trim = (n: number) => Number(n.toFixed(1)).toString();
+  if (rupees >= 1_00_00_000) return `${trim(rupees / 1_00_00_000)} Cr`;
+  if (rupees >= 1_00_000) return `${trim(rupees / 1_00_000)} L`;
+  if (rupees >= 1_000) return `${trim(rupees / 1_000)}k`;
+  return String(rupees);
 }
 
 type Row = { label: string; invoiced: number; financed: number; invoicedPaise: string; financedPaise: string };
@@ -31,15 +36,15 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   const row = payload[0]?.payload as Row | undefined;
   if (!row) return null;
   return (
-    <div className="rounded-md border border-border bg-card px-3 py-2 text-xs shadow-md">
-      <p className="mb-1.5 font-medium text-navy">Week of {label}</p>
+    <div className="min-w-52 rounded-lg border border-border bg-card px-4 py-3 text-xs shadow-[0_16px_40px_-20px_rgba(20,43,67,0.45)]">
+      <p className="mb-2 text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Week of {label}</p>
       {SERIES.map((s) => (
         <p key={s.key} className="flex items-center justify-between gap-6 py-0.5">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            <span aria-hidden="true" className="size-2 rounded-[2px]" style={{ backgroundColor: s.color }} />
+          <span className="flex items-center gap-2 text-slate-ink">
+            <span aria-hidden="true" className="h-2 w-3 rounded-[2px]" style={{ backgroundColor: s.color }} />
             {s.label}
           </span>
-          <span className="tabular font-medium text-slate-ink">{formatINRCompact(s.key === "invoiced" ? row.invoicedPaise : row.financedPaise)}</span>
+          <span className="tabular font-medium text-navy">{formatINRCompact(s.key === "invoiced" ? row.invoicedPaise : row.financedPaise)}</span>
         </p>
       ))}
     </div>
@@ -49,24 +54,25 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 export function VolumeChart({ data }: { data: VolumePoint[] }) {
   const rows: Row[] = data.map((d) => ({ ...d, invoiced: toRupees(d.invoicedPaise), financed: toRupees(d.financedPaise) }));
   return (
-    <figure className="space-y-4">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground" aria-hidden="true">
+    <figure>
+      <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-ink" aria-hidden="true">
         {SERIES.map((s) => (
           <span key={s.key} className="inline-flex items-center gap-2">
-            <span className="size-2.5 rounded-[3px]" style={{ backgroundColor: s.color }} />
+            <span className="h-2 w-3.5 rounded-[2px]" style={{ backgroundColor: s.color }} />
             {s.label}
           </span>
         ))}
+        <span className="ml-auto text-[0.6875rem] text-muted-foreground">Weekly totals, ₹</span>
       </div>
-      <div className="h-64 w-full">
+      <div className="h-60 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={rows} barGap={2} barCategoryGap="28%" margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="#ece7db" />
-            <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: "#d9d2c2" }} tick={{ fontSize: 11, fill: "#5f6b78" }} interval="preserveStartEnd" minTickGap={12} />
-            <YAxis tickLine={false} axisLine={false} width={64} tick={{ fontSize: 11, fill: "#5f6b78" }} tickFormatter={axisTick} />
-            <Tooltip cursor={{ fill: "rgba(20,43,67,0.04)" }} content={(props) => <ChartTooltip active={props.active} payload={props.payload} label={props.label} />} />
+          <BarChart data={rows} barGap={3} barCategoryGap="34%" margin={{ top: 6, right: 0, bottom: 0, left: -8 }}>
+            <CartesianGrid vertical={false} stroke="#ece7db" strokeDasharray="2 4" />
+            <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: "#d9d2c2" }} tick={TICK} interval="preserveStartEnd" minTickGap={18} tickMargin={10} />
+            <YAxis tickLine={false} axisLine={false} width={52} tick={TICK} tickFormatter={axisTick} />
+            <Tooltip cursor={{ fill: "rgba(196,164,106,0.08)" }} content={(props) => <ChartTooltip active={props.active} payload={props.payload} label={props.label} />} />
             {SERIES.map((s) => (
-              <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[4, 4, 0, 0]} maxBarSize={16} isAnimationActive={false} />
+              <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[3, 3, 0, 0]} maxBarSize={12} isAnimationActive={false} />
             ))}
           </BarChart>
         </ResponsiveContainer>
