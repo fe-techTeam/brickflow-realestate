@@ -1,0 +1,20 @@
+name: Branch policy
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release-source:
+    name: Releases to main come from develop
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify source branch
+        run: |
+          if [ "${{ github.head_ref }}" != "develop" ]; then
+            echo "::error::Pull requests into main must come from develop (got '${{ github.head_ref }}')."
+            exit 1
+          fi
