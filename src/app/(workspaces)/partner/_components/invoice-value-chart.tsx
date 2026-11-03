@@ -1,7 +1,10 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
+import { ChartTooltipCard } from "@/components/common/chart-frame";
+import { CHART_COLORS, chartBarProps, chartGridProps, chartXAxisProps, chartYAxisProps } from "@/components/common/chart-theme";
 import { formatINR, formatINRCompact } from "@/lib/money";
+import { CompactMoney } from "./money";
 
 export interface InvoiceValuePoint {
   label: string;
@@ -10,8 +13,8 @@ export interface InvoiceValuePoint {
 }
 
 const SERIES = [
-  { key: "submitted", label: "Invoiced", color: "#2d6cb0" },
-  { key: "approved", label: "Builder-approved", color: "#2a8a5c" },
+  { key: "submitted", label: "Invoiced", color: CHART_COLORS.primary },
+  { key: "approved", label: "Builder-approved", color: CHART_COLORS.positiveSoft },
 ] as const;
 
 /** Plot-only conversion; all displayed figures are formatted from exact paise strings. */
@@ -23,48 +26,54 @@ function ChartTooltip({ active, payload, label }: TooltipContentProps<number, st
   if (!active || !payload?.length) return null;
   const point = payload[0]!.payload as InvoiceValuePoint;
   return (
-    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
-      <p className="mb-1.5 font-medium text-navy">{label}</p>
-      {SERIES.map((series) => (
-        <p key={series.key} className="flex items-center justify-between gap-6">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            <span aria-hidden="true" className="size-2 rounded-[2px]" style={{ background: series.color }} />
-            {series.label}
-          </span>
-          <span className="tabular font-medium text-slate-ink">{formatINR(series.key === "submitted" ? point.submittedPaise : point.approvedPaise)}</span>
-        </p>
-      ))}
-    </div>
+    <ChartTooltipCard
+      title={label}
+      rows={SERIES.map((series) => ({ label: series.label, color: series.color, value: formatINR(series.key === "submitted" ? point.submittedPaise : point.approvedPaise) }))}
+    />
   );
 }
 
 export function InvoiceValueChart({ data }: { data: InvoiceValuePoint[] }) {
   const rows = data.map((d) => ({ ...d, submitted: toRupees(d.submittedPaise), approved: toRupees(d.approvedPaise) }));
+  const invoiced = data.reduce((sum, d) => sum + BigInt(d.submittedPaise), 0n);
+  const approved = data.reduce((sum, d) => sum + BigInt(d.approvedPaise), 0n);
+  const ratio = invoiced > 0n ? Number((approved * 1000n + invoiced / 2n) / invoiced) / 10 : null;
+
   return (
-    <figure className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground" aria-hidden="true">
+    <figure className="flex flex-col gap-6">
+      <div className="grid grid-cols-3 gap-4 border-b border-hairline pb-5">
         {SERIES.map((series) => (
-          <span key={series.key} className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-[3px]" style={{ background: series.color }} />
-            {series.label}
-          </span>
+          <div key={series.key} className="min-w-0">
+            <p className="flex items-center gap-2 text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+              <span aria-hidden="true" className="h-3 w-[3px] rounded-full" style={{ background: series.color }} />
+              {series.label}
+            </p>
+            <CompactMoney paise={series.key === "submitted" ? invoiced : approved} className="mt-2 block text-[1.25rem] font-medium text-navy" />
+          </div>
         ))}
+        <div className="min-w-0">
+          <p className="text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Approval ratio</p>
+          <p className="mt-2 text-[1.25rem] font-medium text-navy tabular">{ratio === null ? "—" : `${ratio.toFixed(ratio % 1 ? 1 : 0)}%`}</p>
+        </div>
       </div>
-      <div className="h-64 w-full" role="img" aria-label="Invoice value by invoice month: invoiced versus builder-approved amounts for the last six months">
+      <div className="h-52 w-full" role="img" aria-label="Invoice value by invoice month: invoiced versus builder-approved amounts for the last six months">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={rows} barGap={2} barCategoryGap="28%" margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="#e3ddcf" strokeDasharray="0" />
-            <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: "#d9d2c2" }} tick={{ fill: "#5f6b78", fontSize: 11 }} />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              width={72}
-              tick={{ fill: "#5f6b78", fontSize: 11 }}
-              tickFormatter={(value: number) => formatINRCompact(BigInt(Math.round(value)) * 100n)}
-            />
-            <Tooltip cursor={{ fill: "rgba(20,43,67,0.04)" }} content={(props) => <ChartTooltip {...(props as TooltipContentProps<number, string>)} />} />
+          <BarChart data={rows} barGap={3} barCategoryGap="34%" margin={{ top: 4, right: 0, bottom: 0, left: -8 }}>
+            <CartesianGrid {...chartGridProps} />
+            <XAxis dataKey="label" {...chartXAxisProps} />
+            <YAxis {...chartYAxisProps} width={64} tickCount={4} tickFormatter={(value: number) => formatINRCompact(BigInt(Math.round(value)) * 100n)} />
+            <Tooltip cursor={{ fill: CHART_COLORS.cursor }} content={(props) => <ChartTooltip {...(props as TooltipContentProps<number, string>)} />} />
             {SERIES.map((series) => (
-              <Bar key={series.key} dataKey={series.key} name={series.label} fill={series.color} radius={[4, 4, 0, 0]} maxBarSize={28} />
+              <Bar
+                key={series.key}
+                dataKey={series.key}
+                name={series.label}
+                fill={series.color}
+                {...chartBarProps}
+                maxBarSize={18}
+                animationDuration={600}
+                animationEasing="ease-out"
+              />
             ))}
           </BarChart>
         </ResponsiveContainer>

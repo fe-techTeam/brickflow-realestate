@@ -3,18 +3,17 @@
 import { createContext, useCallback, useContext, useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, BadgePercent, CalendarClock, CheckCircle2, Landmark, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, BadgePercent, CalendarClock, Check, Landmark, Loader2, Lock, RefreshCw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { AmountRow } from "@/components/common/panels";
-import { DemoBadge, StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/format";
-import { formatBps, formatINR } from "@/lib/money";
+import { formatBps } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { acceptOfferAction, generateOfferAction } from "@/server/actions/financing";
 import type { OfferDto } from "@/server/dto";
+import { Money } from "./money";
 
 export interface OfferInvoiceSummary {
   id: string;
@@ -125,13 +124,70 @@ export function OfferLauncher({
       size={size}
       disabled={pendingInvoiceId !== null}
       onClick={() => void launch(invoice, offer)}
-      className={cn("font-semibold tracking-[0.06em] uppercase", size === "sm" && "text-[0.6875rem]", size === "xs" && "h-7 px-2.5 text-[0.625rem] tracking-[0.04em]", className)}
+      className={cn(
+        "font-semibold tracking-[0.08em] uppercase",
+        size === "sm" && "text-[0.6875rem]",
+        size === "lg" && "h-11 px-6 text-[0.75rem]",
+        size === "xs" && "h-7 px-2.5 text-[0.625rem] tracking-[0.06em]",
+        className,
+      )}
       aria-label={`${label} for invoice ${invoice.invoiceNumber}`}
     >
       {busy ? <Loader2 className="animate-spin" /> : <BadgePercent />}
       {label}
     </Button>
   );
+}
+
+const STEPS = ["Review", "Confirm", "Submitted"] as const;
+
+function StepIndicator({ current, tone = "light" }: { current: 1 | 2 | 3; tone?: "light" | "dark" }) {
+  return (
+    <ol className="flex items-center gap-2 sm:gap-3" aria-label="Early payment steps">
+      {STEPS.map((label, i) => {
+        const step = i + 1;
+        const done = step < current || current === 3;
+        const active = step === current && current !== 3;
+        return (
+          <li key={label} className="flex items-center gap-2 sm:gap-3" aria-current={active ? "step" : undefined}>
+            <span className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "flex size-6 items-center justify-center rounded-full text-[0.6875rem] font-semibold tabular transition-colors",
+                  done && "bg-heritage text-white",
+                  active && (tone === "dark" ? "bg-gold text-navy ring-4 ring-gold/20" : "bg-navy text-gold ring-4 ring-navy/10"),
+                  !done && !active && (tone === "dark" ? "border border-white/25 text-white/50" : "border border-ivory-300 text-muted-foreground"),
+                )}
+              >
+                {done ? <Check className="size-3.5" strokeWidth={2.5} /> : step}
+              </span>
+              <span
+                className={cn(
+                  "text-[0.6875rem] font-semibold tracking-[0.14em] uppercase",
+                  tone === "dark" ? (active || done ? "text-white" : "text-white/45") : active || done ? "text-navy" : "text-muted-foreground",
+                  !active && "max-sm:sr-only",
+                )}
+              >
+                {label}
+              </span>
+            </span>
+            {step < STEPS.length && (
+              <span aria-hidden="true" className={cn("h-px w-6 sm:w-10", tone === "dark" ? (done ? "bg-gold/70" : "bg-white/20") : done ? "bg-heritage/50" : "bg-ivory-300")} />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function daysLeft(validUntil: string, now: number): string {
+  const ms = new Date(validUntil).getTime() - now;
+  if (ms <= 0) return "Expired";
+  const hours = Math.floor(ms / 3_600_000);
+  if (hours < 24) return `${Math.max(1, hours)} ${hours === 1 ? "hour" : "hours"} left`;
+  const days = Math.floor(hours / 24);
+  return `${days} ${days === 1 ? "day" : "days"} left`;
 }
 
 function OfferDialog({
@@ -157,6 +213,7 @@ function OfferDialog({
   const [error, setError] = useState<{ message: string; regenerate: boolean } | null>(null);
   const [accepting, startAccept] = useTransition();
   const [regenerating, startRegenerate] = useTransition();
+  const [openedAt] = useState(() => Date.now());
   const busy = accepting || regenerating;
 
   function accept() {
@@ -192,8 +249,8 @@ function OfferDialog({
     });
   }
 
-  const discountLabel = `Agreed discount (${formatBps(offer.discountRateBps)})`;
   const partial = offer.approvedAmountPaise !== offer.invoiceAmountPaise;
+  const keepBps = 10_000 - offer.discountRateBps;
 
   return (
     <Dialog
@@ -209,86 +266,113 @@ function OfferDialog({
     >
       <DialogContent
         className={cn(
-          "max-h-[92vh] gap-0 overflow-y-auto p-0 sm:max-w-3xl",
-          phase.kind === "review" && "[&>[data-slot=dialog-close]]:top-3 [&>[data-slot=dialog-close]]:right-3 [&>[data-slot=dialog-close]]:text-white/80 [&>[data-slot=dialog-close]]:hover:bg-white/10 [&>[data-slot=dialog-close]]:hover:text-white",
+          "max-h-[94vh] gap-0 overflow-y-auto rounded-xl border-0 bg-card p-0 shadow-overlay ring-1 ring-navy/10 sm:max-w-[58rem]",
+          "[&>[data-slot=dialog-close]]:top-4 [&>[data-slot=dialog-close]]:right-4 [&>[data-slot=dialog-close]]:text-white/70 [&>[data-slot=dialog-close]]:hover:bg-white/10 [&>[data-slot=dialog-close]]:hover:text-white",
         )}
       >
+        <div className="relative overflow-hidden bg-navy px-6 pt-6 pb-5 text-white sm:px-9 sm:pt-7">
+          <div aria-hidden="true" className="surface-navy absolute inset-0 rounded-none border-0 shadow-none" />
+          <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-gold/60 to-transparent" />
+          <div className="relative pr-8">
+            <p className="flex items-center gap-3 text-[0.625rem] font-semibold tracking-[0.22em] text-gold uppercase">
+              <span aria-hidden="true" className="h-px w-6 bg-gold/70" />
+              Early payment · {offer.reference}
+            </p>
+            <DialogTitle className="mt-2.5 font-display text-[1.75rem] leading-tight font-medium text-white sm:text-[2rem]">
+              {phase.kind === "accepted" ? "Submitted to Veefin" : "Get discounted amount"}
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-[0.8125rem] text-white/60">
+              Invoice {invoice.invoiceNumber} · {invoice.builderName}
+              {invoice.projectName ? ` · ${invoice.projectName}` : ""}
+            </DialogDescription>
+            <div className="mt-6">
+              <StepIndicator current={phase.kind === "accepted" ? 3 : consent ? 2 : 1} tone="dark" />
+            </div>
+          </div>
+        </div>
+
         {phase.kind === "accepted" ? (
           <AcceptedState invoice={invoice} offer={offer} reference={phase.reference} onClose={() => onOpenChange(false)} />
         ) : (
           <>
-            <div className="relative overflow-hidden bg-navy px-6 pt-6 pb-5 text-white sm:px-8">
-              <div aria-hidden="true" className="pointer-events-none absolute -top-24 -right-24 size-64 rounded-full border border-gold/20" />
-              <div className="relative flex flex-wrap items-start justify-between gap-3 pr-8">
-                <div className="min-w-0">
-                  <p className="eyebrow text-gold">Early payment offer · {offer.reference}</p>
-                  <DialogTitle className="mt-2 font-display text-[1.875rem] leading-tight font-semibold text-white">Your discounted amount</DialogTitle>
-                  <DialogDescription className="mt-1 text-sm text-white/65">
-                    Invoice {invoice.invoiceNumber} · {invoice.builderName}
-                    {invoice.projectName ? ` · ${invoice.projectName}` : ""}
-                  </DialogDescription>
-                </div>
-                <DemoBadge className="bg-white/10 text-gold ring-gold/40" />
+            <div className="grid gap-8 px-6 pt-7 sm:px-9 md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] md:gap-10">
+              <div className="md:order-2">
+                <NetReceivable offer={offer} keepBps={keepBps} />
               </div>
-            </div>
 
-            <div className="grid gap-6 px-6 py-6 sm:px-8 md:grid-cols-[1.15fr_1fr]">
-              <div>
-                <p className="eyebrow mb-1">Payout breakdown</p>
-                <div className="divide-y divide-border/70">
-                  <AmountRow label="Original invoice amount" value={formatINR(offer.invoiceAmountPaise)} hint="Including GST" />
-                  <AmountRow
+              <div className="md:order-1">
+                <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">Settlement statement</p>
+                <div className="mt-2">
+                  <StatementLine label="Original invoice value" hint="Including GST" value={<Money paise={offer.invoiceAmountPaise} />} />
+                  <StatementLine
                     label="Builder-approved amount"
-                    value={formatINR(offer.approvedAmountPaise)}
                     hint={partial ? "The builder approved a different amount; the discount applies to it." : "Approved in full"}
+                    value={<Money paise={offer.approvedAmountPaise} />}
                   />
-                  <AmountRow label={discountLabel} value={`− ${formatINR(offer.discountAmountPaise)}`} tone="deduct" hint="Deducted upfront" />
-                  <AmountRow label="Other charges" value={formatINR(offer.chargesPaise)} hint="No additional charges" />
-                  <AmountRow label="Net payable to you" value={formatINR(offer.netPayablePaise)} tone="total" hint="Paid to your registered bank account" />
+                  <StatementLine
+                    label={
+                      <>
+                        Agreed discount <span className="ml-1 rounded-sm bg-danger-soft px-1.5 py-px text-[0.6875rem] font-semibold text-danger tabular">{formatBps(offer.discountRateBps)}</span>
+                      </>
+                    }
+                    hint="Deducted upfront by the financier"
+                    value={<Money paise={offer.discountAmountPaise} sign="minus" />}
+                    deduct
+                  />
+                  <StatementLine label="Other charges" hint="Processing, stamp duty and fees" value={<Money paise={offer.chargesPaise} />} muted />
                 </div>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="rounded-lg border border-border bg-ivory/70 p-4">
-                  <p className="eyebrow mb-3 flex items-center gap-1.5">
-                    <Landmark className="size-3.5 text-gold-600" />
-                    Financing terms
-                  </p>
-                  <dl className="grid gap-2.5 text-sm">
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Programme</dt>
-                      <dd className="font-medium text-navy">
-                        {offer.terms.programmeName} <span className="text-xs font-normal text-muted-foreground">({offer.terms.programmeCode})</span>
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Financier</dt>
-                      <dd className="font-medium text-navy">{offer.terms.financier}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Terms</dt>
-                      <dd className="text-[0.8125rem] leading-relaxed text-slate-ink">{offer.terms.terms}</dd>
-                    </div>
-                  </dl>
-                </div>
-                <div className="flex items-start gap-3 rounded-lg border border-gold/30 bg-gold-100/60 p-4">
-                  <CalendarClock className="mt-0.5 size-4 shrink-0 text-gold-600" />
-                  <div className="text-sm">
-                    <p className="font-medium text-navy">Valid until {formatDateTime(offer.validUntil)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Generated {formatDateTime(offer.generatedAt)} · {offer.terms.offerValidityDays}-day validity
-                    </p>
+                <div className="mt-1 border-t-[3px] border-double border-navy/25 pt-3.5">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="text-sm font-semibold text-navy">Net receivable</span>
+                    <Money paise={offer.netPayablePaise} size="md" className="font-semibold text-heritage" />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="px-6 pb-6 sm:px-8">
+            <div className="px-6 pt-7 pb-5 sm:px-9">
+              <div className="rounded-lg border border-hairline bg-ivory-100 px-5 py-5">
+                <p className="flex items-center gap-2 text-[0.625rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+                  <Landmark className="size-3.5 text-gold-700" />
+                  Terms &amp; validity
+                </p>
+                <dl className="mt-4 grid gap-x-8 gap-y-4 text-[0.8125rem] sm:grid-cols-3">
+                  <div className="min-w-0">
+                    <dt className="text-xs text-muted-foreground">Financier</dt>
+                    <dd className="mt-0.5 font-medium text-navy">{offer.terms.financier}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs text-muted-foreground">Programme · {offer.terms.programmeCode}</dt>
+                    <dd className="mt-0.5 truncate font-medium text-navy" title={offer.terms.programmeName}>
+                      {offer.terms.programmeName}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <CalendarClock className="size-3.5 text-gold-700" />
+                      Valid until
+                    </dt>
+                    <dd className="mt-0.5 flex flex-wrap items-center gap-2 font-medium text-navy">
+                      {formatDateTime(offer.validUntil)}
+                      <span className="rounded-full bg-gold-100 px-2 py-px text-[0.6875rem] font-semibold text-gold-700">{daysLeft(offer.validUntil, openedAt)}</span>
+                    </dd>
+                  </div>
+                  <div className="sm:col-span-3">
+                    <dd className="border-l-2 border-gold/60 pl-3.5 text-[0.8125rem] leading-relaxed text-slate-ink">{offer.terms.terms}</dd>
+                    <p className="mt-2 pl-4 text-[0.6875rem] text-muted-foreground">
+                      Generated {formatDateTime(offer.generatedAt)} · {offer.terms.offerValidityDays}-day validity
+                    </p>
+                  </div>
+                </dl>
+              </div>
+            </div>
+
+            <div className="px-6 pb-6 sm:px-9">
               <label
                 htmlFor={`consent-${offer.id}`}
                 className={cn(
-                  "flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors",
-                  consent ? "border-heritage/40 bg-sage/50" : "border-border bg-card hover:bg-ivory/50",
+                  "flex cursor-pointer items-start gap-3.5 rounded-lg border p-4 transition-colors sm:p-5",
+                  consent ? "border-heritage/35 bg-heritage-50" : "border-border bg-card hover:border-gold/50 hover:bg-ivory-50",
                 )}
               >
                 <Checkbox
@@ -299,27 +383,27 @@ function OfferDialog({
                     if (v === true) setError(null);
                   }}
                   disabled={busy}
-                  className="mt-0.5"
+                  className="mt-0.5 size-[18px] data-checked:border-heritage data-checked:bg-heritage"
                   aria-describedby={`consent-text-${offer.id}`}
                 />
                 <span>
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-navy">
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-navy">
                     <ShieldCheck className="size-4 text-heritage" />I agree to the early payment terms
                   </span>
-                  <span id={`consent-text-${offer.id}`} className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                  <span id={`consent-text-${offer.id}`} className="mt-1.5 block text-xs leading-relaxed text-muted-foreground">
                     {consentText}
                   </span>
                 </span>
               </label>
 
               {error && (
-                <div role="alert" className="mt-4 flex flex-col gap-3 rounded-lg border border-[#ecc6bf] bg-[#f8e7e4] p-4 text-sm text-[#93342a] sm:flex-row sm:items-center sm:justify-between">
+                <div role="alert" className="mt-4 flex flex-col gap-3 rounded-lg border border-danger/25 bg-danger-soft p-4 text-sm text-danger sm:flex-row sm:items-center sm:justify-between">
                   <p className="flex items-start gap-2">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                     {error.message}
                   </p>
                   {error.regenerate && (
-                    <Button type="button" variant="outline" size="sm" onClick={regenerate} disabled={busy} className="shrink-0">
+                    <Button type="button" variant="outline" size="sm" onClick={regenerate} disabled={busy} className="shrink-0 bg-card">
                       {regenerating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
                       Generate fresh offer
                     </Button>
@@ -328,15 +412,24 @@ function OfferDialog({
               )}
             </div>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-border bg-ivory/60 px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-              <p className="text-xs text-muted-foreground">Demo transaction — no real funds move.</p>
+            <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-3 border-t border-hairline bg-ivory-100/95 px-6 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-9">
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Lock className="size-3.5" />
+                Demo transaction — no real funds move.
+              </p>
               <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy} className="h-11 bg-card px-5">
                   Not now
                 </Button>
-                <Button type="button" variant="success" onClick={accept} disabled={busy || !consent}>
-                  {accepting ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-                  Accept offer · {formatINR(offer.netPayablePaise)}
+                <Button
+                  type="button"
+                  variant="success"
+                  onClick={accept}
+                  disabled={busy || !consent}
+                  className="h-11 px-6 shadow-[0_10px_24px_-14px_rgba(23,77,60,0.9)] disabled:opacity-40"
+                >
+                  {accepting ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
+                  Confirm · <Money paise={offer.netPayablePaise} className="font-semibold" />
                 </Button>
               </div>
             </div>
@@ -344,6 +437,64 @@ function OfferDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function StatementLine({ label, hint, value, deduct, muted }: { label: ReactNode; hint?: string; value: ReactNode; deduct?: boolean; muted?: boolean }) {
+  return (
+    <div className="border-b border-hairline py-3 last:border-b-0">
+      <div className="flex items-baseline justify-between gap-4">
+        <span className={cn("text-sm", muted ? "text-muted-foreground" : "text-slate-ink")}>{label}</span>
+        <span className={cn("text-sm font-medium tabular", deduct ? "text-danger" : muted ? "text-muted-foreground" : "text-navy")}>{value}</span>
+      </div>
+      {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+/** Focal figure: champagne-framed net receivable with the paise de-emphasised. */
+function NetReceivable({ offer, keepBps }: { offer: OfferDto; keepBps: number }) {
+  return (
+    <div className="relative flex h-full overflow-hidden rounded-xl border border-gold/45 bg-[linear-gradient(180deg,#fcf8ef_0%,#ffffff_70%)] p-1.5 shadow-[0_24px_50px_-34px_rgba(169,138,82,0.75)]">
+      <div className="relative flex w-full flex-col justify-center rounded-[9px] border border-gold/25 px-5 pt-7 pb-6 text-center sm:px-8">
+        <Corner className="top-2 left-2" />
+        <Corner className="top-2 right-2 rotate-90" />
+        <Corner className="right-2 bottom-2 rotate-180" />
+        <Corner className="bottom-2 left-2 -rotate-90" />
+        <p className="text-[0.625rem] font-semibold tracking-[0.24em] text-gold-700 uppercase">Net receivable</p>
+        <Money paise={offer.netPayablePaise} size="display" className="mt-4 block font-normal text-navy" />
+        <p className="mt-3 text-xs text-muted-foreground">Paid to your registered bank account on approval</p>
+        <div aria-hidden="true" className="mx-auto mt-5 flex max-w-[14rem] items-center gap-3">
+          <span className="h-px flex-1 bg-linear-to-r from-transparent to-gold/60" />
+          <span className="size-1.5 rotate-45 bg-gold" />
+          <span className="h-px flex-1 bg-linear-to-l from-transparent to-gold/60" />
+        </div>
+        <dl className="mt-5 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <dt className="text-[0.625rem] tracking-[0.14em] text-muted-foreground uppercase">Approved</dt>
+            <dd className="mt-1 text-[0.8125rem] font-medium text-navy">
+              <Money paise={offer.approvedAmountPaise} showPaise={false} />
+            </dd>
+          </div>
+          <div className="border-x border-gold/25">
+            <dt className="text-[0.625rem] tracking-[0.14em] text-muted-foreground uppercase">Rate</dt>
+            <dd className="mt-1 text-[0.8125rem] font-medium text-navy tabular">{formatBps(offer.discountRateBps)} fixed</dd>
+          </div>
+          <div>
+            <dt className="text-[0.625rem] tracking-[0.14em] text-muted-foreground uppercase">You keep</dt>
+            <dd className="mt-1 text-[0.8125rem] font-medium text-heritage tabular">{formatBps(keepBps)}</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  );
+}
+
+function Corner({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 12 12" className={cn("absolute size-3 text-gold/70", className)} fill="none">
+      <path d="M1 11V3a2 2 0 0 1 2-2h8" stroke="currentColor" strokeWidth="1" />
+    </svg>
   );
 }
 
@@ -358,37 +509,95 @@ function AcceptedState({
   reference: string;
   onClose: () => void;
 }) {
+  const next = [
+    { title: "Offer accepted", body: "Your consent and the agreed terms are recorded.", state: "done" as const },
+    { title: "Veefin approval", body: `${offer.terms.financier} reviews the request.`, state: "current" as const },
+    { title: "Payout", body: "The net amount is paid to your registered account (simulated).", state: "upcoming" as const },
+  ];
   return (
-    <div className="animate-fade-up px-6 py-10 text-center sm:px-10">
-      <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-sage text-heritage ring-8 ring-sage/40">
-        <CheckCircle2 className="size-7" strokeWidth={1.6} />
-      </span>
-      <DialogTitle className="mt-6 font-display text-[1.875rem] font-semibold text-navy">Offer accepted</DialogTitle>
-      <DialogDescription className="mx-auto mt-2 max-w-md text-sm leading-relaxed">
-        Your early payment request for invoice {invoice.invoiceNumber} has been sent to Veefin. You will see each step — approval and the simulated payout — on the
-        invoice and under My Transactions.
-      </DialogDescription>
-      <div className="mx-auto mt-6 grid max-w-md gap-3 rounded-lg border border-border bg-ivory/60 p-4 text-left text-sm sm:grid-cols-2">
+    <div className="animate-fade-up">
+      <div className="grid gap-8 px-6 py-8 sm:px-9 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] md:gap-10">
         <div>
-          <p className="eyebrow">Request reference</p>
-          <p className="mt-1 font-medium text-navy">{reference}</p>
+          <div className="flex items-center gap-4">
+            <span className="relative flex size-14 shrink-0 items-center justify-center">
+              <span aria-hidden="true" className="absolute inset-0 rounded-full border border-gold/50" />
+              <span aria-hidden="true" className="absolute inset-1.5 rounded-full bg-heritage" />
+              <Check className="relative size-6 text-white" strokeWidth={2.25} />
+            </span>
+            <div>
+              <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-heritage uppercase">Request submitted</p>
+              <p className="mt-1 inline-flex items-center gap-2 rounded-full border border-warning/25 bg-warning-soft px-3 py-1 text-xs font-medium text-warning">
+                <span aria-hidden="true" className="size-1.5 animate-pulse rounded-full bg-[#c48a2c]" />
+                Pending approval
+              </p>
+            </div>
+          </div>
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-slate-ink">
+            Your early payment request for invoice <span className="font-medium text-navy">{invoice.invoiceNumber}</span> has been sent to Veefin. Each step — approval
+            and the simulated payout — will appear on the invoice and under My Transactions.
+          </p>
+
+          <ol className="mt-7 grid gap-0">
+            {next.map((step, i) => (
+              <li key={step.title} className="relative flex gap-4 pb-5 last:pb-0">
+                {i < next.length - 1 && <span aria-hidden="true" className="absolute top-6 bottom-0 left-[11px] w-px bg-ivory-300" />}
+                <span
+                  className={cn(
+                    "relative flex size-6 shrink-0 items-center justify-center rounded-full",
+                    step.state === "done" && "bg-heritage text-white",
+                    step.state === "current" && "border border-[#c48a2c] bg-warning-soft",
+                    step.state === "upcoming" && "border border-ivory-300 bg-card",
+                  )}
+                >
+                  {step.state === "done" ? <Check className="size-3.5" strokeWidth={2.5} /> : <span className={cn("size-1.5 rounded-full", step.state === "current" ? "bg-[#c48a2c]" : "bg-ivory-400")} />}
+                </span>
+                <div className="pt-0.5">
+                  <p className={cn("text-sm font-medium", step.state === "upcoming" ? "text-muted-foreground" : "text-navy")}>{step.title}</p>
+                  <p className="text-xs text-muted-foreground">{step.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
-        <div>
-          <p className="eyebrow">Status</p>
-          <StatusBadge kind="financing" status="PENDING_APPROVAL" className="mt-1" />
-        </div>
-        <div className="sm:col-span-2">
-          <p className="eyebrow">Net payable to you</p>
-          <p className="tabular mt-1 font-display text-2xl font-semibold text-heritage">{formatINR(offer.netPayablePaise)}</p>
+
+        <div className="relative overflow-hidden rounded-xl border border-border bg-ivory-100">
+          <div aria-hidden="true" className="h-1 bg-linear-to-r from-gold/40 via-gold to-gold/40" />
+          <div className="px-6 py-6">
+            <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">Request reference</p>
+            <p className="mt-1.5 text-lg font-semibold tracking-[0.04em] text-navy tabular">{reference}</p>
+            <div aria-hidden="true" className="my-5 border-t border-dashed border-ivory-300" />
+            <dl className="grid gap-3 text-[0.8125rem]">
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Invoice</dt>
+                <dd className="font-medium text-navy">{invoice.invoiceNumber}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Offer</dt>
+                <dd className="font-medium text-navy">{offer.reference}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Discount · {formatBps(offer.discountRateBps)}</dt>
+                <dd className="font-medium text-danger">
+                  <Money paise={offer.discountAmountPaise} sign="minus" />
+                </dd>
+              </div>
+            </dl>
+            <div className="mt-5 border-t border-border pt-4">
+              <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-700 uppercase">Net receivable</p>
+              <Money paise={offer.netPayablePaise} size="xl" className="mt-2 block font-medium text-heritage" />
+            </div>
+          </div>
         </div>
       </div>
-      <div className="mt-8 flex flex-col-reverse justify-center gap-2 sm:flex-row">
-        <Button type="button" variant="outline" onClick={onClose}>
+
+      <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-t border-hairline bg-ivory-100/95 px-6 py-4 backdrop-blur sm:flex-row sm:justify-end sm:px-9">
+        <Button type="button" variant="outline" onClick={onClose} className="h-11 bg-card px-5">
           Close
         </Button>
-        <Button asChild>
+        <Button asChild className="h-11 px-6">
           <Link href={`/partner/invoices/${invoice.id}`} onClick={onClose}>
             View invoice & request
+            <ArrowRight />
           </Link>
         </Button>
       </div>

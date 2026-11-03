@@ -24,9 +24,9 @@ export default async function LoginPage() {
       <aside className="relative isolate hidden overflow-hidden bg-navy text-white lg:flex lg:flex-col">
         <div aria-hidden="true" className="absolute inset-0 -z-20 bg-[linear-gradient(165deg,#1a3654_0%,#142b43_42%,#0b1b2c_100%)]" />
         <div aria-hidden="true" className="blueprint-grid absolute inset-0 -z-20 [mask-image:radial-gradient(120%_80%_at_70%_60%,#000_30%,transparent_80%)]" />
-        <ArchitecturalScene className="absolute right-[-4%] bottom-[6%] -z-10 h-[78%] w-[72%] max-w-[760px]" />
-        <div aria-hidden="true" className="absolute inset-y-0 left-0 -z-10 w-[62%] bg-gradient-to-r from-navy-900/95 via-navy/70 to-transparent" />
-        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-navy-950/90 to-transparent" />
+        <ArchitecturalScene className="absolute right-[-16%] bottom-[20%] -z-10 h-[70%] w-[66%] max-w-[700px] xl:right-[-10%]" />
+        <div aria-hidden="true" className="absolute inset-y-0 left-0 -z-10 w-[72%] bg-gradient-to-r from-navy-900 via-navy-900/85 to-transparent" />
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 -z-10 h-[38%] bg-gradient-to-t from-navy-950 via-navy-950/85 to-transparent" />
 
         <div className="flex flex-1 flex-col px-12 py-11 xl:px-16 xl:py-14">
           <Logo tone="light" size="lg" showTagline className="animate-fade-in" />
@@ -41,7 +41,7 @@ export default async function LoginPage() {
               <br />
               <span className="font-accent font-medium text-gold-300 italic">Liquidity, delivered.</span>
             </h1>
-            <p className="mt-6 max-w-md text-[0.9375rem] leading-relaxed text-white/65">
+            <p className="mt-6 max-w-[25rem] text-[0.9375rem] leading-relaxed text-white/70">
               BrickFlow brings channel partners, real estate builders and their financing partner onto one auditable workflow, from invoice
               approval to early payment.
             </p>
