@@ -1,5 +1,6 @@
 "use client";
 
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
@@ -10,15 +11,65 @@ import { activeHref } from "./sidebar-nav";
 
 const SEGMENT_LABELS: Record<string, string> = { new: "New", edit: "Edit" };
 
-function humanise(segment: string): string {
+/** Singular record names, used when a dynamic id follows a collection segment. */
+const RECORD_LABELS: Record<string, string> = {
+  invoices: "Invoice",
+  requests: "Financing request",
+  transactions: "Transaction",
+  organisations: "Organisation",
+  builders: "Builder",
+  partners: "Channel partner",
+  programmes: "Programme",
+  disbursements: "Disbursement",
+  settlements: "Settlement",
+  offers: "Offer",
+  projects: "Project",
+  documents: "Document",
+  users: "User",
+};
+
+function isRecordId(segment: string): boolean {
+  return /^[a-z0-9]{16,}$/i.test(segment) || /^[0-9a-f-]{20,}$/i.test(segment) || /^\d+$/.test(segment);
+}
+
+function humanise(segment: string, parent?: string): string {
   if (SEGMENT_LABELS[segment]) return SEGMENT_LABELS[segment];
-  if (/^[a-z0-9]{16,}$/i.test(segment) || /^[0-9a-f-]{20,}$/i.test(segment)) return "Details";
+  if (isRecordId(segment)) {
+    if (parent && RECORD_LABELS[parent]) return RECORD_LABELS[parent];
+    if (parent && parent.length > 3 && parent.endsWith("s")) return humanise(parent.slice(0, -1));
+    return "Details";
+  }
   return segment.replace(/[-_]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
-/** Workspace eyebrow plus a trail derived from the navigation map: Section › Details. */
+type PageLabel = { pathname: string; label: string } | null;
+
+const BreadcrumbLabelContext = createContext<{ value: PageLabel; set: (value: PageLabel) => void } | null>(null);
+
+export function BreadcrumbProvider({ children }: { children: ReactNode }) {
+  const [value, set] = useState<PageLabel>(null);
+  return <BreadcrumbLabelContext.Provider value={{ value, set }}>{children}</BreadcrumbLabelContext.Provider>;
+}
+
+/**
+ * Renders nothing; names the current page's last breadcrumb, e.g. `<BreadcrumbLabel label={invoice.number} />`.
+ * Can be rendered from a server page. The label applies only to the pathname it was set on.
+ */
+export function BreadcrumbLabel({ label }: { label: string }) {
+  const set = useContext(BreadcrumbLabelContext)?.set;
+  const pathname = usePathname();
+  useEffect(() => {
+    if (!set) return;
+    set({ pathname, label });
+    return () => set(null);
+  }, [set, pathname, label]);
+  return null;
+}
+
+/** Workspace eyebrow plus a trail derived from the navigation map: Section › Record. */
 export function Breadcrumbs({ workspace, className }: { workspace: WorkspaceKey; className?: string }) {
   const pathname = usePathname();
+  const pageLabel = useContext(BreadcrumbLabelContext)?.value;
   const items = NAVIGATION[workspace].flatMap((s) => s.items);
   const currentHref = activeHref(pathname, items);
   const current = items.find((i) => i.href === currentHref);
@@ -26,11 +77,16 @@ export function Breadcrumbs({ workspace, className }: { workspace: WorkspaceKey;
   if (current) {
     crumbs.push({ label: current.title, href: current.href });
     const rest = pathname.slice(current.href.length).split("/").filter(Boolean);
+    const parents = [current.href.split("/").filter(Boolean).pop(), ...rest];
     rest.forEach((segment, i) => {
-      crumbs.push({ label: humanise(segment), href: `${current.href}/${rest.slice(0, i + 1).join("/")}` });
+      crumbs.push({ label: humanise(segment, parents[i]), href: `${current.href}/${rest.slice(0, i + 1).join("/")}` });
     });
   } else {
-    crumbs.push({ label: humanise(pathname.split("/").filter(Boolean).pop() ?? "Overview") });
+    const segments = pathname.split("/").filter(Boolean);
+    crumbs.push({ label: segments.length ? humanise(segments[segments.length - 1], segments[segments.length - 2]) : "Overview" });
+  }
+  if (pageLabel?.pathname === pathname && crumbs.length > 0) {
+    crumbs[crumbs.length - 1] = { ...crumbs[crumbs.length - 1], label: pageLabel.label };
   }
 
   return (

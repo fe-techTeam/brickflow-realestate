@@ -14,7 +14,7 @@ export default function FinanceError({ error, retry }: { error: unknown; retry: 
 
   return (
     <div className="surface mx-auto flex max-w-xl animate-fade-up flex-col items-center px-6 py-14 text-center">
-      <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-[#fbf1df] text-[#8a5a12] ring-1 ring-[#efd9ae]">
+      <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-warning-soft text-warning ring-1 ring-[#efd9ae]">
         <AlertTriangle className="size-5" strokeWidth={1.6} />
       </span>
       <p className="eyebrow mb-2 text-gold-600">Veefin Finance</p>

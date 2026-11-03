@@ -44,22 +44,22 @@ export function InternalCommentForm({ requestId }: { requestId: string }) {
         id="internal-comment"
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        placeholder="Add a note for the credit team…"
+        placeholder="Add a private annotation for the credit team…"
         rows={3}
         maxLength={2000}
         disabled={pending}
         aria-invalid={Boolean(error)}
         aria-describedby="internal-comment-hint"
-        className="bg-card"
+        className="min-h-24 resize-y border-border bg-card text-[0.875rem] leading-relaxed shadow-none focus-visible:border-gold"
       />
       <div className="flex items-center justify-between gap-3">
         <p id="internal-comment-hint" className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
           <Lock className="size-3" aria-hidden="true" />
           Shared with Veefin users only
         </p>
-        <Button type="submit" size="sm" disabled={pending || body.trim().length === 0}>
+        <Button type="submit" size="sm" className="px-3.5" disabled={pending || body.trim().length === 0}>
           {pending && <Loader2 className="size-3.5 animate-spin" />}
-          Add comment
+          Add annotation
         </Button>
       </div>
       {error && (

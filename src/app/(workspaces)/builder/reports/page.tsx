@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { BarChart3, Clock, Download, FileSpreadsheet, FileStack, HandCoins, Landmark, Timer } from "lucide-react";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
-import { StatCard, StatGrid } from "@/components/common/stat-card";
+import { BarChart3, Download, FileSpreadsheet, HandCoins, Landmark, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatINRCompact, sumPaise } from "@/lib/money";
 import { SETTLEMENT_STATUS } from "@/lib/status";
 import { requireWorkspace } from "@/server/auth/session";
 import { getBuilderReport } from "@/server/queries/builder";
+import { Empty, Figure, Masthead, Metric, MetricStrip, Panel } from "../_components/kit";
+import { Money } from "../_components/money";
 import { formatDays } from "../_lib/dates";
 import { FinancingByProjectChart, MonthlyVolumeChart, SettlementProfileChart, TurnaroundChart } from "./_components/report-charts";
 
@@ -36,10 +35,10 @@ export default async function ReportsPage() {
 
   return (
     <>
-      <PageHeader
+      <Masthead
         eyebrow="Finance"
         title="Reports"
-        description="Invoice flow, approval speed, early-payment take-up and settlement exposure across your projects."
+        lede="Invoice flow, approval speed, early-payment take-up and settlement exposure across your projects."
         actions={
           <Button asChild>
             <a href={EXPORT_URL} download>
@@ -50,47 +49,53 @@ export default async function ReportsPage() {
         }
       />
 
-      <StatGrid className="mb-8 xl:grid-cols-4 2xl:grid-cols-4">
-        <StatCard label="Invoices received" value={report.invoiceCount} hint={`${monthlyTotal} submitted since ${firstMonth}`} icon={FileStack} />
-        <StatCard
+      <MetricStrip className="mb-6 grid-cols-1 sm:mb-8 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric
+          label="Invoices received"
+          value={<Figure unit={report.invoiceCount === 1 ? "invoice" : "invoices"}>{report.invoiceCount}</Figure>}
+          caption={`${monthlyTotal} submitted since ${firstMonth}`}
+        />
+        <Metric
           label="Average turnaround"
-          value={formatDays(report.turnaround.averageDays)}
-          hint={`Submission to decision across ${report.turnaround.decidedCount} decided ${report.turnaround.decidedCount === 1 ? "invoice" : "invoices"}`}
-          icon={Timer}
-          tone="slate"
+          accent="slate"
+          value={<Figure>{formatDays(report.turnaround.averageDays)}</Figure>}
+          caption={`Submission to decision across ${report.turnaround.decidedCount} decided ${report.turnaround.decidedCount === 1 ? "invoice" : "invoices"}`}
         />
-        <StatCard label="Median turnaround" value={formatDays(report.turnaround.medianDays)} hint="Half of decisions are made within this time" icon={Clock} tone="slate" />
-        <StatCard
+        <Metric label="Median turnaround" accent="slate" value={<Figure>{formatDays(report.turnaround.medianDays)}</Figure>} caption="Half of decisions are made within this time" />
+        <Metric
           label="Early-payment take-up"
-          value={takeUp === null ? "—" : `${takeUp.toFixed(1)}%`}
-          hint={`${formatINRCompact(financed)} of ${formatINRCompact(approved)} approved value financed`}
-          icon={HandCoins}
-          tone="gold"
+          accent="gold"
+          value={<Figure>{takeUp === null ? "—" : `${takeUp.toFixed(1)}%`}</Figure>}
+          caption={
+            <>
+              <Money paise={financed} compact /> of <Money paise={approved} compact /> approved value financed
+            </>
+          }
         />
-      </StatGrid>
+      </MetricStrip>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Section title="Monthly invoice volume" description={`Value submitted by channel partners and the amount you approved, by month of submission (${firstMonth} – ${lastMonth})`}>
+      <div className="grid gap-6 sm:gap-8 xl:grid-cols-2">
+        <Panel eyebrow="Flow" title="Monthly invoice volume" description={`Value submitted by channel partners and the amount you approved, by month of submission (${firstMonth} – ${lastMonth})`}>
           {monthlyTotal === 0 ? (
-            <EmptyState icon={BarChart3} title="No invoices in this period" className="py-10" />
+            <Empty icon={BarChart3} title="No invoices in this period" className="py-10" />
           ) : (
             <MonthlyVolumeChart
               data={report.monthly.map((m) => ({ label: m.label, count: m.count, submitted: toRupees(m.value), approved: toRupees(m.approvedValue) }))}
             />
           )}
-        </Section>
+        </Panel>
 
-        <Section title="Approval turnaround" description="Time from submission (or latest resubmission) to your approval or rejection">
+        <Panel eyebrow="Speed" title="Approval turnaround" description="Time from submission (or latest resubmission) to your approval or rejection">
           {report.turnaround.decidedCount === 0 ? (
-            <EmptyState icon={Timer} title="No decisions yet" description="Turnaround appears once invoices are approved or rejected." className="py-10" />
+            <Empty icon={Timer} title="No decisions yet" description="Turnaround appears once invoices are approved or rejected." className="py-10" />
           ) : (
             <TurnaroundChart data={report.turnaround.distribution} />
           )}
-        </Section>
+        </Panel>
 
-        <Section title="Financed vs not financed by project" description="Approved value of accepted invoices, split by whether the partner took early payment">
+        <Panel eyebrow="Take-up" title="Financed vs not financed by project" description="Approved value of accepted invoices, split by whether the partner took early payment">
           {report.financingByProject.length === 0 ? (
-            <EmptyState icon={HandCoins} title="No approved invoices yet" className="py-10" />
+            <Empty icon={HandCoins} title="No approved invoices yet" className="py-10" />
           ) : (
             <FinancingByProjectChart
               data={report.financingByProject.map((p) => ({
@@ -102,9 +107,10 @@ export default async function ReportsPage() {
               }))}
             />
           )}
-        </Section>
+        </Panel>
 
-        <Section
+        <Panel
+          eyebrow="Exposure"
           title="Settlement profile"
           description={`Amounts owed to Veefin by settlement status${
             report.awaitingDisbursement.count > 0 ? ` · ${formatINRCompact(report.awaitingDisbursement.value)} more once pending disbursements complete` : ""
@@ -113,15 +119,17 @@ export default async function ReportsPage() {
           {hasSettlements ? (
             <SettlementProfileChart data={settlementRows} />
           ) : (
-            <EmptyState icon={Landmark} title="No settlements yet" description="Settlements arise when Veefin pays a partner early on your approved invoice." className="py-10" />
+            <Empty icon={Landmark} title="No settlements yet" description="Settlements arise when Veefin pays a partner early on your approved invoice." className="py-10" />
           )}
-        </Section>
+        </Panel>
       </div>
 
-      <Section className="mt-6" title="Data export" description="Download every invoice visible to your organisation for reconciliation or your ERP">
+      <Panel className="mt-6 sm:mt-8" eyebrow="Reconciliation" title="Data export" description="Download every invoice visible to your organisation for reconciliation or your ERP">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-3">
-            <FileSpreadsheet className="mt-0.5 size-5 shrink-0 text-heritage" strokeWidth={1.6} />
+          <div className="flex gap-4">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-sage text-heritage">
+              <FileSpreadsheet className="size-5" strokeWidth={1.6} />
+            </span>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-ink">
               CSV with one row per invoice: partner, project, dates, status, invoice / GST / approved amounts in rupees, and the early-payment and settlement position. Opens
               directly in Excel. Disbursement references are simulated.
@@ -134,7 +142,7 @@ export default async function ReportsPage() {
             </a>
           </Button>
         </div>
-      </Section>
+      </Panel>
     </>
   );
 }

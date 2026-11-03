@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Handshake } from "lucide-react";
-import { DataTable, readSort, SortTh, sortRows, Td, Th, Tr } from "@/components/common/data-table";
+import { readSort, sortRows } from "@/components/common/data-table";
 import { ListToolbar } from "@/components/common/list-toolbar";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
-import { formatINR } from "@/lib/money";
+import { sumPaise } from "@/lib/money";
 import { requireWorkspace } from "@/server/auth/session";
 import { listFinancePartners, listFinancierBuilderOptions, type FinancePartnerRow } from "@/server/queries/finance";
+import { Count, EmptyNote, KeyFigures, Masthead, Money, Monogram, Panel } from "../_components/ledger";
+import { LedgerTable, LSortTh, LTd, LTh, LTr } from "../_components/ledger-table";
 
 export const metadata: Metadata = { title: "Channel partners · Veefin Finance" };
 
@@ -35,88 +35,144 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       (!builder || p.builders.some((b) => b.id === builder)),
   );
   const rows = sortRows(filtered, sort, accessors);
+  const pending = partners.reduce((n, p) => n + p.pendingCount, 0);
+  const requestTotal = partners.reduce((n, p) => n + p.requestCount, 0);
 
   return (
     <>
-      <PageHeader
-        eyebrow="Portfolio"
+      <Masthead
+        eyebrow="Portfolio · Beneficiaries"
         title="Channel partners"
-        description="Brokers empanelled with builders on Veefin programmes, and those who have requested early payment."
+        context={[
+          <span key="n">
+            <strong className="font-semibold text-navy">{partners.length}</strong> partner{partners.length === 1 ? "" : "s"} empanelled with programme builders
+          </span>,
+          <span key="p">{pending} pending approval</span>,
+        ]}
       />
 
-      <Section title="Channel partner directory" description={`${rows.length} of ${partners.length} partners`} bodyClassName="p-0 sm:p-0">
-        <div className="border-b border-border/80 px-5 py-4 sm:px-6">
+      <KeyFigures
+        items={[
+          { label: "Channel partners", value: <Count value={partners.length} />, hint: "Brokers on Veefin programme builders" },
+          { label: "Financing requests", value: <Count value={requestTotal} />, hint: "Raised with Veefin, all statuses", accent: "navy" },
+          { label: "Pending approval", value: <Count value={pending} />, hint: pending ? "Awaiting a credit decision" : "Queue is clear", accent: "gold", href: "/finance/requests?status=PENDING_APPROVAL" },
+          {
+            label: "Net disbursed",
+            value: <Money paise={sumPaise(partners.map((p) => p.disbursedValue))} compact size="lg" className="text-heritage" />,
+            hint: "Simulated payouts to partners",
+            accent: "heritage",
+          },
+        ]}
+      />
+
+      <Panel className="mt-8" eyebrow="Directory" title="Channel partner register" description={`${rows.length} of ${partners.length} partners`} bodyClassName="pb-0">
+        <div className="border-t border-border/70 py-4">
           <ListToolbar searchPlaceholder="Search name, GSTIN or city…" filters={[{ param: "builder", label: "Builders", options: builderOptions }]} />
         </div>
         {rows.length === 0 ? (
-          <EmptyState icon={Handshake} title="No matching channel partners" description="Clear the search or builder filter to see all partners." />
+          <EmptyNote
+            icon={Handshake}
+            title="No matching channel partners"
+            description="Clear the search or builder filter to see every partner."
+            action={
+              <Button asChild variant="outline">
+                <Link href={PATH}>Show all partners</Link>
+              </Button>
+            }
+            className="border-t border-border/70"
+          />
         ) : (
-          <div className="px-5 sm:px-6">
-            <DataTable minWidth={1000}>
+          <>
+            <ul className="-mx-5 divide-y divide-border/70 border-t border-border/70 md:hidden">
+              {rows.map((p) => (
+                <li key={p.id}>
+                  <Link href={`/finance/partners/${p.id}`} className="flex items-center gap-3 px-5 py-4">
+                    <Monogram name={p.name} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-navy">{p.name}</p>
+                      <p className="truncate text-[0.6875rem] text-muted-foreground">
+                        {p.city ?? "—"} · {p.requestCount} request{p.requestCount === 1 ? "" : "s"}
+                        {p.pendingCount > 0 && ` · ${p.pendingCount} pending`}
+                      </p>
+                    </div>
+                    <Money paise={p.disbursedValue} className="text-heritage" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <LedgerTable minWidth={1000} className="hidden md:block">
               <thead>
                 <tr>
-                  <SortTh label="Channel partner" sortKey="name" sort={sort} searchParams={params} pathname={PATH} />
-                  <Th>GSTIN</Th>
-                  <Th>Empanelled builders</Th>
-                  <SortTh label="Requests" sortKey="requests" sort={sort} searchParams={params} pathname={PATH} align="right" />
-                  <SortTh label="Net disbursed" sortKey="disbursed" sort={sort} searchParams={params} pathname={PATH} align="right" />
-                  <Th align="right">
+                  <LSortTh label="Channel partner" sortKey="name" sort={sort} searchParams={params} pathname={PATH} />
+                  <LTh>GSTIN</LTh>
+                  <LTh>Empanelled builders</LTh>
+                  <LSortTh label="Requests" sortKey="requests" sort={sort} searchParams={params} pathname={PATH} align="right" />
+                  <LSortTh label="Net disbursed" sortKey="disbursed" sort={sort} searchParams={params} pathname={PATH} align="right" />
+                  <LTh align="right">
                     <span className="sr-only">Action</span>
-                  </Th>
+                  </LTh>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((p) => (
-                  <Tr key={p.id}>
-                    <Td>
-                      <Link href={`/finance/partners/${p.id}`} className="font-medium text-navy hover:underline">
-                        {p.name}
-                      </Link>
-                      <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {p.city ?? "—"}
-                        {p.status !== "ACTIVE" && <StatusBadge kind="record" status={p.status} />}
-                      </p>
-                    </Td>
-                    <Td className="tabular text-xs">{p.gstin ?? "—"}</Td>
-                    <Td>
+                  <LTr key={p.id}>
+                    <LTd>
+                      <div className="flex items-center gap-3">
+                        <Monogram name={p.name} size="sm" />
+                        <div className="min-w-0">
+                          <Link href={`/finance/partners/${p.id}`} className="font-medium text-navy underline-offset-4 hover:underline">
+                            {p.name}
+                          </Link>
+                          <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {p.city ?? "—"}
+                            {p.status !== "ACTIVE" && <StatusBadge kind="record" status={p.status} />}
+                          </p>
+                        </div>
+                      </div>
+                    </LTd>
+                    <LTd className="tabular text-xs tracking-wide">{p.gstin ?? "—"}</LTd>
+                    <LTd>
                       {p.builders.length === 0 ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
-                        <ul className="space-y-0.5">
+                        <ul className="flex flex-wrap gap-1.5">
                           {p.builders.map((b) => (
-                            <li key={b.id} className="text-sm">
-                              <Link href={`/finance/builders/${b.id}`} className="text-slate-ink hover:text-navy hover:underline">
+                            <li key={b.id}>
+                              <Link
+                                href={`/finance/builders/${b.id}`}
+                                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-ivory/50 px-2.5 py-0.5 text-xs text-slate-ink transition-colors hover:border-gold/50 hover:text-navy"
+                              >
                                 {b.name}
+                                <span className="tabular text-[0.625rem] text-muted-foreground">{b.code}</span>
                               </Link>
-                              <span className="tabular ml-1.5 text-xs text-muted-foreground">{b.code}</span>
                             </li>
                           ))}
                         </ul>
                       )}
-                    </Td>
-                    <Td align="right">
-                      {p.requestCount}
-                      {p.pendingCount > 0 && <p className="text-xs text-[#8a5a12]">{p.pendingCount} pending</p>}
-                    </Td>
-                    <Td align="right" className="font-medium text-heritage">
-                      {formatINR(p.disbursedValue)}
-                      <p className="text-xs font-normal text-muted-foreground">{p.disbursedCount} payouts</p>
-                    </Td>
-                    <Td align="right">
+                    </LTd>
+                    <LTd align="right">
+                      <span className="text-navy">{p.requestCount}</span>
+                      {p.pendingCount > 0 && <p className="text-[0.6875rem] font-medium text-warning">{p.pendingCount} pending</p>}
+                    </LTd>
+                    <LTd align="right">
+                      <Money paise={p.disbursedValue} className="font-semibold text-heritage" />
+                      <p className="text-[0.6875rem] text-muted-foreground">{p.disbursedCount} payouts</p>
+                    </LTd>
+                    <LTd align="right">
                       <Button asChild size="sm" variant="outline">
                         <Link href={`/finance/partners/${p.id}`} aria-label={`View ${p.name}`}>
-                          View
+                          Open
                           <ArrowRight className="size-3.5" />
                         </Link>
                       </Button>
-                    </Td>
-                  </Tr>
+                    </LTd>
+                  </LTr>
                 ))}
               </tbody>
-            </DataTable>
-          </div>
+            </LedgerTable>
+          </>
         )}
-      </Section>
+      </Panel>
     </>
   );
 }

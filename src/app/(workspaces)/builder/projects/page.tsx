@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, CheckCircle2, FileStack, HandCoins } from "lucide-react";
-import { DataTable, readSort, SortTh, sortRows, Td, Th, Tr } from "@/components/common/data-table";
+import { Building2 } from "lucide-react";
+import { readSort, sortRows } from "@/components/common/data-table";
 import { ListToolbar } from "@/components/common/list-toolbar";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
-import { StatCard, StatGrid } from "@/components/common/stat-card";
 import { StatusBadge } from "@/components/common/status-badge";
 import type { RecordStatus } from "@/generated/prisma/enums";
-import { formatINR, formatINRCompact, sumPaise } from "@/lib/money";
+import { sumPaise } from "@/lib/money";
 import { requireWorkspace } from "@/server/auth/session";
 import { listBuilderProjects } from "@/server/queries/builder";
-import { ToolbarRow } from "../_components/toolbar-row";
+import { Empty, Figure, Masthead, Metric, MetricStrip, Panel, ShareBar } from "../_components/kit";
+import { Money } from "../_components/money";
+import { Ledger, SortTh, TableToolbar, Td, Th, Tr } from "../_components/table";
 import { enumParam, param, type SearchParams } from "../_lib/params";
 
 export const metadata: Metadata = { title: "Projects" };
@@ -44,26 +43,44 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
     approved: (p) => p.totals.approvedValue,
     financed: (p) => p.totals.financedValue,
   });
+  const invoiceCount = projects.reduce((n, p) => n + p.totals.invoiceCount, 0);
 
   return (
     <>
-      <PageHeader eyebrow="Directory" title="Projects" description="Your RERA-registered projects and the channel partner invoices raised against each of them." />
+      <Masthead eyebrow="Directory" title="Projects" lede="Your RERA-registered projects and the channel partner invoices raised against each of them." />
 
-      <StatGrid className="mb-8 xl:grid-cols-4 2xl:grid-cols-4">
-        <StatCard label="Projects" value={projects.length} hint={`${projects.filter((p) => p.status === "ACTIVE").length} active · ${cities.length} ${cities.length === 1 ? "city" : "cities"}`} icon={Building2} />
-        <StatCard
-          label="Invoices raised"
-          value={projects.reduce((n, p) => n + p.totals.invoiceCount, 0)}
-          hint={`${formatINRCompact(sumPaise(projects.map((p) => p.totals.invoiceValue)))} invoiced in total`}
-          icon={FileStack}
-          tone="slate"
+      <MetricStrip className="mb-6 grid-cols-1 sm:mb-8 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric
+          label="Projects"
+          value={<Figure unit={projects.length === 1 ? "project" : "projects"}>{projects.length}</Figure>}
+          caption={`${projects.filter((p) => p.status === "ACTIVE").length} active · ${cities.length} ${cities.length === 1 ? "city" : "cities"}`}
         />
-        <StatCard label="Approved value" value={formatINRCompact(sumPaise(projects.map((p) => p.totals.approvedValue)))} hint="Approved amount of accepted invoices" icon={CheckCircle2} tone="heritage" />
-        <StatCard label="Financed value" value={formatINRCompact(sumPaise(projects.map((p) => p.totals.financedValue)))} hint="Paid early to partners by Veefin" icon={HandCoins} tone="gold" />
-      </StatGrid>
+        <Metric
+          label="Invoices raised"
+          accent="slate"
+          value={<Figure unit={invoiceCount === 1 ? "invoice" : "invoices"}>{invoiceCount}</Figure>}
+          caption={
+            <>
+              <Money paise={sumPaise(projects.map((p) => p.totals.invoiceValue))} compact /> invoiced in total
+            </>
+          }
+        />
+        <Metric
+          label="Approved value"
+          accent="heritage"
+          value={<Money paise={sumPaise(projects.map((p) => p.totals.approvedValue))} compact size="xl" className="font-normal" />}
+          caption="Approved amount of accepted invoices"
+        />
+        <Metric
+          label="Financed value"
+          accent="gold"
+          value={<Money paise={sumPaise(projects.map((p) => p.totals.financedValue))} compact size="xl" className="font-normal" />}
+          caption="Paid early to partners by Veefin"
+        />
+      </MetricStrip>
 
-      <Section title="All projects" description={`${rows.length} of ${projects.length} shown`} bodyClassName="py-0">
-        <ToolbarRow>
+      <Panel title="All projects" description={`${rows.length} of ${projects.length} shown`} flush>
+        <TableToolbar>
           <ListToolbar
             searchPlaceholder="Search project, code, location or RERA…"
             filters={[
@@ -71,20 +88,19 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
               { param: "status", label: "Statuses", options: [{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }] },
             ]}
           />
-        </ToolbarRow>
+        </TableToolbar>
         {rows.length === 0 ? (
-          <EmptyState
+          <Empty
             icon={Building2}
             title={projects.length === 0 ? "No projects registered" : "No projects match your filters"}
             description={projects.length === 0 ? "Projects are configured by the platform administrator." : "Try a different search term or clear the filters."}
           />
         ) : (
-          <DataTable minWidth={980}>
+          <Ledger minWidth={960} caption="Projects">
             <thead>
               <tr>
                 <SortTh label="Project" sortKey="name" sort={sort} searchParams={sp} pathname={PATH} />
-                <SortTh label="City / location" sortKey="city" sort={sort} searchParams={sp} pathname={PATH} />
-                <Th>RERA registration</Th>
+                <SortTh label="Location · RERA" sortKey="city" sort={sort} searchParams={sp} pathname={PATH} />
                 <Th>Status</Th>
                 <SortTh label="Invoices" sortKey="invoices" sort={sort} searchParams={sp} pathname={PATH} align="right" />
                 <SortTh label="Invoiced" sortKey="value" sort={sort} searchParams={sp} pathname={PATH} align="right" />
@@ -96,34 +112,52 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
               {rows.map((p) => (
                 <Tr key={p.id}>
                   <Td>
-                    <Link href={`/builder/approvals?view=all&project=${p.id}`} className="font-medium text-navy underline-offset-4 hover:underline" title={`View invoices for ${p.name}`}>
-                      {p.name}
-                    </Link>
-                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">{p.code}</p>
+                    <span className="flex items-center gap-3.5">
+                      <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-navy text-gold">
+                        <Building2 className="size-4" strokeWidth={1.5} />
+                      </span>
+                      <span className="min-w-0">
+                        <Link
+                          href={`/builder/approvals?view=all&project=${p.id}`}
+                          className="font-display text-[1.0625rem] font-semibold whitespace-nowrap text-navy decoration-gold/60 underline-offset-[5px] hover:underline"
+                          title={`View invoices for ${p.name}`}
+                        >
+                          {p.name}
+                        </Link>
+                        <span className="mt-0.5 block font-mono text-[0.6875rem] text-muted-foreground">{p.code}</span>
+                      </span>
+                    </span>
                   </Td>
                   <Td>
-                    <p>{p.city}</p>
-                    {p.location && <p className="mt-0.5 text-xs text-muted-foreground">{p.location}</p>}
+                    <p className="text-navy">{p.city}</p>
+                    {p.location && <p className="mt-1 text-[0.75rem] text-muted-foreground">{p.location}</p>}
+                    <p className="mt-1 font-mono text-[0.6875rem] tracking-tight text-muted-foreground">RERA {p.reraNumber ?? "—"}</p>
                   </Td>
-                  <Td className="font-mono text-xs">{p.reraNumber ?? "—"}</Td>
                   <Td>
                     <StatusBadge kind="record" status={p.status} />
                   </Td>
                   <Td align="right">
-                    {p.totals.invoiceCount}
-                    {p.totals.openCount > 0 && <p className="text-xs text-muted-foreground">{p.totals.openCount} open</p>}
+                    <span className="font-medium text-navy">{p.totals.invoiceCount}</span>
+                    {p.totals.openCount > 0 && <p className="mt-1 text-[0.6875rem] text-[#8a5a12]">{p.totals.openCount} open</p>}
                   </Td>
-                  <Td align="right">{formatINR(p.totals.invoiceValue)}</Td>
-                  <Td align="right" className="text-heritage">
-                    {formatINR(p.totals.approvedValue)}
+                  <Td align="right">
+                    <Money paise={p.totals.invoiceValue} />
                   </Td>
-                  <Td align="right">{formatINR(p.totals.financedValue)}</Td>
+                  <Td align="right">
+                    <Money paise={p.totals.approvedValue} className="font-medium text-heritage" />
+                  </Td>
+                  <Td align="right">
+                    <Money paise={p.totals.financedValue} className="text-navy" />
+                    <span className="mt-1.5 flex justify-end">
+                      <ShareBar part={p.totals.financedValue} whole={p.totals.approvedValue} />
+                    </span>
+                  </Td>
                 </Tr>
               ))}
             </tbody>
-          </DataTable>
+          </Ledger>
         )}
-      </Section>
+      </Panel>
     </>
   );
 }

@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
-import { BadgePercent, Download, Landmark, Scale, Wallet } from "lucide-react";
-import { PageHeader } from "@/components/common/page-header";
-import { Section } from "@/components/common/panels";
-import { StatCard, StatGrid } from "@/components/common/stat-card";
-import { DemoBadge } from "@/components/common/status-badge";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatBps, formatINR, formatINRCompact } from "@/lib/money";
 import { requireWorkspace } from "@/server/auth/session";
 import { getFinanceReports } from "@/server/queries/finance";
 import { BuilderValueChart, ExposureChart, MonthlyVolumeChart, SettlementAgeingChart } from "../_components/charts";
+import { KeyFigures, Masthead, Money, Panel, SimulatedTag } from "../_components/ledger";
 
 export const metadata: Metadata = { title: "Reports · Veefin Finance" };
 
@@ -19,12 +16,22 @@ export default async function ReportsPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Operations"
+      <Masthead
+        eyebrow="Operations · Portfolio analytics"
         title="Reports"
-        description="Portfolio analytics for the Veefin early-payment book. Amounts are in Indian rupees; payouts are simulated in this environment."
+        context={[
+          <span key="d">
+            <strong className="tabular font-semibold text-navy">{formatINRCompact(report.disbursedValue)}</strong> disbursed
+          </span>,
+          <span key="o">
+            <strong className="tabular font-semibold text-navy">{formatINRCompact(report.outstandingValue)}</strong> outstanding
+          </span>,
+          <span key="n" className="text-muted-foreground">
+            Amounts in Indian rupees · payouts simulated
+          </span>,
+        ]}
         actions={
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="bg-card">
             <a href="/api/finance/reports/requests" download>
               <Download className="size-4" />
               Export requests (CSV)
@@ -33,56 +40,59 @@ export default async function ReportsPage() {
         }
       />
 
-      <StatGrid className="xl:grid-cols-4 2xl:grid-cols-4">
-        <StatCard
-          label="Total disbursed"
-          value={formatINRCompact(report.disbursedValue)}
-          hint={`${report.disbursedCount} simulated payout${report.disbursedCount === 1 ? "" : "s"}`}
-          icon={Wallet}
-          tone="heritage"
-        />
-        <StatCard
-          label="Discount earned"
-          value={formatINRCompact(report.discountEarned)}
-          hint={report.weightedRateBps !== null ? `Weighted average ${formatBps(report.weightedRateBps)}` : "No disbursements yet"}
-          icon={BadgePercent}
-          tone="gold"
-        />
-        <StatCard
-          label="Outstanding settlements"
-          value={formatINRCompact(report.outstandingValue)}
-          hint={`${report.outstandingCount} open with builders`}
-          icon={Scale}
-        />
-        <StatCard label="Settled" value={formatINRCompact(report.settledValue)} hint={`${report.settledCount} repaid by builders`} icon={Landmark} tone="slate" />
-      </StatGrid>
+      <KeyFigures
+        items={[
+          {
+            label: "Total disbursed",
+            value: <Money paise={report.disbursedValue} compact size="lg" className="text-heritage" />,
+            hint: `${report.disbursedCount} simulated payout${report.disbursedCount === 1 ? "" : "s"}`,
+            accent: "heritage",
+          },
+          {
+            label: "Discount earned",
+            value: <Money paise={report.discountEarned} compact size="lg" />,
+            hint: report.weightedRateBps !== null ? `Weighted average ${formatBps(report.weightedRateBps)}` : "No disbursements yet",
+            accent: "gold",
+          },
+          {
+            label: "Outstanding settlements",
+            value: <Money paise={report.outstandingValue} compact size="lg" />,
+            hint: `${report.outstandingCount} open with builders`,
+            accent: "navy",
+          },
+          { label: "Settled", value: <Money paise={report.settledValue} compact size="lg" />, hint: `${report.settledCount} repaid by builders` },
+        ]}
+      />
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <Section
+      <div className="mt-8 grid gap-6 xl:grid-cols-2">
+        <Panel
+          eyebrow="Last twelve months"
           title="Disbursed volume by month"
-          description={`Net paid to channel partners · last 12 months · ${formatINR(monthlyTotal)}`}
-          actions={<DemoBadge />}
+          description={
+            <>
+              Net paid to channel partners · <span className="tabular font-medium text-navy">{formatINR(monthlyTotal)}</span>
+            </>
+          }
+          actions={<SimulatedTag />}
         >
           <MonthlyVolumeChart data={report.monthly} />
-        </Section>
+        </Panel>
 
-        <Section title="Exposure by builder" description="Disbursed and awaiting settlement, plus approved but not yet disbursed">
-          <ExposureChart
-            data={report.builders.map((b) => ({ name: b.name, outstanding: b.outstanding.toString(), committed: b.committed.toString() }))}
-          />
-        </Section>
+        <Panel eyebrow="Concentration" title="Exposure by builder" description="Disbursed and awaiting settlement, plus approved but not yet disbursed">
+          <ExposureChart data={report.builders.map((b) => ({ name: b.name, outstanding: b.outstanding.toString(), committed: b.committed.toString() }))} />
+        </Panel>
 
-        <Section title="Discount earned by builder" description="Sum of discount amounts on disbursed requests">
+        <Panel eyebrow="Yield" title="Discount earned by builder" description="Sum of discount amounts on disbursed requests">
           <BuilderValueChart
             data={report.builders.map((b) => ({ name: b.name, paise: b.discount.toString() }))}
             seriesLabel="Discount earned"
-            emptyText="No discount earned yet — nothing has been disbursed."
+            emptyText="No discount earned yet. Nothing has been disbursed."
           />
-        </Section>
+        </Panel>
 
-        <Section title="Settlement ageing" description="Open builder settlements by days to or past the due date">
+        <Panel eyebrow="Credit risk" title="Settlement ageing" description="Open builder settlements by days to or past the due date">
           <SettlementAgeingChart data={report.ageing} />
-        </Section>
+        </Panel>
       </div>
     </>
   );

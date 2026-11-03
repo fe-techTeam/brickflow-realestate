@@ -1,13 +1,15 @@
 import Link from "next/link";
-import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown } from "lucide-react";
-import { DataTable, Td, Th, Tr, type SortDirection, type SortState } from "@/components/common/data-table";
+import { ArrowRight } from "lucide-react";
+import type { SortState } from "@/components/common/data-table";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import type { FinancingStatus } from "@/generated/prisma/enums";
 import { formatDate } from "@/lib/format";
-import { formatBps, formatINR } from "@/lib/money";
+import { formatBps } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { FinancingRequestListItem } from "@/server/services/financing";
+import { Money } from "./ledger";
+import { LedgerTable, LSortTh, LTd, LTh, LTr } from "./ledger-table";
 
 export const REQUEST_SORT_KEYS = ["cp", "builder", "invoice", "approved", "rate", "net", "date", "status"] as const;
 
@@ -28,10 +30,10 @@ const NEXT_STEP: Partial<Record<FinancingStatus, { label: string; variant: "defa
   DISBURSEMENT_INITIATED: { label: "Confirm", variant: "default" },
 };
 
-export function RequestActionLink({ id, status, compact = false }: { id: string; status: FinancingStatus; compact?: boolean }) {
-  const step = NEXT_STEP[status] ?? { label: "View", variant: "outline" as const };
+export function RequestActionLink({ id, status, compact = false, className }: { id: string; status: FinancingStatus; compact?: boolean; className?: string }) {
+  const step = NEXT_STEP[status] ?? { label: "Open", variant: "outline" as const };
   return (
-    <Button asChild size="sm" variant={step.variant}>
+    <Button asChild size="sm" variant={step.variant} className={className}>
       <Link href={`/finance/requests/${id}`} aria-label={`${step.label} request`} title={compact ? `${step.label} request` : undefined}>
         <span className={compact ? "hidden 2xl:inline" : undefined}>{step.label}</span>
         <ArrowRight className="size-3.5" />
@@ -58,15 +60,7 @@ function Breakable({ text }: { text: string }) {
 type Column = "cp" | "builder";
 type SortKey = (typeof REQUEST_SORT_KEYS)[number];
 
-function sortHref(searchParams: Record<string, string | string[] | undefined>, pathname: string, key: string, dir: SortDirection) {
-  const params = new URLSearchParams();
-  for (const [k, v] of Object.entries(searchParams)) if (typeof v === "string" && k !== "sort" && k !== "dir") params.set(k, v);
-  params.set("sort", key);
-  params.set("dir", dir);
-  return `${pathname}?${params.toString()}`;
-}
-
-/** Financing requests table; sortable when `sort` is provided. Below 2xl the builder is shown under the CP to keep every column visible. */
+/** Financing requests: a refined table from md up, stacked case cards below. */
 export function RequestTable({
   rows,
   hide = [],
@@ -84,87 +78,106 @@ export function RequestTable({
   const showBuilder = !hide.includes("builder");
   const builderColumn = showCp ? "hidden 2xl:table-cell" : undefined;
 
-  const header = (label: string, key: SortKey, align: "left" | "right" = "left", className?: string) => {
-    if (!sort) {
-      return (
-        <Th align={align} className={className}>
-          {label}
-        </Th>
-      );
-    }
-    const active = sort.key === key;
-    const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
-    return (
-      <Th align={align} className={className}>
-        <Link
-          href={sortHref(searchParams, pathname, key, active && sort.dir === "desc" ? "asc" : "desc")}
-          scroll={false}
-          className={cn("inline-flex items-center gap-1 hover:text-navy", active && "text-navy")}
-          aria-label={`Sort by ${label}`}
-        >
-          {label}
-          <Icon className="size-3" />
-        </Link>
-      </Th>
+  const header = (label: string, key: SortKey, align: "left" | "right" = "left", className?: string) =>
+    sort ? (
+      <LSortTh label={label} sortKey={key} sort={sort} searchParams={searchParams} pathname={pathname} align={align} className={className} />
+    ) : (
+      <LTh align={align} className={className}>
+        {label}
+      </LTh>
     );
-  };
 
   return (
-    <DataTable minWidth={960}>
-      <thead>
-        <tr>
-          {showCp && header("Channel partner", "cp")}
-          {showBuilder && header("Builder", "builder", "left", builderColumn)}
-          {header("Invoice no.", "invoice")}
-          {header("Approved", "approved", "right")}
-          {header("Rate", "rate", "right")}
-          {header("Net payable", "net", "right")}
-          {header("Requested", "date")}
-          {header("Status", "status")}
-          <Th align="right">
-            <span className="sr-only">Action</span>
-          </Th>
-        </tr>
-      </thead>
-      <tbody>
+    <>
+      <ul className="-mx-5 divide-y divide-border/70 border-t border-border/70 md:hidden">
         {rows.map((r) => (
-          <Tr key={r.id}>
-            {showCp && (
-              <Td className="min-w-44">
-                <Link href={`/finance/requests/${r.id}`} className="font-medium text-navy hover:underline">
-                  {r.cp.name}
-                </Link>
-                {showBuilder && <p className="text-xs text-slate-ink 2xl:hidden">→ {r.builder.name}</p>}
-                <p className="tabular text-xs text-muted-foreground">{r.reference}</p>
-              </Td>
-            )}
-            {showBuilder && (
-              <Td className={cn("min-w-36", builderColumn)}>
-                <span className="text-slate-ink">{r.builder.name}</span>
-                {!showCp && <p className="tabular text-xs text-muted-foreground">{r.reference}</p>}
-              </Td>
-            )}
-            <Td className="min-w-36">
-              <span className="tabular">
-                <Breakable text={r.invoice.invoiceNumber} />
-              </span>
-              <p className="text-xs text-muted-foreground">{r.invoice.project.name}</p>
-            </Td>
-            <Td align="right">{formatINR(r.approvedAmountPaise)}</Td>
-            <Td align="right">{formatBps(r.discountRateBps)}</Td>
-            <Td align="right" className="font-medium text-heritage">
-              {formatINR(r.netPayablePaise)}
-            </Td>
-            <Td className="whitespace-nowrap">{formatDate(r.createdAt)}</Td>
-            <Td>
-              <StatusBadge kind="financing" status={r.status} />
-            </Td>
-            <Td align="right">
-              <RequestActionLink id={r.id} status={r.status} compact={showCp && showBuilder} />
-            </Td>
-          </Tr>
+          <li key={r.id}>
+            <Link href={`/finance/requests/${r.id}`} className="block px-5 py-4 transition-colors active:bg-ivory/60">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-navy">{showCp ? r.cp.name : r.builder.name}</p>
+                  {showCp && showBuilder && <p className="truncate text-xs text-slate-ink/80">to {r.builder.name}</p>}
+                  <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">
+                    {r.reference} · {r.invoice.invoiceNumber}
+                  </p>
+                </div>
+                <StatusBadge kind="financing" status={r.status} />
+              </div>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Net payable</p>
+                  <Money paise={r.netPayablePaise} size="md" className="text-heritage" />
+                </div>
+                <p className="text-right text-xs text-muted-foreground">
+                  <Money paise={r.approvedAmountPaise} size="xs" className="font-normal" /> at {formatBps(r.discountRateBps)}
+                  <span className="block">{formatDate(r.createdAt)}</span>
+                </p>
+              </div>
+            </Link>
+          </li>
         ))}
-      </tbody>
-    </DataTable>
+      </ul>
+
+      <LedgerTable minWidth={960} className="hidden md:block">
+        <thead>
+          <tr>
+            {showCp && header("Channel partner", "cp")}
+            {showBuilder && header("Builder", "builder", "left", builderColumn)}
+            {header("Invoice", "invoice")}
+            {header("Approved", "approved", "right")}
+            {header("Rate", "rate", "right")}
+            {header("Net payable", "net", "right")}
+            {header("Requested", "date")}
+            {header("Status", "status")}
+            <LTh align="right">
+              <span className="sr-only">Action</span>
+            </LTh>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <LTr key={r.id}>
+              {showCp && (
+                <LTd className="min-w-44">
+                  <Link href={`/finance/requests/${r.id}`} className="font-medium text-navy underline-offset-4 hover:underline">
+                    {r.cp.name}
+                  </Link>
+                  {showBuilder && <p className="text-xs text-slate-ink/80 2xl:hidden">to {r.builder.name}</p>}
+                  <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">{r.reference}</p>
+                </LTd>
+              )}
+              {showBuilder && (
+                <LTd className={cn("min-w-36", builderColumn)}>
+                  <span className="text-navy">{r.builder.name}</span>
+                  {!showCp && <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">{r.reference}</p>}
+                </LTd>
+              )}
+              <LTd className="min-w-36">
+                <span className="tabular text-navy">
+                  <Breakable text={r.invoice.invoiceNumber} />
+                </span>
+                <p className="text-xs text-muted-foreground">{r.invoice.project.name}</p>
+              </LTd>
+              <LTd align="right">
+                <Money paise={r.approvedAmountPaise} className="font-normal text-slate-ink" />
+              </LTd>
+              <LTd align="right" className="text-slate-ink">
+                {formatBps(r.discountRateBps)}
+              </LTd>
+              <LTd align="right">
+                <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+              </LTd>
+              <LTd className="text-xs whitespace-nowrap">{formatDate(r.createdAt)}</LTd>
+              <LTd>
+                <StatusBadge kind="financing" status={r.status} />
+              </LTd>
+              <LTd align="right">
+                <RequestActionLink id={r.id} status={r.status} compact={showCp && showBuilder} />
+              </LTd>
+            </LTr>
+          ))}
+        </tbody>
+      </LedgerTable>
+    </>
   );
 }

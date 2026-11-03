@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { Building2, Info, Landmark, ShieldCheck, Users } from "lucide-react";
-import { DataTable, Td, Th, Tr } from "@/components/common/data-table";
-import { PageHeader } from "@/components/common/page-header";
-import { DetailList, EmptyState, Section } from "@/components/common/panels";
-import { StatusBadge } from "@/components/common/status-badge";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, initials } from "@/lib/format";
 import { requireWorkspace } from "@/server/auth/session";
 import { getPartnerProfile } from "@/server/queries/partner";
+import { RefCell, Table, Td, Th, Tr } from "../_components/table";
+import { EmptyNote, FacadePattern, Facts, PageIntro, Panel, StatusMark, StatusPill } from "../_components/ui";
 
 export const metadata: Metadata = { title: "Organisation Profile" };
 
@@ -23,76 +21,78 @@ export default async function OrganisationProfilePage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Account"
-        title="Organisation profile"
-        description="Your registered organisation details, builder empanelments and team on BrickFlow."
-        actions={<StatusBadge kind="record" status={org.status} className="text-xs" />}
+      <PageIntro
+        eyebrow="Organisation profile"
+        title={org.name}
+        description={`${org.legalName} · Channel partner on BrickFlow since ${formatDate(org.createdAt)}`}
+        actions={<StatusPill kind="record" status={org.status} label="Account" />}
       />
 
-      <div role="note" className="mb-6 flex animate-fade-up items-start gap-3 rounded-lg border border-border bg-card px-5 py-4 text-sm text-slate-ink">
-        <Info className="mt-0.5 size-4 shrink-0 text-gold-600" />
-        <p>
-          These details are maintained by the BrickFlow platform administrator after KYC verification. To change your legal details, bank account, empanelments or team
-          members, contact the platform administrator.
-        </p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
-          <Section title={org.name} description={org.legalName}>
-            <DetailList
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <Panel eyebrow="KYC verified" title="Registration details">
+            <Facts
               items={[
                 { label: "Legal name", value: org.legalName },
                 { label: "Organisation type", value: "Channel partner" },
                 { label: "GSTIN", value: org.gstin },
                 { label: "PAN", value: org.pan },
                 { label: "RERA registration", value: org.reraNumber },
-                { label: "Registered address", value: address || null },
                 { label: "Primary contact", value: org.contactName },
                 { label: "Contact email", value: org.contactEmail },
                 { label: "Contact phone", value: org.contactPhone },
-                { label: "On BrickFlow since", value: formatDate(org.createdAt) },
+                { label: "Registered address", value: address || null, wide: true },
               ]}
             />
-          </Section>
+          </Panel>
 
-          <Section title="Empanelled builders" description="Builders you can raise invoices to" bodyClassName="py-0">
+          <Panel eyebrow="Relationships" title="Empanelled builders" description="Builders you can raise invoices to" bodyClassName="pb-0">
             {empanelments.length === 0 ? (
-              <EmptyState icon={Building2} title="No empanelments" description="Ask the platform administrator to add your builder empanelments." />
+              <div className="-mx-5 border-t border-hairline sm:-mx-7">
+                <EmptyNote compact icon={Building2} title="No empanelments" description="Ask the platform administrator to add your builder empanelments." />
+              </div>
             ) : (
-              <DataTable minWidth={640}>
+              <Table minWidth={560}>
                 <thead>
                   <tr>
                     <Th>Builder</Th>
                     <Th>Empanelment code</Th>
                     <Th align="right">Credit period</Th>
-                    <Th>Empanelled</Th>
                     <Th>Status</Th>
                   </tr>
                 </thead>
                 <tbody>
                   {empanelments.map((rel) => (
                     <Tr key={rel.id}>
-                      <Td className="font-medium text-navy">{rel.builder.name}</Td>
-                      <Td className="font-mono text-xs">{rel.empanelmentCode}</Td>
-                      <Td align="right">{rel.creditPeriodDays} days</Td>
-                      <Td className="whitespace-nowrap">{formatDate(rel.empanelledAt)}</Td>
                       <Td>
-                        <StatusBadge kind="record" status={rel.status} />
+                        <RefCell primary={rel.builder.name} secondary={`Empanelled ${formatDate(rel.empanelledAt)}`} />
+                      </Td>
+                      <Td className="text-[0.8125rem] tracking-wide">{rel.empanelmentCode}</Td>
+                      <Td align="right" className="text-[0.8125rem]">
+                        {rel.creditPeriodDays} days
+                      </Td>
+                      <Td>
+                        <StatusMark kind="record" status={rel.status} />
                       </Td>
                     </Tr>
                   ))}
                 </tbody>
-              </DataTable>
+              </Table>
             )}
-          </Section>
+          </Panel>
 
-          <Section title="Team members" description={`${org.members.length} ${org.members.length === 1 ? "user" : "users"} with access to this workspace`} bodyClassName="py-0">
+          <Panel
+            eyebrow="Access"
+            title="Team members"
+            description={`${org.members.length} ${org.members.length === 1 ? "user" : "users"} with access to this workspace`}
+            bodyClassName="pb-0"
+          >
             {org.members.length === 0 ? (
-              <EmptyState icon={Users} title="No team members" />
+              <div className="-mx-5 border-t border-hairline sm:-mx-7">
+                <EmptyNote compact icon={Users} title="No team members" />
+              </div>
             ) : (
-              <DataTable minWidth={720}>
+              <Table minWidth={640}>
                 <thead>
                   <tr>
                     <Th>Name</Th>
@@ -105,56 +105,78 @@ export default async function OrganisationProfilePage() {
                   {org.members.map((member) => (
                     <Tr key={member.id}>
                       <Td>
-                        <p className="font-medium text-navy">
-                          {member.user.name}
-                          {member.user.id === actor.userId && <span className="ml-2 text-xs font-normal text-muted-foreground">(you)</span>}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{member.user.email}</p>
+                        <div className="flex items-center gap-3">
+                          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-navy font-display text-sm font-semibold text-gold">{initials(member.user.name)}</span>
+                          <div className="min-w-0">
+                            <p className="font-medium text-navy">
+                              {member.user.name}
+                              {member.user.id === actor.userId && (
+                                <span className="ml-2 rounded-full bg-gold-100 px-1.5 py-px text-[0.625rem] font-semibold tracking-wide text-gold-700 uppercase">You</span>
+                              )}
+                            </p>
+                            <p className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">{member.user.email}</p>
+                          </div>
+                        </div>
                       </Td>
                       <Td>
-                        <p>{member.role.name}</p>
-                        {member.designation && <p className="text-xs text-muted-foreground">{member.designation}</p>}
+                        <p className="text-[0.8125rem] text-navy">{member.role.name}</p>
+                        {member.designation && <p className="mt-0.5 text-xs text-muted-foreground">{member.designation}</p>}
                       </Td>
-                      <Td className="whitespace-nowrap">{member.user.lastLoginAt ? formatDateTime(member.user.lastLoginAt) : "Never"}</Td>
+                      <Td className="text-[0.8125rem] whitespace-nowrap">{member.user.lastLoginAt ? formatDateTime(member.user.lastLoginAt) : "Never"}</Td>
                       <Td>
-                        <StatusBadge kind="record" status={member.user.status} />
+                        <StatusMark kind="record" status={member.user.status} />
                       </Td>
                     </Tr>
                   ))}
                 </tbody>
-              </DataTable>
+              </Table>
             )}
-          </Section>
+          </Panel>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-6">
-          <Section title="Payout bank account" description="Early payments are disbursed here">
-            <div className="rounded-lg bg-navy p-5 text-white">
-              <div className="flex items-center justify-between">
-                <Landmark className="size-5 text-gold" strokeWidth={1.6} />
-                <span className="text-[0.625rem] font-semibold tracking-[0.18em] text-gold uppercase">Registered</span>
-              </div>
-              <p className="mt-6 font-mono text-lg tracking-wider">{maskAccount(org.bankAccountNumber)}</p>
-              <p className="mt-1 text-xs text-white/60">{org.bankName ?? "Bank not on file"}</p>
-              <div className="mt-5 flex justify-between text-xs">
-                <span className="text-white/50">IFSC</span>
-                <span className="font-mono">{org.bankIfsc ?? "—"}</span>
-              </div>
-              <div className="mt-1 flex justify-between gap-3 text-xs">
-                <span className="text-white/50">Account name</span>
-                <span className="text-right">{org.legalName}</span>
+        <aside className="flex min-w-0 flex-col gap-6">
+          <section className="animate-fade-up">
+            <p className="mb-3 text-[0.625rem] font-semibold tracking-[0.2em] text-gold-700 uppercase">Payout account</p>
+            <div className="surface-navy relative isolate aspect-[1.586] overflow-hidden p-6">
+              <FacadePattern className="inset-y-0 right-0 -z-10 h-full w-full text-gold/[0.14]" />
+              <div className="flex h-full flex-col">
+                <div className="flex items-start justify-between">
+                  <Landmark className="size-5 text-gold" strokeWidth={1.5} />
+                  <span className="text-[0.5625rem] font-semibold tracking-[0.22em] text-gold uppercase">Registered</span>
+                </div>
+                <p className="mt-auto text-[1.125rem] tracking-[0.18em] tabular">{maskAccount(org.bankAccountNumber)}</p>
+                <div className="mt-4 flex items-end justify-between gap-4 text-[0.6875rem]">
+                  <div className="min-w-0">
+                    <p className="text-white/45 uppercase">Account name</p>
+                    <p className="mt-0.5 truncate text-white/90">{org.legalName}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-white/45 uppercase">IFSC</p>
+                    <p className="mt-0.5 tracking-wide text-white/90">{org.bankIfsc ?? "—"}</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </Section>
+            <p className="mt-3 text-xs text-muted-foreground">{org.bankName ?? "Bank not on file"} · early payments are disbursed to this account</p>
+          </section>
 
-          <div className="rounded-lg border border-border bg-ivory/70 p-5 text-xs leading-relaxed text-muted-foreground">
-            <p className="mb-1 flex items-center gap-1.5 font-semibold text-navy">
-              <ShieldCheck className="size-3.5 text-heritage" />
+          <div className="rounded-xl border border-border bg-card p-5 text-xs leading-relaxed text-muted-foreground">
+            <p className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-navy">
+              <ShieldCheck className="size-4 text-heritage" />
               Data protection
             </p>
             Account numbers are masked throughout BrickFlow. Full bank details are only used to route simulated payouts and are never shown to builders.
           </div>
-        </div>
+
+          <div role="note" className="rounded-xl border border-dashed border-gold/45 p-5 text-xs leading-relaxed text-muted-foreground">
+            <p className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-navy">
+              <Info className="size-4 text-gold-700" />
+              Maintained by the administrator
+            </p>
+            These details are maintained by the BrickFlow platform administrator after KYC verification. To change legal details, bank account, empanelments or team
+            members, contact the platform administrator.
+          </div>
+        </aside>
       </div>
     </>
   );
