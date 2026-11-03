@@ -1,4 +1,3 @@
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
@@ -20,7 +19,7 @@ export default defineConfig({
       NODE_ENV: "test",
       DATABASE_URL: "file:./prisma/test.db",
       STORAGE_DRIVER: "local",
-      STORAGE_DIR: path.join(os.tmpdir(), "brickflow-vitest-storage"),
+      STORAGE_DIR: path.join(root, "storage", "vitest"),
       DEMO_PASSWORD: "BrickFlow@2026",
       AUTH_SECRET: "vitest-only-secret-value-that-is-at-least-32-characters",
       APP_URL: "http://localhost:3000",

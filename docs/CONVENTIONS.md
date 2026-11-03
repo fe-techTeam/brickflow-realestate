@@ -67,6 +67,7 @@ Tokens, utilities and components added for the premium visual system. All existi
 | `DetailList`, `Timeline`, `AmountRow`, `EmptyState`, `Section` | `common/panels` | `DetailItem.emphasis` renders as a figure; `TimelineEntry.tone` adds `gold`. |
 | `ActionDialog` | `common/action-dialog` | Shows a tone medallion from `confirmVariant`; override with `icon` or hide with `icon={null}`. |
 | `ErrorState`, `errorDigest` | `common/error-state` | Card for workspace `error.tsx`: `<ErrorState error={error} onRetry={retry} back={{ href: "/builder", label: "Back to overview" }} />`. |
+| `BreadcrumbLabel` | `shell/breadcrumbs` | Optional. Render `<BreadcrumbLabel label={invoice.number} />` on a detail page to name the last breadcrumb. Without it the shell derives a record name from the route (e.g. "Invoice", "Financing request", "Transaction"). |
 | `StatusScreen` | `brand/status-screen` | Full-page brand composition used by the root `not-found`, `error` and `global-error` pages. |
 | `Logo`, `LogoMark`, `ArchitecturalScene` | `brand/*` | `Logo` takes `tone`, `size` (`sm`, `md`, `lg`), `showTagline`. The scene is decorative and respects reduced motion. |
 
