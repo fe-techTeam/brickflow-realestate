@@ -67,11 +67,11 @@ export function SettingsForm({ fields, initial }: { fields: SettingField[]; init
           return (
             <div key={field.key} className="grid gap-3 py-6 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-8">
               <div>
-                <Label htmlFor={id} className="flex items-center gap-2 text-sm font-semibold text-basalt">
+                <Label htmlFor={id} className="flex items-center gap-2 text-sm font-semibold text-fg">
                   {field.label}
                   {changed && (
                     <>
-                      <span className="size-1.5 rounded-full bg-kota" aria-hidden="true" />
+                      <span className="size-1.5 rounded-full bg-haze" aria-hidden="true" />
                       <span className="sr-only">(changed)</span>
                     </>
                   )}
@@ -103,11 +103,11 @@ export function SettingsForm({ fields, initial }: { fields: SettingField[]; init
           );
         })}
       </div>
-      <div className="-mx-5 -mb-6 flex flex-col-reverse gap-3 border-t border-border/80 bg-paper/50 px-5 py-4 sm:-mx-7 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+      <div className="-mx-5 -mb-6 flex flex-col-reverse gap-3 border-t border-border/80 bg-glass/50 px-5 py-4 sm:-mx-7 sm:flex-row sm:items-center sm:justify-between sm:px-7">
         <p className="text-xs text-muted-foreground" aria-live="polite">
           {dirty ? (
-            <span className="inline-flex items-center gap-2 font-medium text-kota-600">
-              <span className="size-1.5 rounded-full bg-kota" aria-hidden="true" />
+            <span className="inline-flex items-center gap-2 font-medium text-fg-muted">
+              <span className="size-1.5 rounded-full bg-haze" aria-hidden="true" />
               Unsaved changes
             </span>
           ) : (
@@ -129,7 +129,7 @@ export function SettingsForm({ fields, initial }: { fields: SettingField[]; init
             Discard changes
           </Button>
           <Button type="submit" disabled={pending || !dirty}>
-            {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4 text-kota" />}
+            {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4 text-fg-muted" />}
             Save settings
           </Button>
         </div>

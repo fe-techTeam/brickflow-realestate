@@ -14,10 +14,10 @@ export default function PartnerError({ error, retry }: { error: unknown; retry: 
 
   return (
     <div className="surface mx-auto mt-10 max-w-xl animate-fade-up px-6 py-14 text-center sm:px-10">
-      <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-[#f9e6ea] text-danger">
+      <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-[rgba(255,123,110,0.14)] text-danger">
         <AlertTriangle className="size-5" strokeWidth={1.6} />
       </span>
-      <h1 className="mt-5 font-display text-[1.75rem] font-medium">We couldn&apos;t load this page</h1>
+      <h1 className="mt-5 font-display text-[1.75rem] font-normal">We couldn&apos;t load this page</h1>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         Something went wrong while loading your workspace data. Your invoices and requests are safe — please try again.
       </p>

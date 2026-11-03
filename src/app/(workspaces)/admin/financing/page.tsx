@@ -102,7 +102,7 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
             {(["ACTIVE", "DRAFT", "SUSPENDED", "CLOSED"] as ProgrammeStatus[]).map((s) => (
               <span key={s} className="inline-flex items-center gap-2">
                 <StatusBadge kind="programme" status={s} />
-                <span className="tabular font-medium text-basalt">{counts[s]}</span>
+                <span className="tabular font-medium text-fg">{counts[s]}</span>
               </span>
             ))}
           </>
@@ -113,7 +113,7 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
       <section aria-labelledby="rate-book" className="mb-12">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-kota-600 uppercase">The rate book</p>
+            <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-fg-muted uppercase">The rate book</p>
             <h2 id="rate-book" className="mt-1.5 text-[1.75rem] leading-tight font-semibold">
               Programmes in force
             </h2>
@@ -160,13 +160,13 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
       </section>
 
       <section aria-labelledby="pricing-rule" className="mb-12 grid animate-fade-up overflow-hidden rounded-xl border border-border/90 bg-card lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
-        <div className="relative bg-basalt px-7 py-8 text-white">
-          <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-16 size-56 rounded-full bg-kota/10 blur-3xl" />
-          <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-kota uppercase">The pricing rule</p>
+        <div className="relative bg-night px-7 py-8 text-white">
+          <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-16 size-56 rounded-full bg-haze/10 blur-3xl" />
+          <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-fg-muted uppercase">The pricing rule</p>
           <h2 id="pricing-rule" className="mt-2 text-[1.625rem] leading-tight font-semibold text-white">
             A fixed discount on the approved amount
           </h2>
-          <dl className="mt-6 space-y-3 border-l border-kota/50 pl-4 font-sans text-[0.875rem]">
+          <dl className="mt-6 space-y-3 border-l border-line-strong/50 pl-4 font-sans text-[0.875rem]">
             <div>
               <dt className="text-[0.6875rem] text-white/50">Discount</dt>
               <dd className="text-white/90">Approved amount × agreed rate</dd>
@@ -181,8 +181,8 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
         <ol className="grid divide-y divide-border/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {PRINCIPLES.map(({ title, body }, i) => (
             <li key={title} className="px-6 py-7">
-              <span className="font-display text-[1.75rem] leading-none font-semibold text-kota">{NUMERALS[i]}</span>
-              <p className="mt-4 text-sm font-semibold text-basalt">{title}</p>
+              <span className="font-display text-[1.75rem] leading-none font-normal text-fg-muted">{NUMERALS[i]}</span>
+              <p className="mt-4 text-sm font-semibold text-fg">{title}</p>
               <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-muted-foreground">{body}</p>
             </li>
           ))}
@@ -232,7 +232,7 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
                       </p>
                     </LTd>
                     <LTd>
-                      <Link href={`/admin/organisations/${p.builder.id}`} className="font-medium text-basalt hover:underline">
+                      <Link href={`/admin/organisations/${p.builder.id}`} className="font-medium text-fg hover:underline">
                         {p.builder.name}
                       </Link>
                       <p className="text-xs text-muted-foreground">{p.financier.name}</p>
@@ -246,10 +246,10 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
                       <p className="tabular mt-1.5 text-xs whitespace-nowrap text-muted-foreground">
                         {plural(p._count.offers, "offer")} · {plural(p._count.requests, "request")}
                       </p>
-                      {row.openOffers > 0 && <p className="text-xs text-kota-600">{row.openOffers} open</p>}
+                      {row.openOffers > 0 && <p className="text-xs text-fg-muted">{row.openOffers} open</p>}
                     </LTd>
                     <LTd className="tabular text-xs whitespace-nowrap">
-                      <p className="text-basalt">{formatDate(p.effectiveFrom)}</p>
+                      <p className="text-fg">{formatDate(p.effectiveFrom)}</p>
                       <p className="text-muted-foreground">{p.effectiveTo ? `to ${formatDate(p.effectiveTo)}` : "open-ended"}</p>
                     </LTd>
                     <LTd align="right" className="text-xs whitespace-nowrap">

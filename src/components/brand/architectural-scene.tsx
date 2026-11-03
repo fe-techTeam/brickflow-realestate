@@ -36,7 +36,7 @@ function TowerShape({ t, index }: { t: Tower; index: number }) {
       <rect x={t.x} y={t.top} width={t.w} height={BASE - t.top} fill="url(#bf-tower)" className="bf-rise" />
       <path
         d={`M${t.x} ${BASE}V${t.top}H${t.x + t.w}V${BASE}`}
-        stroke="#a89a84"
+        stroke="#c9d3df"
         strokeOpacity="0.75"
         strokeWidth="1.1"
         pathLength={1}
@@ -45,7 +45,7 @@ function TowerShape({ t, index }: { t: Tower; index: number }) {
       {t.crown === "setback" && (
         <path
           d={`M${t.x + t.w * 0.18} ${t.top}V${t.top - 22}H${t.x + t.w * 0.82}V${t.top}`}
-          stroke="#a89a84"
+          stroke="#c9d3df"
           strokeOpacity="0.6"
           strokeWidth="1"
           pathLength={1}
@@ -56,16 +56,16 @@ function TowerShape({ t, index }: { t: Tower; index: number }) {
         <>
           <path
             d={`M${t.x + t.w * 0.22} ${t.top}V${t.top - 30}H${t.x + t.w * 0.78}V${t.top}M${t.x + t.w / 2} ${t.top - 30}V${t.top - 74}`}
-            stroke="#a89a84"
+            stroke="#c9d3df"
             strokeOpacity="0.7"
             strokeWidth="1"
             pathLength={1}
             className="bf-draw"
           />
-          <circle cx={t.x + t.w / 2} cy={t.top - 76} r="2.2" fill="#c4b9a7" className="bf-glint" />
+          <circle cx={t.x + t.w / 2} cy={t.top - 76} r="2.2" fill="#dbe3eb" className="bf-glint" />
         </>
       )}
-      <g stroke="#a89a84" strokeOpacity="0.16" strokeWidth="0.75" className="bf-fade">
+      <g stroke="#c9d3df" strokeOpacity="0.16" strokeWidth="0.75" className="bf-fade">
         {floors.map((y) => (
           <path key={y} d={`M${t.x} ${y}H${t.x + t.w}`} />
         ))}
@@ -84,7 +84,7 @@ function TowerShape({ t, index }: { t: Tower; index: number }) {
             y={y + 4}
             width={step - 6}
             height={FLOOR - 8}
-            fill="#c4b9a7"
+            fill="#dbe3eb"
             fillOpacity="0.55"
             className="bf-lit"
             style={{ "--t": `${(n % 5) * 1.3}s` } as CSSProperties}
@@ -137,26 +137,26 @@ export function ArchitecturalScene({ className, interactive = true }: { classNam
       <svg viewBox="0 0 600 700" preserveAspectRatio="xMidYMax meet" className="h-full w-full overflow-visible" fill="none">
         <defs>
           <linearGradient id="bf-tower" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#2f3d3a" stopOpacity="0.95" />
-            <stop offset="1" stopColor="#1a2321" stopOpacity="0.95" />
+            <stop offset="0" stopColor="#2d3b4f" stopOpacity="0.95" />
+            <stop offset="1" stopColor="#182231" stopOpacity="0.95" />
           </linearGradient>
           <linearGradient id="bf-water" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#a89a84" stopOpacity="0" />
-            <stop offset="0.35" stopColor="#c4b9a7" stopOpacity="0.95" />
-            <stop offset="0.75" stopColor="#a89a84" stopOpacity="0.7" />
-            <stop offset="1" stopColor="#a89a84" stopOpacity="0" />
+            <stop offset="0" stopColor="#c9d3df" stopOpacity="0" />
+            <stop offset="0.35" stopColor="#dbe3eb" stopOpacity="0.95" />
+            <stop offset="0.75" stopColor="#c9d3df" stopOpacity="0.7" />
+            <stop offset="1" stopColor="#c9d3df" stopOpacity="0" />
           </linearGradient>
           <radialGradient id="bf-glow" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0" stopColor="#a89a84" stopOpacity="0.22" />
-            <stop offset="1" stopColor="#a89a84" stopOpacity="0" />
+            <stop offset="0" stopColor="#c9d3df" stopOpacity="0.22" />
+            <stop offset="1" stopColor="#c9d3df" stopOpacity="0" />
           </radialGradient>
         </defs>
 
         <g className="bf-layer-back">
           <circle cx="300" cy="250" r="230" fill="url(#bf-glow)" />
-          <circle cx="300" cy="250" r="196" stroke="#a89a84" strokeOpacity="0.2" strokeWidth="0.8" pathLength={1} className="bf-draw" style={{ "--d": "0s" } as CSSProperties} />
-          <circle cx="300" cy="250" r="150" stroke="#a89a84" strokeOpacity="0.1" strokeWidth="0.6" strokeDasharray="2 6" />
-          <g stroke="#a89a84" strokeOpacity="0.28" strokeWidth="0.8">
+          <circle cx="300" cy="250" r="196" stroke="#c9d3df" strokeOpacity="0.2" strokeWidth="0.8" pathLength={1} className="bf-draw" style={{ "--d": "0s" } as CSSProperties} />
+          <circle cx="300" cy="250" r="150" stroke="#c9d3df" strokeOpacity="0.1" strokeWidth="0.6" strokeDasharray="2 6" />
+          <g stroke="#c9d3df" strokeOpacity="0.28" strokeWidth="0.8">
             {Array.from({ length: 48 }, (_, i) => {
               const a = (i / 48) * Math.PI * 2;
               const r1 = 196;
@@ -169,7 +169,7 @@ export function ArchitecturalScene({ className, interactive = true }: { classNam
               );
             })}
           </g>
-          <path d="M300 30V560M60 250H540" stroke="#a89a84" strokeOpacity="0.08" strokeWidth="0.6" />
+          <path d="M300 30V560M60 250H540" stroke="#c9d3df" strokeOpacity="0.08" strokeWidth="0.6" />
         </g>
 
         <g className="bf-layer-mid">
@@ -177,11 +177,11 @@ export function ArchitecturalScene({ className, interactive = true }: { classNam
             <TowerShape key={t.x} t={t} index={i} />
           ))}
           <g className="bf-fade" style={{ "--d": "1.6s" } as CSSProperties}>
-            <path d="M346 96V560M341 96H351M341 560H351" stroke="#a89a84" strokeOpacity="0.45" strokeWidth="0.75" />
-            <text x="342" y="330" transform="rotate(-90 342 330)" textAnchor="middle" fill="#a89a84" fillOpacity="0.65" fontSize="8.5" letterSpacing="1.6" fontFamily="var(--font-inter), sans-serif">
+            <path d="M346 96V560M341 96H351M341 560H351" stroke="#c9d3df" strokeOpacity="0.45" strokeWidth="0.75" />
+            <text x="342" y="330" transform="rotate(-90 342 330)" textAnchor="middle" fill="#c9d3df" fillOpacity="0.65" fontSize="8.5" letterSpacing="1.6" fontFamily="var(--font-inter), sans-serif">
               ELEV. +142.00
             </text>
-            <text x="30" y="586" fill="#a89a84" fillOpacity="0.45" fontSize="8" letterSpacing="1.8" fontFamily="var(--font-inter), sans-serif">
+            <text x="30" y="586" fill="#c9d3df" fillOpacity="0.45" fontSize="8" letterSpacing="1.8" fontFamily="var(--font-inter), sans-serif">
               SOUTH ELEVATION · 1:500
             </text>
           </g>

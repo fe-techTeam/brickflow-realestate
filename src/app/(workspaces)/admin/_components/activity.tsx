@@ -38,11 +38,11 @@ export function actionTone(action: string): "kota" | "leaf" | "danger" | "muted"
 }
 
 const DOT = {
-  kota: "bg-kota ring-kota/25",
+  kota: "bg-haze ring-line-strong/25",
   leaf: "bg-leaf ring-leaf/20",
   danger: "bg-danger ring-danger/20",
-  muted: "bg-ink/30 ring-ink/10",
-  basalt: "bg-basalt ring-basalt/15",
+  muted: "bg-night/30 ring-line-strong/10",
+  basalt: "bg-night ring-line-strong/15",
 };
 
 export function entityHref(entityType: string, entityId: string): string | null {
@@ -55,7 +55,7 @@ export function entityHref(entityType: string, entityId: string): string | null 
 
 function ActionCode({ action }: { action: string }) {
   return (
-    <code className="rounded-[5px] border border-border/80 bg-paper/70 px-1.5 py-0.5 font-mono text-[0.6875rem] whitespace-nowrap text-basalt/80">{action}</code>
+    <code className="rounded-[5px] border border-border/80 bg-glass/70 px-1.5 py-0.5 font-mono text-[0.6875rem] whitespace-nowrap text-fg/80">{action}</code>
   );
 }
 
@@ -69,7 +69,7 @@ export function ActivityTimeline({ entries, directory }: { entries: ActivityItem
         return (
           <li key={entry.id} className="grid grid-cols-[3.75rem_1.5rem_1fr] gap-x-2 sm:grid-cols-[4.5rem_1.75rem_1fr]">
             <time dateTime={entry.createdAt.toISOString()} className="tabular pt-0.5 text-right font-sans leading-tight">
-              <span className="block text-[0.8125rem] font-medium text-basalt">{time.format(entry.createdAt)}</span>
+              <span className="block text-[0.8125rem] font-medium text-fg">{time.format(entry.createdAt)}</span>
               <span className="block text-[0.6875rem] text-muted-foreground">{shortDay.format(entry.createdAt)}</span>
             </time>
             <span aria-hidden="true" className="relative flex justify-center">
@@ -77,9 +77,9 @@ export function ActivityTimeline({ entries, directory }: { entries: ActivityItem
               <span className={cn("relative mt-1.5 size-2 rounded-full ring-4", DOT[tone])} />
             </span>
             <div className={cn("min-w-0", i < entries.length - 1 ? "pb-6" : "pb-1")}>
-              <p className="text-sm leading-snug text-ink">{entry.summary}</p>
+              <p className="text-sm leading-snug text-fg-soft">{entry.summary}</p>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                <span className="font-medium text-basalt/80">{entry.actorName}</span>
+                <span className="font-medium text-fg/80">{entry.actorName}</span>
                 {org && (
                   <>
                     <span aria-hidden="true">·</span>
@@ -135,7 +135,7 @@ function Value({ field, value, className }: { field: string; value: unknown; cla
   return (
     <span
       className={cn(
-        "text-[0.8125rem] break-words whitespace-pre-wrap text-basalt",
+        "text-[0.8125rem] break-words whitespace-pre-wrap text-fg",
         kind === "figure" && "tabular font-sans font-medium",
         kind === "code" && "font-mono text-[0.75rem]",
         className,
@@ -179,7 +179,7 @@ function ChangeTable({ before, after }: { before: Json; after: Json }) {
             <tr key={field} className="border-t border-border/60">
               <th scope="row" className="py-2 pr-4 text-left align-top font-normal">
                 <span className="flex items-center gap-2">
-                  <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", changed ? "bg-kota" : "bg-transparent")} />
+                  <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", changed ? "bg-haze" : "bg-transparent")} />
                   <FieldLabel field={field} />
                   {changed && <span className="sr-only">(changed)</span>}
                 </span>
@@ -210,7 +210,7 @@ function MetadataView({ raw }: { raw: string }) {
     const diff = isRecord(before) && isRecord(after);
     const entries = Object.entries(diff ? rest : parsed);
     return (
-      <div className="space-y-3.5 rounded-lg border border-border/80 bg-paper/50 px-4 py-3.5">
+      <div className="space-y-3.5 rounded-lg border border-border/80 bg-glass/50 px-4 py-3.5">
         {diff && <ChangeTable before={before} after={after} />}
         {entries.length > 0 && (
           <dl className={cn("grid gap-x-6 gap-y-2.5 sm:grid-cols-[minmax(9rem,auto)_1fr]", diff && "border-t border-border/60 pt-3.5")}>
@@ -230,7 +230,7 @@ function MetadataView({ raw }: { raw: string }) {
     );
   }
   return (
-    <pre className="max-h-72 overflow-auto rounded-lg bg-basalt-900 px-4 py-3 font-mono text-[0.6875rem] leading-relaxed break-words whitespace-pre-wrap text-paper">
+    <pre className="max-h-72 overflow-auto rounded-lg bg-night-deep px-4 py-3 font-mono text-[0.6875rem] leading-relaxed break-words whitespace-pre-wrap text-fg">
       {parsed === undefined ? raw : JSON.stringify(parsed, null, 2)}
     </pre>
   );
@@ -251,8 +251,8 @@ export function AuditLedger({ entries, directory }: { entries: ActivityItem[]; d
       {groups.map((group) => (
         <section key={group.key} aria-label={group.label}>
           <div className="mb-4 flex items-baseline gap-4">
-            <h3 className="font-display text-[1.25rem] font-semibold whitespace-nowrap">{group.label}</h3>
-            <span aria-hidden="true" className="h-px flex-1 translate-y-[-3px] bg-gradient-to-r from-kota/50 to-border/40" />
+            <h3 className="font-display text-[1.25rem] font-normal whitespace-nowrap">{group.label}</h3>
+            <span aria-hidden="true" className="h-px flex-1 translate-y-[-3px] bg-gradient-to-r from-haze/50 to-border/40" />
             <span className="tabular text-xs whitespace-nowrap text-muted-foreground">
               {group.items.length} {group.items.length === 1 ? "entry" : "entries"}
             </span>
@@ -265,7 +265,7 @@ export function AuditLedger({ entries, directory }: { entries: ActivityItem[]; d
               const last = i === group.items.length - 1;
               return (
                 <li key={entry.id} className="grid grid-cols-[3rem_1.25rem_1fr] gap-x-2 sm:grid-cols-[4rem_1.75rem_1fr]">
-                  <time dateTime={entry.createdAt.toISOString()} className="tabular pt-0.5 text-right font-sans text-[0.8125rem] font-medium text-basalt">
+                  <time dateTime={entry.createdAt.toISOString()} className="tabular pt-0.5 text-right font-sans text-[0.8125rem] font-medium text-fg">
                     {time.format(entry.createdAt)}
                   </time>
                   <span aria-hidden="true" className="relative flex justify-center">
@@ -275,15 +275,15 @@ export function AuditLedger({ entries, directory }: { entries: ActivityItem[]; d
                   <div className={cn("min-w-0", last ? "pb-1" : "pb-7")}>
                     <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
                       <div className="min-w-0">
-                        <p className="text-[0.9375rem] leading-snug text-basalt">{entry.summary}</p>
+                        <p className="text-[0.9375rem] leading-snug text-fg">{entry.summary}</p>
                         <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                          <span className="font-medium text-ink">{entry.actorName}</span>
+                          <span className="font-medium text-fg-soft">{entry.actorName}</span>
                           <span aria-hidden="true">·</span>
                           <span>{entry.actorRole ? (ROLE_LABELS[entry.actorRole] ?? entry.actorRole) : "System"}</span>
                           {org && (
                             <>
                               <span aria-hidden="true">·</span>
-                              <Link href={`/admin/organisations/${org.id}`} className="text-basalt/80 hover:text-basalt hover:underline">
+                              <Link href={`/admin/organisations/${org.id}`} className="text-fg/80 hover:text-fg hover:underline">
                                 {org.name}
                               </Link>
                               <OrgTypeBadge type={org.type} />
@@ -296,7 +296,7 @@ export function AuditLedger({ entries, directory }: { entries: ActivityItem[]; d
                         <span className="text-[0.6875rem] text-muted-foreground">
                           {ENTITY_LABELS[entry.entityType] ?? entry.entityType}{" "}
                           {href ? (
-                            <Link href={href} className="font-mono text-basalt/80 hover:text-basalt hover:underline" title={entry.entityId}>
+                            <Link href={href} className="font-mono text-fg/80 hover:text-fg hover:underline" title={entry.entityId}>
                               {entry.entityId.slice(0, 10)}…
                             </Link>
                           ) : (
@@ -309,7 +309,7 @@ export function AuditLedger({ entries, directory }: { entries: ActivityItem[]; d
                     </div>
                     {entry.metadata && (
                       <details className="group/meta mt-2.5">
-                        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded text-[0.75rem] font-medium text-kota-600 select-none hover:text-basalt focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+                        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded text-[0.75rem] font-medium text-fg-muted select-none hover:text-fg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
                           <ChevronDown className="size-3.5 transition-transform group-open/meta:rotate-180" aria-hidden="true" />
                           <span className="group-open/meta:hidden">Show recorded values</span>
                           <span className="hidden group-open/meta:inline">Hide recorded values</span>
@@ -352,11 +352,11 @@ export function EventTimeline({ events }: { events: EventItem[] }) {
               <span className={cn("relative mt-1.5 size-2 rounded-full ring-4", DOT[e.tone])} />
             </span>
             <div className={cn("min-w-0", last ? "pb-1" : "pb-6")}>
-              <p className="text-sm font-medium text-basalt">{e.title}</p>
+              <p className="text-sm font-medium text-fg">{e.title}</p>
               <p className="tabular mt-0.5 text-xs text-muted-foreground">
                 {e.actor} · {shortDay.format(e.at)}, {time.format(e.at)}
               </p>
-              {e.body && <p className="mt-2 rounded-md border-l-2 border-kota/60 bg-paper/60 px-3 py-2 text-[0.8125rem] leading-relaxed text-ink">{e.body}</p>}
+              {e.body && <p className="mt-2 rounded-md border-l-2 border-line-strong/60 bg-glass/60 px-3 py-2 text-[0.8125rem] leading-relaxed text-fg-soft">{e.body}</p>}
             </div>
           </li>
         );

@@ -12,7 +12,7 @@ export interface ChartLegendItem {
 
 export function ChartLegend({ items, className }: { items: ChartLegendItem[]; className?: string }) {
   return (
-    <ul className={cn("flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ink", className)}>
+    <ul className={cn("flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-fg-soft", className)}>
       {items.map((item) => (
         <li key={item.label} className="flex items-center gap-2">
           <span
@@ -22,7 +22,7 @@ export function ChartLegend({ items, className }: { items: ChartLegendItem[]; cl
           />
           <span>{item.label}</span>
           {item.value !== undefined && (
-            <span className="figure font-semibold text-basalt">
+            <span className="figure font-semibold text-fg">
               <FigureValue value={item.value} />
             </span>
           )}
@@ -42,15 +42,15 @@ export interface ChartTooltipRow {
 export function ChartTooltipCard({ title, rows, footer }: { title?: ReactNode; rows: ChartTooltipRow[]; footer?: ReactNode }) {
   return (
     <div className="min-w-44 rounded-lg border border-border bg-card px-3.5 py-3 text-xs shadow-raised">
-      {title && <p className="mb-2 font-semibold text-basalt">{title}</p>}
+      {title && <p className="mb-2 font-semibold text-fg">{title}</p>}
       <div className="space-y-1">
         {rows.map((row) => (
-          <p key={row.label} className="flex items-center justify-between gap-5 text-ink">
+          <p key={row.label} className="flex items-center justify-between gap-5 text-fg-soft">
             <span className="flex items-center gap-2">
               {row.color && <span aria-hidden="true" className="size-2 rounded-[2px]" style={{ background: row.color }} />}
               {row.label}
             </span>
-            <span className="figure font-semibold text-basalt">
+            <span className="figure font-semibold text-fg">
               <FigureValue value={row.value} />
             </span>
           </p>
@@ -107,11 +107,11 @@ export function ChartFrame({
       {hasHeader && (
         <div className={cn("flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between", !bare && "px-5 pt-5 sm:px-6 sm:pt-6")}>
           <div className="min-w-0">
-            {eyebrow && <p className="eyebrow mb-1.5 text-[0.625rem] text-kota-700">{eyebrow}</p>}
+            {eyebrow && <p className="eyebrow mb-1.5 text-[0.625rem] text-fg-muted">{eyebrow}</p>}
             {title && <figcaption className="heading-section">{title}</figcaption>}
             {description && <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground">{description}</p>}
             {figure && (
-              <p className="figure mt-3 text-[1.625rem] leading-none font-semibold tracking-[-0.03em] text-basalt">
+              <p className="figure mt-3 text-[1.625rem] leading-none font-semibold tracking-[-0.03em] text-fg">
                 <FigureValue value={figure} display />
               </p>
             )}
@@ -123,7 +123,7 @@ export function ChartFrame({
         {legend && legend.length > 0 && <ChartLegend items={legend} className="mb-4" />}
         {empty ? (
           <div
-            className="blueprint-grid-ink flex items-center justify-center rounded-lg border border-dashed border-border bg-paper-100/60 text-sm text-muted-foreground"
+            className="blueprint-grid-ink flex items-center justify-center rounded-lg border border-dashed border-border bg-glass-100/60 text-sm text-muted-foreground"
             style={{ height }}
           >
             {emptyText}
@@ -135,20 +135,20 @@ export function ChartFrame({
         )}
         {table && !empty && (
           <details className="group/table mt-4 text-xs">
-            <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 font-medium text-muted-foreground transition-colors select-none hover:text-basalt">
-              <span aria-hidden="true" className="h-px w-3 bg-kota transition-all group-open/table:w-5" />
+            <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 font-medium text-muted-foreground transition-colors select-none hover:text-fg">
+              <span aria-hidden="true" className="h-px w-3 bg-haze transition-all group-open/table:w-5" />
               <span className="group-open/table:hidden">View data table</span>
               <span className="hidden group-open/table:inline">Hide data table</span>
             </summary>
             <div className="mt-3 overflow-x-auto rounded-lg border hairline">
               <table className="w-full text-left">
-                <thead className="bg-paper-100">
+                <thead className="bg-glass-100">
                   <tr>
                     {table.headers.map((h, i) => (
                       <th
                         key={h}
                         scope="col"
-                        className={cn("border-b border-border px-3 py-2 text-[0.625rem] font-semibold tracking-[0.1em] text-ink-soft uppercase", i > 0 && "text-right")}
+                        className={cn("border-b border-border px-3 py-2 text-[0.625rem] font-semibold tracking-[0.1em] text-fg-muted uppercase", i > 0 && "text-right")}
                       >
                         {h}
                       </th>
@@ -159,7 +159,7 @@ export function ChartFrame({
                   {table.rows.map((row, r) => (
                     <tr key={r} className="last:[&>td]:border-b-0">
                       {row.map((cell, i) => (
-                        <td key={i} className={cn("border-b hairline px-3 py-2 text-ink", i > 0 && "figure text-right")}>
+                        <td key={i} className={cn("border-b hairline px-3 py-2 text-fg-soft", i > 0 && "figure text-right")}>
                           <FigureValue value={cell} />
                         </td>
                       ))}
@@ -171,7 +171,7 @@ export function ChartFrame({
           </details>
         )}
       </div>
-      {footer && <div className={cn("border-t hairline text-xs text-muted-foreground", !bare ? "bg-paper-100/70 px-5 py-3 sm:px-6" : "mt-4 pt-3")}>{footer}</div>}
+      {footer && <div className={cn("border-t hairline text-xs text-muted-foreground", !bare ? "bg-glass-100/70 px-5 py-3 sm:px-6" : "mt-4 pt-3")}>{footer}</div>}
     </figure>
   );
 }

@@ -23,10 +23,10 @@ import type { ActionResult } from "@/server/action-result";
 type ButtonVariant = "default" | "accent" | "success" | "outline" | "secondary" | "ghost" | "destructive" | "link";
 
 const MEDALLION: Partial<Record<ButtonVariant, { icon: LucideIcon; className: string }>> = {
-  default: { icon: Landmark, className: "bg-basalt-50 text-basalt ring-basalt-200" },
+  default: { icon: Landmark, className: "bg-glass-50 text-fg ring-line" },
   success: { icon: BadgeCheck, className: "bg-leaf-50 text-leaf ring-leaf-200" },
-  accent: { icon: HandCoins, className: "bg-gulmohar-50 text-gulmohar-700 ring-gulmohar-200" },
-  destructive: { icon: CircleAlert, className: "bg-danger-soft text-danger ring-[#efc6cf]" },
+  accent: { icon: HandCoins, className: "bg-signal-50 text-signal-700 ring-signal-200" },
+  destructive: { icon: CircleAlert, className: "bg-danger-soft text-danger ring-[rgba(255,123,110,0.3)]" },
 };
 
 export interface ActionDialogField {
@@ -131,7 +131,7 @@ export function ActionDialog<T, I = Record<string, string>>({
               <MedallionIcon className="size-5" strokeWidth={1.6} />
             </span>
           )}
-          {eyebrow && <p className="eyebrow mb-1.5 text-[0.625rem] text-kota-700">{eyebrow}</p>}
+          {eyebrow && <p className="eyebrow mb-1.5 text-[0.625rem] text-fg-muted">{eyebrow}</p>}
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription className="mt-2">{description}</DialogDescription>}
         </DialogHeader>

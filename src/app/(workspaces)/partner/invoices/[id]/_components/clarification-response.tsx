@@ -89,9 +89,9 @@ export function ClarificationResponse({ invoiceId, builderName }: { invoiceId: s
       <div className="grid gap-2">
         <Label htmlFor="clarification-file">Replacement invoice PDF (optional)</Label>
         {file ? (
-          <div className="flex items-center gap-3 rounded-md border border-border bg-paper/50 px-3 py-2">
-            <FileText className="size-4 text-kota-600" />
-            <span className="min-w-0 flex-1 truncate text-sm text-basalt">{file.name}</span>
+          <div className="flex items-center gap-3 rounded-md border border-border bg-glass/50 px-3 py-2">
+            <FileText className="size-4 text-fg-muted" />
+            <span className="min-w-0 flex-1 truncate text-sm text-fg">{file.name}</span>
             <Button
               type="button"
               variant="ghost"

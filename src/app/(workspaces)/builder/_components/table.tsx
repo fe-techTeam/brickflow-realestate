@@ -27,7 +27,7 @@ export function Th({ children, align = "left", className }: { children?: ReactNo
       scope="col"
       className={cn(
         cellPad,
-        "border-b border-[#dfe2de] bg-[#fbfaf6] py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
+        "border-b border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
         align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left",
         className,
       )}
@@ -42,7 +42,7 @@ export function Td({ children, align = "left", className }: { children?: ReactNo
     <td
       className={cn(
         cellPad,
-        "border-b border-[#eceeeb] py-4 align-middle text-ink",
+        "border-b border-[rgba(255,255,255,0.07)] py-4 align-middle text-fg-soft",
         align === "right" && "tabular text-right",
         align === "center" && "text-center",
         className,
@@ -54,7 +54,7 @@ export function Td({ children, align = "left", className }: { children?: ReactNo
 }
 
 export function Tr({ children, className }: { children: ReactNode; className?: string }) {
-  return <tr className={cn("transition-colors last:[&>td]:border-b-0 hover:bg-[#fafbf9]", className)}>{children}</tr>;
+  return <tr className={cn("transition-colors last:[&>td]:border-b-0 hover:bg-[rgba(255,255,255,0.04)]", className)}>{children}</tr>;
 }
 
 /** Sortable header that toggles ?sort/&dir while preserving other params. */
@@ -86,10 +86,10 @@ export function SortTh({
         href={`${pathname}?${params.toString()}`}
         scroll={false}
         aria-label={`Sort by ${label}`}
-        className={cn("group/sort inline-flex items-center gap-1.5 transition-colors hover:text-basalt", active && "text-basalt", align === "right" && "flex-row-reverse")}
+        className={cn("group/sort inline-flex items-center gap-1.5 transition-colors hover:text-fg", active && "text-fg", align === "right" && "flex-row-reverse")}
       >
         {label}
-        <Icon className={cn("size-3", active ? "text-kota-600" : "opacity-40 group-hover/sort:opacity-80")} />
+        <Icon className={cn("size-3", active ? "text-fg-muted" : "opacity-40 group-hover/sort:opacity-80")} />
       </Link>
     </Th>
   );
@@ -98,7 +98,7 @@ export function SortTh({
 /** Full-bleed filter strip at the top of a flush Panel. */
 export function TableToolbar({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
-    <div className="flex flex-col gap-3 border-b border-[#eceeeb] bg-[#fbfbfa] px-5 py-4 sm:px-7 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-3 border-b border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.04)] px-5 py-4 sm:px-7 lg:flex-row lg:items-center lg:justify-between">
       <div className="min-w-0 flex-1">{children}</div>
       {aside && <div className="shrink-0 text-[0.75rem] text-muted-foreground">{aside}</div>}
     </div>
@@ -108,7 +108,7 @@ export function TableToolbar({ children, aside }: { children: ReactNode; aside?:
 /** Link styled as the primary identifier of a row. */
 export function RowLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
   return (
-    <Link href={href} className={cn("font-medium text-basalt decoration-kota/60 underline-offset-[5px] hover:underline", className)}>
+    <Link href={href} className={cn("font-medium text-fg decoration-fg-muted/60 underline-offset-[5px] hover:underline", className)}>
       {children}
     </Link>
   );

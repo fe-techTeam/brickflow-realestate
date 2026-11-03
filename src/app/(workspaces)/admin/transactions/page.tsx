@@ -43,10 +43,10 @@ function ViewTabs({ view }: { view: "requests" | "invoices" }) {
             aria-current={active ? "page" : undefined}
             className={cn(
               "relative -mb-px inline-flex items-center gap-2 border-b-2 pt-1 pb-3.5 text-sm font-medium transition-colors",
-              active ? "border-kota text-basalt" : "border-transparent text-muted-foreground hover:text-basalt",
+              active ? "border-line-strong text-fg" : "border-transparent text-muted-foreground hover:text-fg",
             )}
           >
-            <t.icon className={cn("size-4", active && "text-kota-600")} strokeWidth={1.6} />
+            <t.icon className={cn("size-4", active && "text-fg-muted")} strokeWidth={1.6} />
             {t.label}
           </Link>
         );
@@ -82,7 +82,7 @@ async function RequestsView({ sp }: { sp: SearchParams }) {
         items={[
           { label: "Requests", value: <Count value={rows.length} size="lg" />, hint: status ? FINANCING_STATUS[status].label : "All stages" },
           { label: "Builder-approved", value: <Money paise={approved} compact size="lg" />, hint: "Gross value financed", accent: "basalt" },
-          { label: "Discount", value: <Money paise={discount} compact size="lg" className="text-kota-600" />, hint: "At each agreed rate", accent: "kota" },
+          { label: "Discount", value: <Money paise={discount} compact size="lg" className="text-fg-muted" />, hint: "At each agreed rate", accent: "kota" },
           { label: "Net to partners", value: <Money paise={net} compact size="lg" className="text-leaf" />, hint: "Payable early (simulated)", accent: "leaf" },
         ]}
       />
@@ -130,7 +130,7 @@ async function RequestsView({ sp }: { sp: SearchParams }) {
                       <p className="tabular text-xs text-muted-foreground">{formatDate(r.createdAt)}</p>
                     </LTd>
                     <LTd>
-                      <p className="text-basalt">{r.cp.name}</p>
+                      <p className="text-fg">{r.cp.name}</p>
                       <p className="text-xs text-muted-foreground">→ {r.builder.name}</p>
                     </LTd>
                     <LTd>
@@ -138,7 +138,7 @@ async function RequestsView({ sp }: { sp: SearchParams }) {
                       <p className="text-xs text-muted-foreground">{r.invoice.project.name}</p>
                     </LTd>
                     <LTd align="right">
-                      <Money paise={r.approvedAmountPaise} className="text-basalt" />
+                      <Money paise={r.approvedAmountPaise} className="text-fg" />
                     </LTd>
                     <LTd align="right">
                       <Rate bps={r.discountRateBps} size="sm" className="font-semibold" />
@@ -259,7 +259,7 @@ async function InvoicesView({ sp }: { sp: SearchParams }) {
                       {i.reference} · {i.submittedAt ? formatDate(i.submittedAt) : "not submitted"}
                     </p>
                   </LTd>
-                  <LTd className="text-basalt">{i.cp.name}</LTd>
+                  <LTd className="text-fg">{i.cp.name}</LTd>
                   <LTd>
                     <p>{i.builder.name}</p>
                     <p className="text-xs text-muted-foreground">{i.project.name}</p>
@@ -267,7 +267,7 @@ async function InvoicesView({ sp }: { sp: SearchParams }) {
                   <LTd className="tabular text-xs whitespace-nowrap">{formatDate(i.invoiceDate)}</LTd>
                   <LTd className="tabular text-xs whitespace-nowrap">{formatDate(i.dueDate)}</LTd>
                   <LTd align="right">
-                    <Money paise={i.amountPaise} className="text-basalt" />
+                    <Money paise={i.amountPaise} className="text-fg" />
                   </LTd>
                   <LTd align="right">
                     {i.approvedAmountPaise !== null ? <Money paise={i.approvedAmountPaise} className="text-leaf" /> : <span className="text-muted-foreground">—</span>}

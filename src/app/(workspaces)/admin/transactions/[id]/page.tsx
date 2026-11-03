@@ -46,7 +46,7 @@ function LedgerLine({ label, hint, children, total = false }: { label: string; h
   return (
     <div className={total ? "flex items-end justify-between gap-4 pt-5" : "flex items-baseline justify-between gap-4 py-3.5"}>
       <div>
-        <p className={total ? "text-sm font-semibold text-basalt" : "text-sm text-ink"}>{label}</p>
+        <p className={total ? "text-sm font-semibold text-fg" : "text-sm text-fg-soft"}>{label}</p>
         {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
       </div>
       {children}
@@ -55,7 +55,7 @@ function LedgerLine({ label, hint, children, total = false }: { label: string; h
 }
 
 const link = (href: string, label: string) => (
-  <Link className="font-medium text-basalt hover:underline" href={href}>
+  <Link className="font-medium text-fg hover:underline" href={href}>
     {label}
   </Link>
 );
@@ -123,20 +123,20 @@ export default async function TransactionDetailPage({ params }: { params: Promis
                 label="Builder-approved amount"
                 hint={invoice.amountPaise !== request.approvedAmountPaise ? `Invoice total ${formatINR(invoice.amountPaise)}` : "Equal to the invoice total"}
               >
-                <Money paise={request.approvedAmountPaise} size="md" className="text-basalt" />
+                <Money paise={request.approvedAmountPaise} size="md" className="text-fg" />
               </LedgerLine>
               <LedgerLine label={`Discount at ${formatBps(request.discountRateBps)}`} hint="Agreed programme rate at acceptance">
                 <Money paise={request.discountAmountPaise} size="md" sign="−" className="text-danger" />
               </LedgerLine>
               <LedgerLine label="Other charges" hint="None, by design">
-                <Money paise={request.chargesPaise} size="md" className="text-basalt" />
+                <Money paise={request.chargesPaise} size="md" className="text-fg" />
               </LedgerLine>
               <LedgerLine label="Net payable to channel partner" total>
                 <Money paise={request.netPayablePaise} size="xl" className="text-leaf" />
               </LedgerLine>
             </div>
           </div>
-          <div className="mt-6 flex gap-3 rounded-lg border-l-2 border-leaf bg-leaf-100/40 px-4 py-3.5 text-xs leading-relaxed text-ink">
+          <div className="mt-6 flex gap-3 rounded-lg border-l-2 border-leaf bg-leaf-100/40 px-4 py-3.5 text-xs leading-relaxed text-fg-soft">
             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-leaf" strokeWidth={1.6} aria-hidden="true" />
             <div>
               <p>
@@ -164,7 +164,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
                   </span>
                 ),
               },
-              { label: "Invoice total", value: <Money paise={invoice.amountPaise} className="text-basalt" /> },
+              { label: "Invoice total", value: <Money paise={invoice.amountPaise} className="text-fg" /> },
               { label: "Invoice · due date", value: <span className="tabular">{`${formatDate(invoice.invoiceDate)} · ${formatDate(invoice.dueDate)}`}</span> },
               {
                 label: "Statuses",
@@ -210,7 +210,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
           {settlement ? (
             <FactList
               facts={[
-                { label: "Amount", value: <Money paise={settlement.amountPaise} size="lg" className="text-basalt" /> },
+                { label: "Amount", value: <Money paise={settlement.amountPaise} size="lg" className="text-fg" /> },
                 { label: "Status", value: <StatusBadge kind="settlement" status={effectiveSettlementStatus(settlement)} /> },
                 { label: "Due date", value: <span className="tabular">{formatDate(settlement.dueDate)}</span> },
                 { label: "Settled on", value: settlement.settledAt ? <span className="tabular">{formatDateTime(settlement.settledAt)}</span> : "—" },
@@ -236,8 +236,8 @@ export default async function TransactionDetailPage({ params }: { params: Promis
             ) : (
               <ul className="space-y-4">
                 {request.comments.map((c) => (
-                  <li key={c.id} className="border-l-2 border-kota/60 pl-4">
-                    <p className="text-sm leading-relaxed whitespace-pre-line text-ink">{c.body}</p>
+                  <li key={c.id} className="border-l-2 border-line-strong/60 pl-4">
+                    <p className="text-sm leading-relaxed whitespace-pre-line text-fg-soft">{c.body}</p>
                     <p className="tabular mt-1.5 text-xs text-muted-foreground">
                       {c.authorName} · {formatDateTime(c.createdAt)}
                     </p>
@@ -255,7 +255,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
                 {invoice.documents.map((d) => (
                   <li key={d.id} className="flex items-center justify-between gap-3 py-3">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-paper text-kota-600 ring-1 ring-kota/25">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-glass text-fg-muted ring-1 ring-line-strong/25">
                         <FileText className="size-4" strokeWidth={1.5} aria-hidden="true" />
                       </span>
                       <div className="min-w-0">
@@ -263,7 +263,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
                           href={`/api/documents/invoices/${d.id}`}
                           target="_blank"
                           rel="noopener"
-                          className="block truncate text-sm font-medium text-basalt hover:underline"
+                          className="block truncate text-sm font-medium text-fg hover:underline"
                         >
                           {d.fileName}
                         </a>
@@ -272,7 +272,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
                         </p>
                       </div>
                     </div>
-                    <a href={`/api/documents/invoices/${d.id}?download=1`} className="shrink-0 text-xs font-semibold text-basalt hover:text-kota-600">
+                    <a href={`/api/documents/invoices/${d.id}?download=1`} className="shrink-0 text-xs font-semibold text-fg hover:text-fg-muted">
                       Download
                     </a>
                   </li>

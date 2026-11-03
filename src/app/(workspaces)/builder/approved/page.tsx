@@ -147,15 +147,15 @@ export default async function ApprovedInvoicesPage({ searchParams }: { searchPar
                       <Ref>{invoice.reference}</Ref>
                     </Td>
                     <Td>
-                      <p className="font-medium text-basalt">{invoice.cp.name}</p>
+                      <p className="font-medium text-fg">{invoice.cp.name}</p>
                       <p className="mt-1 text-[0.75rem] text-muted-foreground">{invoice.project.name}</p>
                     </Td>
                     <Td align="right">
-                      <Money paise={invoice.amountPaise} className="text-ink" />
+                      <Money paise={invoice.amountPaise} className="text-fg-soft" />
                     </Td>
                     <Td align="right">
                       {invoice.approvedAmountPaise !== null ? <Money paise={invoice.approvedAmountPaise} className="font-semibold text-leaf" /> : "—"}
-                      {partial && <p className="mt-0.5 text-[0.6875rem] text-[#8a5a12]">Partial approval</p>}
+                      {partial && <p className="mt-0.5 text-[0.6875rem] text-[#ffb36b]">Partial approval</p>}
                     </Td>
                     <Td className="whitespace-nowrap">{formatDate(invoice.decidedAt)}</Td>
                     <Td className="whitespace-nowrap">{formatDate(invoice.dueDate)}</Td>

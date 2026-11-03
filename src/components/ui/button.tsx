@@ -9,19 +9,19 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "border-basalt-900 bg-basalt bg-gradient-to-b from-basalt-700 to-basalt text-white shadow-button hover:from-basalt-600 hover:to-basalt-700 active:from-basalt active:to-basalt-900",
+          "border-white/10 bg-white/[0.14] text-white shadow-xs hover:bg-white/[0.2] active:bg-white/[0.1]",
         accent:
-          "border-gulmohar-700/60 bg-gulmohar text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.16),0_1px_2px_rgb(117_39_23/0.25)] hover:bg-gulmohar-500 active:bg-gulmohar-700",
+          "border-signal-600/60 bg-signal-500 font-semibold text-[#1e2733] shadow-[0_1px_2px_rgb(8_14_24/0.25)] hover:bg-signal-400 active:bg-signal-600",
         success:
-          "border-leaf-800 bg-leaf bg-gradient-to-b from-leaf-600 to-leaf text-white shadow-button hover:from-leaf-500 hover:to-leaf-600 active:from-leaf active:to-leaf-800",
+          "border-leaf-300/60 bg-leaf-300 text-white shadow-xs hover:bg-leaf active:bg-leaf-300",
         outline:
-          "border-input bg-card text-basalt shadow-xs hover:border-basalt/25 hover:bg-paper-50 hover:text-basalt aria-expanded:border-basalt/25 aria-expanded:bg-paper-50",
+          "border-line-strong bg-transparent text-fg hover:border-white/30 hover:bg-glass-100 aria-expanded:bg-glass-100",
         secondary:
-          "border-paper-300/70 bg-secondary text-secondary-foreground hover:bg-paper-300/70 aria-expanded:bg-paper-300/70",
-        ghost: "text-ink hover:bg-paper-200/70 hover:text-basalt aria-expanded:bg-paper-200/70 aria-expanded:text-basalt",
+          "border-line/70 bg-secondary text-secondary-foreground hover:bg-glass-300/70 aria-expanded:bg-glass-300/70",
+        ghost: "text-fg-soft hover:bg-glass-200/70 hover:text-fg aria-expanded:bg-glass-200/70 aria-expanded:text-fg",
         destructive:
-          "border-danger/15 bg-danger-soft text-danger hover:border-danger/30 hover:bg-[#f3dcd6] focus-visible:ring-destructive/25",
-        link: "h-auto px-0 text-basalt underline decoration-kota/60 underline-offset-4 hover:decoration-kota",
+          "border-danger/25 bg-danger-soft text-danger hover:border-danger/40 hover:bg-danger/20 focus-visible:ring-destructive/25",
+        link: "h-auto px-0 text-fg underline decoration-fg-muted/60 underline-offset-4 hover:decoration-fg-muted",
       },
       size: {
         default: "h-9 gap-2 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",

@@ -62,15 +62,15 @@ export default async function BuilderOverviewPage() {
 
   return (
     <>
-      <section className="relative mb-6 animate-fade-up overflow-hidden rounded-[14px] bg-basalt text-white shadow-[0_30px_60px_-36px_rgba(26, 35, 33,0.7)] sm:mb-8">
-        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-kota/70 to-transparent" />
-        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(120%_90%_at_100%_0%,rgba(168, 154, 132,0.16),transparent_55%)]" />
-        <Skyline className="absolute right-0 bottom-0 h-[78%] w-auto text-kota/[0.16] max-lg:hidden" />
+      <section className="relative mb-6 animate-fade-up overflow-hidden rounded-[14px] bg-night text-white shadow-[0_30px_60px_-36px_rgba(10, 16, 26,0.7)] sm:mb-8">
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-haze/70 to-transparent" />
+        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(120%_90%_at_100%_0%,rgba(255, 255, 255,0.16),transparent_55%)]" />
+        <Skyline className="absolute right-0 bottom-0 h-[78%] w-auto text-fg-muted/[0.16] max-lg:hidden" />
 
         <div className="relative grid gap-8 px-6 py-8 sm:px-10 sm:py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:gap-12 lg:py-12">
           <div className="min-w-0">
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] font-semibold tracking-[0.18em] text-kota uppercase">
-              <span aria-hidden="true" className="h-px w-6 bg-kota/70" />
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] font-semibold tracking-[0.18em] text-fg-muted uppercase">
+              <span aria-hidden="true" className="h-px w-6 bg-haze/70" />
               Executive overview
             </p>
             <h1 className="mt-4 text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.01em] text-white sm:text-[3.25rem]">
@@ -80,11 +80,11 @@ export default async function BuilderOverviewPage() {
               {totals.pendingCount > 0 ? (
                 <>
                   <span className="font-medium text-white">{plural(totals.pendingCount, "invoice")} awaiting your review</span>
-                  <span className="mx-2 text-kota/70">·</span>
-                  <Money paise={totals.pendingValue} compact className="font-medium text-kota" /> pending
+                  <span className="mx-2 text-fg-muted/70">·</span>
+                  <Money paise={totals.pendingValue} compact className="font-medium text-fg-muted" /> pending
                   {oldest !== null && oldest >= 1 && (
                     <>
-                      <span className="mx-2 text-kota/70">·</span>oldest waiting {plural(oldest, "day")}
+                      <span className="mx-2 text-fg-muted/70">·</span>oldest waiting {plural(oldest, "day")}
                     </>
                   )}
                 </>
@@ -97,10 +97,10 @@ export default async function BuilderOverviewPage() {
                 <Link href="/builder/approvals">
                   <ClipboardCheck className="size-4" />
                   Review approvals
-                  {totals.pendingCount > 0 && <span className="tabular ml-1 rounded-full bg-basalt/15 px-2 py-0.5 text-[0.75rem]">{totals.pendingCount}</span>}
+                  {totals.pendingCount > 0 && <span className="tabular ml-1 rounded-full bg-night/15 px-2 py-0.5 text-[0.75rem]">{totals.pendingCount}</span>}
                 </Link>
               </Button>
-              <Button variant="ghost" size="lg" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
+              <Button variant="ghost" size="lg" asChild className="text-white/80 hover:bg-card/10 hover:text-white">
                 <Link href="/builder/reports">
                   <BarChart3 className="size-4" />
                   Reports
@@ -109,8 +109,8 @@ export default async function BuilderOverviewPage() {
             </div>
           </div>
 
-          <dl className="grid content-end gap-px self-end overflow-hidden rounded-xl border border-white/10 bg-white/10 backdrop-blur-sm">
-            <div className="bg-basalt-900/55 px-5 py-5">
+          <dl className="grid content-end gap-px self-end overflow-hidden rounded-xl border border-white/10 bg-card/10 backdrop-blur-sm">
+            <div className="bg-night-deep/55 px-5 py-5">
               <dt className="text-[0.625rem] font-semibold tracking-[0.18em] text-white/55 uppercase">Awaiting your decision</dt>
               <dd className="mt-2.5">
                 <Money paise={totals.pendingValue} compact size="xl" className="font-light text-white" />
@@ -119,7 +119,7 @@ export default async function BuilderOverviewPage() {
                 </p>
               </dd>
             </div>
-            <div className="bg-basalt-900/55 px-5 py-5">
+            <div className="bg-night-deep/55 px-5 py-5">
               <dt className="text-[0.625rem] font-semibold tracking-[0.18em] text-white/55 uppercase">Next settlement to Veefin</dt>
               <dd className="mt-2.5">
                 {nextSettlement ? (
@@ -128,7 +128,7 @@ export default async function BuilderOverviewPage() {
                     <p className="mt-1.5 text-[0.75rem] text-white/55">
                       Due {formatDate(nextSettlement.dueDate)}
                       {dueIn !== null && (
-                        <span className={dueIn < 0 ? "text-[#f0a597]" : dueIn <= 7 ? "text-kota" : undefined}>
+                        <span className={dueIn < 0 ? "text-[#ffd57c]" : dueIn <= 7 ? "text-fg-muted" : undefined}>
                           {" · "}
                           {dueIn === 0 ? "today" : dueIn > 0 ? `in ${plural(dueIn, "day")}` : `${plural(-dueIn, "day")} overdue`}
                         </span>
@@ -181,7 +181,7 @@ export default async function BuilderOverviewPage() {
           description="Oldest submissions first, with days waiting"
           flush
           actions={
-            <Button variant="ghost" size="sm" asChild className="text-basalt">
+            <Button variant="ghost" size="sm" asChild className="text-fg">
               <Link href="/builder/approvals">
                 Open inbox
                 <ArrowRight className="size-3.5" />
@@ -192,19 +192,19 @@ export default async function BuilderOverviewPage() {
           {inbox.length === 0 ? (
             <Empty icon={Inbox} title="Inbox clear" description="Every submitted invoice has been decided. New submissions from channel partners will appear here." />
           ) : (
-            <ul className="divide-y divide-[#eceeeb]">
+            <ul className="divide-y divide-[rgba(255,255,255,0.07)]">
               {inbox.map((invoice) => {
                 const age = ageInDays(invoice.submittedAt, now);
                 return (
                   <li key={invoice.id}>
                     <Link
                       href={`/builder/invoices/${invoice.id}`}
-                      className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[#fafbf9] focus-visible:bg-[#fafbf9] focus-visible:outline-none sm:gap-5 sm:px-7 sm:py-5"
+                      className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[rgba(255,255,255,0.04)] focus-visible:bg-[rgba(255,255,255,0.04)] focus-visible:outline-none sm:gap-5 sm:px-7 sm:py-5"
                     >
                       <Monogram name={invoice.cp.name} className="self-start sm:self-center" />
                       <div className="min-w-0 flex-1">
                         <p className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium text-basalt">{invoice.invoiceNumber}</span>
+                          <span className="font-medium text-fg">{invoice.invoiceNumber}</span>
                           <StatusBadge kind="invoice" status={invoice.status} />
                         </p>
                         <p className="mt-1 truncate text-[0.75rem] text-muted-foreground">
@@ -212,12 +212,12 @@ export default async function BuilderOverviewPage() {
                         </p>
                         <div className="mt-3 flex items-center justify-between gap-3 sm:hidden">
                           <AgeingMeter days={age} />
-                          <Money paise={invoice.amountPaise} size="md" className="font-medium text-basalt" />
+                          <Money paise={invoice.amountPaise} size="md" className="font-medium text-fg" />
                         </div>
                       </div>
                       <AgeingMeter days={age} className="hidden w-28 shrink-0 sm:inline-flex" />
-                      <Money paise={invoice.amountPaise} size="md" className="hidden shrink-0 font-medium text-basalt sm:inline-flex" />
-                      <ChevronRight className="hidden size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-basalt sm:block" />
+                      <Money paise={invoice.amountPaise} size="md" className="hidden shrink-0 font-medium text-fg sm:inline-flex" />
+                      <ChevronRight className="hidden size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-fg sm:block" />
                     </Link>
                   </li>
                 );
@@ -231,7 +231,7 @@ export default async function BuilderOverviewPage() {
           title="Recent financing activity"
           description="Veefin's steps on your approved invoices"
           actions={
-            <Button variant="ghost" size="sm" asChild className="text-basalt">
+            <Button variant="ghost" size="sm" asChild className="text-fg">
               <Link href="/builder/financed">
                 Financed
                 <ArrowRight className="size-3.5" />
@@ -258,7 +258,7 @@ export default async function BuilderOverviewPage() {
                     <>
                       {FINANCING_STATUS[event.toStatus].label}
                       <span className="mx-1.5 text-muted-foreground/60">·</span>
-                      <Link href={`/builder/invoices/${event.request.invoice.id}`} className="decoration-kota/60 underline-offset-4 hover:underline">
+                      <Link href={`/builder/invoices/${event.request.invoice.id}`} className="decoration-fg-muted/60 underline-offset-4 hover:underline">
                         {event.request.invoice.invoiceNumber}
                       </Link>
                     </>

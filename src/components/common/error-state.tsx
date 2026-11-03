@@ -45,7 +45,7 @@ export function ErrorState({
         <span aria-hidden="true" className="absolute inset-0 rounded-full bg-danger-soft ring-1 ring-danger/15" />
         <Icon className="relative size-5 text-danger" strokeWidth={1.6} />
       </span>
-      <h1 className="font-display text-[1.5rem] leading-tight font-medium tracking-[-0.01em] text-basalt">{title}</h1>
+      <h1 className="font-display text-[1.5rem] leading-tight font-normal tracking-[-0.01em] text-fg">{title}</h1>
       <p className="mx-auto mt-2.5 max-w-md text-sm leading-relaxed text-muted-foreground">{description}</p>
       {(onRetry || back || actions) && (
         <div className="mt-8 flex flex-col-reverse justify-center gap-2.5 sm:flex-row">
@@ -57,7 +57,7 @@ export function ErrorState({
           {actions}
           {onRetry && (
             <Button onClick={() => onRetry()}>
-              <RotateCw className="text-kota-300" />
+              <RotateCw className="text-fg-muted" />
               Try again
             </Button>
           )}
@@ -65,7 +65,7 @@ export function ErrorState({
       )}
       {digest && (
         <p className="mt-7 text-[0.6875rem] text-muted-foreground">
-          Reference <span className="figure ml-1 rounded bg-paper-100 px-1.5 py-0.5 text-basalt ring-1 ring-paper-300">{digest}</span>
+          Reference <span className="figure ml-1 rounded bg-glass-100 px-1.5 py-0.5 text-fg ring-1 ring-line">{digest}</span>
         </p>
       )}
     </div>

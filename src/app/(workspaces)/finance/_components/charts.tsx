@@ -22,16 +22,16 @@ function BarGradients() {
   return (
     <defs>
       <linearGradient id="fin-basalt" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#3a4945" />
+        <stop offset="0%" stopColor="#ffffff" />
         <stop offset="100%" stopColor={CHART_COLORS.primary} />
       </linearGradient>
       <linearGradient id="fin-kota" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#c4b9a7" />
-        <stop offset="100%" stopColor={CHART_COLORS.kotaDeep} />
+        <stop offset="0%" stopColor="#ffd57c" />
+        <stop offset="100%" stopColor={CHART_COLORS.accent} />
       </linearGradient>
       <linearGradient id="fin-leaf-h" x1="0" y1="0" x2="1" y2="0">
         <stop offset="0%" stopColor={CHART_COLORS.positive} />
-        <stop offset="100%" stopColor="#3f8752" />
+        <stop offset="100%" stopColor="#45c99d" />
       </linearGradient>
     </defs>
   );
@@ -202,7 +202,7 @@ const AGEING_COLORS: Record<string, string> = {
   "not-due-30": CHART_COLORS.primarySoft,
   "not-due": CHART_COLORS.primary,
   "overdue-30": CHART_COLORS.warning,
-  "overdue-60": "#b8324f",
+  "overdue-60": "#ff7b6e",
   "overdue-60+": CHART_COLORS.negative,
 };
 

@@ -118,7 +118,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                   <Link href={`/partner/invoices/${r.invoice.id}`} className="flex items-start gap-3 px-5 py-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
-                        <p className="font-medium text-basalt">{r.invoice.invoiceNumber}</p>
+                        <p className="font-medium text-fg">{r.invoice.invoiceNumber}</p>
                         <Money paise={r.netPayablePaise} className="font-semibold text-leaf" />
                       </div>
                       <p className="mt-0.5 text-xs text-muted-foreground">

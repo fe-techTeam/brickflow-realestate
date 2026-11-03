@@ -34,17 +34,17 @@ type Size = "default" | "sm";
 
 function SummaryRows({ rows }: { rows: { label: string; value: ReactNode; strong?: boolean }[] }) {
   return (
-    <dl className="overflow-hidden rounded-lg border border-border bg-paper/50">
+    <dl className="overflow-hidden rounded-lg border border-border bg-glass/50">
       {rows.map((row) => (
         <div
           key={row.label}
           className={cn(
             "flex items-baseline justify-between gap-4 px-4 py-2.5",
-            row.strong ? "border-t border-kota/30 bg-card py-3.5" : "border-t border-border/50 first:border-t-0",
+            row.strong ? "border-t border-line-strong/30 bg-card py-3.5" : "border-t border-border/50 first:border-t-0",
           )}
         >
-          <dt className={cn("text-xs", row.strong ? "font-semibold tracking-[0.12em] text-basalt uppercase" : "text-muted-foreground")}>{row.label}</dt>
-          <dd className={cn("tabular text-right text-sm text-basalt", row.strong && "text-[1.375rem] font-light tracking-[-0.01em] text-leaf")}>{row.value}</dd>
+          <dt className={cn("text-xs", row.strong ? "font-semibold tracking-[0.12em] text-fg uppercase" : "text-muted-foreground")}>{row.label}</dt>
+          <dd className={cn("tabular text-right text-sm text-fg", row.strong && "text-[1.375rem] font-light tracking-[-0.01em] text-leaf")}>{row.value}</dd>
         </div>
       ))}
     </dl>
@@ -53,12 +53,12 @@ function SummaryRows({ rows }: { rows: { label: string; value: ReactNode; strong
 
 function AdviceSeal() {
   return (
-    <span className="pointer-events-none absolute -top-3 -right-2 inline-flex size-[4.5rem] -rotate-12 text-kota-600/90" aria-hidden="true">
+    <span className="pointer-events-none absolute -top-3 -right-2 inline-flex size-[4.5rem] -rotate-12 text-fg-muted/90" aria-hidden="true">
       <svg viewBox="0 0 120 120" className="size-full">
         <defs>
           <path id="bf-dialog-seal" d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
         </defs>
-        <circle cx="60" cy="60" r="57" fill="#fafbf9" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="60" cy="60" r="57" fill="rgba(255,255,255,0.04)" stroke="currentColor" strokeWidth="1.6" />
         <circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" strokeWidth="0.6" />
         <circle cx="60" cy="60" r="33" fill="none" stroke="currentColor" strokeWidth="0.8" />
         <text fill="currentColor" style={{ fontSize: 9.5, letterSpacing: "0.22em", fontWeight: 600 }}>
@@ -89,19 +89,19 @@ function TransferAdvice({
   reference?: string;
 }) {
   return (
-    <div className="relative rounded-xl border border-border bg-[linear-gradient(180deg,#fafbf9,#f8f4ea)] p-5">
+    <div className="relative rounded-xl border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.05))] p-5">
       <AdviceSeal />
-      <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-kota-600 uppercase">Payment advice{reference ? ` · ${reference}` : ""}</p>
+      <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-fg-muted uppercase">Payment advice{reference ? ` · ${reference}` : ""}</p>
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 text-xs">
         <div className="min-w-0">
           <p className="text-muted-foreground">From</p>
-          <p className="mt-1 font-medium text-basalt">Veefin Finance</p>
+          <p className="mt-1 font-medium text-fg">Veefin Finance</p>
           <p className="text-muted-foreground">Disbursement pool (demo)</p>
         </div>
-        <ArrowRight className="mt-5 size-4 text-kota-600" aria-hidden="true" />
+        <ArrowRight className="mt-5 size-4 text-fg-muted" aria-hidden="true" />
         <div className="min-w-0">
           <p className="text-muted-foreground">To</p>
-          <p className="mt-1 truncate font-medium text-basalt">{beneficiaryName}</p>
+          <p className="mt-1 truncate font-medium text-fg">{beneficiaryName}</p>
           {bankName !== undefined && <p className="truncate text-muted-foreground">{bankName ?? "—"}</p>}
           {account && (
             <p className="tabular text-muted-foreground">
@@ -111,7 +111,7 @@ function TransferAdvice({
           )}
         </div>
       </div>
-      <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-dashed border-kota/40 pt-4">
+      <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-dashed border-line-strong/40 pt-4">
         <span className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Amount</span>
         <span className="tabular text-[1.75rem] leading-none font-light tracking-[-0.02em] text-leaf">{formatINR(amountPaise)}</span>
       </div>
@@ -225,7 +225,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="font-display text-2xl font-semibold text-basalt">Initiate disbursement</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-normal text-fg">Initiate disbursement</DialogTitle>
             <DemoBadge />
           </div>
           <DialogDescription className="text-sm leading-relaxed">
@@ -322,11 +322,11 @@ export function ConfirmTransferButton({
       <DialogContent className="sm:max-w-lg" showCloseButton={!processing}>
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="font-display text-2xl font-semibold text-basalt">Confirm simulated transfer</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-normal text-fg">Confirm simulated transfer</DialogTitle>
             <DemoBadge />
           </div>
           <DialogDescription className="text-sm leading-relaxed">
-            Confirms payout {paymentReference} of <span className="tabular font-medium text-basalt">{formatINR(amountPaise)}</span>, generates a demo UTR and
+            Confirms payout {paymentReference} of <span className="tabular font-medium text-fg">{formatINR(amountPaise)}</span>, generates a demo UTR and
             opens the builder settlement. No real funds move.
           </DialogDescription>
         </DialogHeader>
@@ -343,15 +343,15 @@ export function ConfirmTransferButton({
                 <span
                   className={cn(
                     "relative flex size-6 shrink-0 items-center justify-center rounded-full ring-1 transition-colors duration-300",
-                    done ? "bg-leaf text-white ring-leaf" : active ? "bg-basalt text-kota ring-basalt" : "bg-card text-muted-foreground ring-border",
+                    done ? "bg-leaf text-white ring-leaf" : active ? "bg-night text-fg-muted ring-line-strong" : "bg-card text-muted-foreground ring-border",
                   )}
                 >
-                  {active && <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-basalt/25" />}
+                  {active && <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-night/25" />}
                   {done ? <Check className="size-3.5" /> : active ? <Loader2 className="size-3.5 animate-spin" /> : <span className="tabular text-[0.625rem] font-semibold">{index + 1}</span>}
                 </span>
-                <span className={cn("flex-1 transition-colors", done ? "text-leaf" : active ? "font-medium text-basalt" : "text-muted-foreground")}>{label}</span>
+                <span className={cn("flex-1 transition-colors", done ? "text-leaf" : active ? "font-medium text-fg" : "text-muted-foreground")}>{label}</span>
                 <span className="text-[0.625rem] font-semibold tracking-[0.16em] uppercase">
-                  {done ? <span className="text-leaf">Done</span> : active ? <span className="text-kota-600">Processing</span> : null}
+                  {done ? <span className="text-leaf">Done</span> : active ? <span className="text-fg-muted">Processing</span> : null}
                 </span>
               </li>
             );
@@ -440,9 +440,9 @@ export function MarkSettledButton({
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={submit} className="grid gap-4" noValidate>
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl font-semibold text-basalt">Record builder settlement</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-normal text-fg">Record builder settlement</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
-              Confirm that {builderName} has paid <span className="tabular font-medium text-basalt">{formatINR(amountPaise)}</span> against {requestReference}.
+              Confirm that {builderName} has paid <span className="tabular font-medium text-fg">{formatINR(amountPaise)}</span> against {requestReference}.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">

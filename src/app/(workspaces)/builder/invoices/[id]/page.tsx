@@ -43,7 +43,7 @@ async function loadInvoice(actor: Actor, id: string): Promise<InvoiceDetail> {
 }
 
 function Quote({ children, className }: { children: ReactNode; className?: string }) {
-  return <blockquote className={cn("border-l-2 border-kota/60 pl-3.5 font-display text-[1.0625rem] leading-snug text-ink italic", className)}>{children}</blockquote>;
+  return <blockquote className={cn("border-l-2 border-line-strong/60 pl-3.5 font-display text-[1.0625rem] leading-snug text-fg-soft italic", className)}>{children}</blockquote>;
 }
 
 function DecisionSummary({ invoice }: { invoice: InvoiceDetail }) {
@@ -59,7 +59,7 @@ function DecisionSummary({ invoice }: { invoice: InvoiceDetail }) {
             <BadgeCheck className="size-5" strokeWidth={1.75} />
           </span>
           <div>
-            <p className="font-display text-[1.375rem] leading-none font-semibold text-leaf">Approved</p>
+            <p className="font-display text-[1.375rem] leading-none font-normal text-leaf">Approved</p>
             <p className="mt-1 text-[0.75rem] text-muted-foreground">
               {formatDate(invoice.decidedAt)}
               {decidedBy ? ` · ${decidedBy}` : ""}
@@ -84,11 +84,11 @@ function DecisionSummary({ invoice }: { invoice: InvoiceDetail }) {
     return (
       <div>
         <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-full bg-[#b8324f] text-white ring-4 ring-[#f9e6ea]">
+          <span className="flex size-10 items-center justify-center rounded-full bg-[#ff7b6e] text-white ring-4 ring-[rgba(255,123,110,0.14)]">
             <XCircle className="size-5" strokeWidth={1.75} />
           </span>
           <div>
-            <p className="font-display text-[1.375rem] leading-none font-semibold text-[#8a1f37]">Rejected</p>
+            <p className="font-display text-[1.375rem] leading-none font-normal text-[#ff8c80]">Rejected</p>
             <p className="mt-1 text-[0.75rem] text-muted-foreground">
               {formatDate(invoice.decidedAt)}
               {decidedBy ? ` · ${decidedBy}` : ""}
@@ -103,11 +103,11 @@ function DecisionSummary({ invoice }: { invoice: InvoiceDetail }) {
   return (
     <div>
       <div className="flex items-center gap-3">
-        <span className="flex size-10 items-center justify-center rounded-full bg-[#fbf1df] text-[#8a5a12] ring-4 ring-[#fdf7ec]">
+        <span className="flex size-10 items-center justify-center rounded-full bg-[rgba(255,179,107,0.14)] text-[#ffb36b] ring-4 ring-[rgba(255,255,255,0.05)]">
           <MessageSquareText className="size-5" strokeWidth={1.75} />
         </span>
         <div>
-          <p className="font-display text-[1.375rem] leading-none font-semibold text-basalt">With the partner</p>
+          <p className="font-display text-[1.375rem] leading-none font-normal text-fg">With the partner</p>
           <p className="mt-1 text-[0.75rem] text-muted-foreground">Waiting for {invoice.cp.name}</p>
         </div>
       </div>
@@ -139,16 +139,16 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
   return (
     <>
       <header className="mb-6 animate-fade-up sm:mb-8">
-        <Link href={back.href} className="mb-5 inline-flex items-center gap-1 text-[0.75rem] font-medium tracking-wide text-muted-foreground transition-colors hover:text-basalt">
+        <Link href={back.href} className="mb-5 inline-flex items-center gap-1 text-[0.75rem] font-medium tracking-wide text-muted-foreground transition-colors hover:text-fg">
           <ChevronLeft className="size-3.5" />
           {back.label}
         </Link>
-        <div className="flex flex-col gap-6 border-b border-[#dfe2de] pb-7 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-6 border-b border-[rgba(255,255,255,0.1)] pb-7 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <Eyebrow className="mb-3">
               Invoice review <span className="font-mono tracking-normal normal-case">{invoice.reference}</span>
             </Eyebrow>
-            <h1 className="text-[2.25rem] leading-[1.05] font-semibold text-basalt sm:text-[2.875rem]">{invoice.invoiceNumber}</h1>
+            <h1 className="text-[2.25rem] leading-[1.05] font-semibold text-fg sm:text-[2.875rem]">{invoice.invoiceNumber}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <StatusBadge kind="invoice" status={invoice.status} />
               {invoice.status === "ACCEPTED" && <StatusBadge kind="financing" status={invoice.financingStatus} />}
@@ -156,7 +156,7 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
           </div>
           <div className="lg:text-right">
             <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Invoice amount · incl. GST</p>
-            <Money paise={invoice.amountPaise} size="hero" className="mt-2 font-light text-basalt" />
+            <Money paise={invoice.amountPaise} size="hero" className="mt-2 font-light text-fg" />
           </div>
         </div>
 
@@ -184,16 +184,16 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
       <div className="grid gap-6 sm:gap-8 xl:grid-cols-[minmax(0,1fr)_400px]">
         <aside className="space-y-6 sm:space-y-8 xl:sticky xl:top-24 xl:col-start-2 xl:row-start-1 xl:self-start">
           <section className={cn(CARD, "animate-fade-up overflow-hidden")} aria-labelledby="decision-title">
-            <div className={cn("h-1", reviewable ? "bg-gradient-to-r from-kota/40 via-kota to-kota/40" : invoice.status === "ACCEPTED" ? "bg-leaf" : invoice.status === "REJECTED" ? "bg-[#b8324f]" : "bg-[#c48a2c]")} />
+            <div className={cn("h-1", reviewable ? "bg-gradient-to-r from-haze/40 via-haze to-haze/40" : invoice.status === "ACCEPTED" ? "bg-leaf" : invoice.status === "REJECTED" ? "bg-[#ff7b6e]" : "bg-[#ffb36b]")} />
             <div className="px-5 py-6 sm:px-7">
-              <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-kota-600 uppercase">Your decision</p>
+              <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-fg-muted uppercase">Your decision</p>
               {reviewable ? (
                 <>
-                  <h2 id="decision-title" className="mt-1.5 text-[1.625rem] leading-tight font-semibold text-basalt">
+                  <h2 id="decision-title" className="mt-1.5 text-[1.625rem] leading-tight font-semibold text-fg">
                     Review &amp; decide
                   </h2>
                   <p className="mt-1 text-[0.75rem] text-muted-foreground">Submitted {formatDateTime(invoice.submittedAt)}</p>
-                  <div className="my-6 border-y border-[#eceeeb] py-4">
+                  <div className="my-6 border-y border-[rgba(255,255,255,0.07)] py-4">
                     <LedgerLine label="For approval" hint={`${invoice.cp.name}`} value={<Money paise={invoice.amountPaise} size="lg" className="font-medium" />} className="py-0" />
                   </div>
                   <ReviewActions
@@ -203,7 +203,7 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
                     amountPaise={invoice.amountPaise.toString()}
                     status={invoice.status as "SUBMITTED" | "UNDER_REVIEW"}
                   />
-                  <p className="mt-5 flex gap-2.5 rounded-lg bg-paper/80 px-3.5 py-3 text-[0.75rem] leading-relaxed text-ink/80">
+                  <p className="mt-5 flex gap-2.5 rounded-lg bg-glass/80 px-3.5 py-3 text-[0.75rem] leading-relaxed text-fg-soft/80">
                     <ShieldCheck className="mt-px size-4 shrink-0 text-leaf" />
                     Approval makes this invoice eligible for early payment from Veefin. Your due date and credit terms do not change.
                   </p>
@@ -226,8 +226,8 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
                   const fromBuilder = entry.action === "CLARIFICATION_REQUESTED";
                   return (
                     <li key={entry.id} className={fromBuilder ? "mr-8" : "ml-8"}>
-                      <div className={cn("rounded-xl px-4 py-3", fromBuilder ? "rounded-tl-sm bg-[#fbf1df]/80" : "rounded-tr-sm bg-leaf-100/70")}>
-                        <p className="text-[0.8125rem] leading-relaxed text-ink">{entry.comment ?? "—"}</p>
+                      <div className={cn("rounded-xl px-4 py-3", fromBuilder ? "rounded-tl-sm bg-[rgba(255,179,107,0.14)]/80" : "rounded-tr-sm bg-leaf-100/70")}>
+                        <p className="text-[0.8125rem] leading-relaxed text-fg-soft">{entry.comment ?? "—"}</p>
                       </div>
                       <p className={cn("mt-1.5 text-[0.6875rem] text-muted-foreground", !fromBuilder && "text-right")}>
                         {fromBuilder ? "You asked" : `${invoice.cp.name} responded`} · {entry.actorName} · {formatDateTime(entry.createdAt)}
@@ -309,8 +309,8 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
                 </Fact>
               </dl>
 
-              <div className="self-start rounded-xl border border-[#eceeeb] bg-[#fbfbfa] px-5 py-2">
-                <div className="divide-y divide-[#eceeeb]">
+              <div className="self-start rounded-xl border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.04)] px-5 py-2">
+                <div className="divide-y divide-[rgba(255,255,255,0.07)]">
                   <LedgerLine label="Taxable value" value={taxable !== null ? <Money paise={taxable} /> : <span className="text-muted-foreground">—</span>} tone="muted" />
                   <LedgerLine label="GST" value={invoice.gstAmountPaise !== null ? <Money paise={invoice.gstAmountPaise} /> : <span className="text-[0.8125rem] text-muted-foreground">Not stated</span>} tone="muted" />
                   <LedgerLine label="Invoice total" value={<Money paise={invoice.amountPaise} size="lg" className="font-medium" />} />
@@ -329,9 +329,9 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
               </div>
             </div>
             {invoice.description && (
-              <div className="mt-7 border-t border-[#eceeeb] pt-6">
+              <div className="mt-7 border-t border-[rgba(255,255,255,0.07)] pt-6">
                 <p className="mb-2 text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Description</p>
-                <p className="max-w-3xl font-display text-[1.1875rem] leading-snug text-ink">{invoice.description}</p>
+                <p className="max-w-3xl font-display text-[1.1875rem] leading-snug text-fg-soft">{invoice.description}</p>
               </div>
             )}
           </Panel>

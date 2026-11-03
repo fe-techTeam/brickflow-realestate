@@ -32,8 +32,8 @@ export function ChartTooltip({
 }) {
   if (!active || rows.length === 0) return null;
   return (
-    <div className="min-w-48 rounded-lg border border-[#dfe2de] bg-card px-3.5 py-3 text-xs shadow-[0_18px_40px_-18px_rgba(34, 45, 43,0.45)]">
-      {label !== undefined && label !== "" && <p className="mb-2 border-b border-[#eceeeb] pb-1.5 font-display text-[0.9375rem] font-semibold text-basalt">{label}</p>}
+    <div className="min-w-48 rounded-lg border border-[rgba(255,255,255,0.1)] bg-card px-3.5 py-3 text-xs shadow-[0_18px_40px_-18px_rgba(8, 14, 24,0.45)]">
+      {label !== undefined && label !== "" && <p className="mb-2 border-b border-[rgba(255,255,255,0.07)] pb-1.5 font-display text-[0.9375rem] font-normal text-fg">{label}</p>}
       <ul className="space-y-1">
         {rows.map((row) => (
           <li key={String(row.dataKey ?? row.name)} className="flex items-center justify-between gap-4">
@@ -41,7 +41,7 @@ export function ChartTooltip({
               <span aria-hidden="true" className="size-2 rounded-[2px]" style={{ backgroundColor: row.color }} />
               {row.name}
             </span>
-            <span className="tabular font-medium text-ink">{format(Number(row.value ?? 0))}</span>
+            <span className="tabular font-medium text-fg-soft">{format(Number(row.value ?? 0))}</span>
           </li>
         ))}
       </ul>
@@ -66,8 +66,8 @@ export function ChartLegend({ series, className }: { series: SeriesDef[]; classN
 /** Collapsible table view of a chart's data for screen readers, print and exact figures. */
 export function ChartDataTable({ caption, columns, rows }: { caption: string; columns: string[]; rows: ReactNode[][] }) {
   return (
-    <details className="group mt-5 border-t border-[#eceeeb] pt-3.5 text-xs">
-      <summary className="cursor-pointer text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase transition-colors select-none hover:text-basalt">View data table</summary>
+    <details className="group mt-5 border-t border-[rgba(255,255,255,0.07)] pt-3.5 text-xs">
+      <summary className="cursor-pointer text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase transition-colors select-none hover:text-fg">View data table</summary>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full border-collapse">
           <caption className="sr-only">{caption}</caption>
@@ -84,7 +84,7 @@ export function ChartDataTable({ caption, columns, rows }: { caption: string; co
             {rows.map((row, r) => (
               <tr key={r}>
                 {row.map((cell, i) => (
-                  <td key={i} className={cn("border-b border-border/60 px-2 py-1.5 text-ink", i === 0 ? "text-left" : "tabular text-right")}>
+                  <td key={i} className={cn("border-b border-border/60 px-2 py-1.5 text-fg-soft", i === 0 ? "text-left" : "tabular text-right")}>
                     {cell}
                   </td>
                 ))}

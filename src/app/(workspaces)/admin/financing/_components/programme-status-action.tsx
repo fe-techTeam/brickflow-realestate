@@ -81,24 +81,24 @@ export function ProgrammeStatusAction({ programme, target }: { programme: Progra
       </DialogTrigger>
       <DialogContent className="gap-5 p-6 sm:max-w-lg sm:p-7">
         <DialogHeader className="gap-0 text-left">
-          <p className="flex items-center gap-2.5 text-[0.625rem] font-semibold tracking-[0.22em] text-kota-600 uppercase">
-            <span aria-hidden="true" className="h-px w-5 bg-kota" />
+          <p className="flex items-center gap-2.5 text-[0.625rem] font-semibold tracking-[0.22em] text-fg-muted uppercase">
+            <span aria-hidden="true" className="h-px w-5 bg-haze" />
             Programme status
           </p>
-          <DialogTitle className="mt-2.5 font-display text-[1.75rem] leading-tight font-semibold text-basalt">
+          <DialogTitle className="mt-2.5 font-display text-[1.75rem] leading-tight font-normal text-fg">
             {label} {programme.code}?
           </DialogTitle>
           <DialogDescription className="mt-2 text-[0.8125rem] leading-relaxed">
-            {programme.builderName} · <span className="tabular font-medium text-basalt">{formatBps(programme.discountRateBps)}</span> agreed discount. {copy.effect}
+            {programme.builderName} · <span className="tabular font-medium text-fg">{formatBps(programme.discountRateBps)}</span> agreed discount. {copy.effect}
           </DialogDescription>
         </DialogHeader>
-        <ul className="divide-y divide-border/70 rounded-lg border border-border/80 bg-paper/50 text-[0.8125rem] text-ink">
+        <ul className="divide-y divide-border/70 rounded-lg border border-border/80 bg-glass/50 text-[0.8125rem] text-fg-soft">
           <li className="flex gap-3 px-4 py-3">
             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-leaf" strokeWidth={1.6} aria-hidden="true" />
             <span>Accepted financing requests ({programme.requests}) keep their agreed terms.</span>
           </li>
           <li className="flex gap-3 px-4 py-3">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-kota-600" strokeWidth={1.6} aria-hidden="true" />
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-fg-muted" strokeWidth={1.6} aria-hidden="true" />
             <span>
               {programme.openOffers > 0
                 ? `${programme.openOffers} open offer${programme.openOffers === 1 ? "" : "s"} will be withdrawn; partners can regenerate if the builder still has an active programme.`

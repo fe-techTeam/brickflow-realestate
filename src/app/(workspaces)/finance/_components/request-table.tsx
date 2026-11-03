@@ -92,11 +92,11 @@ export function RequestTable({
       <ul className="-mx-5 divide-y divide-border/70 border-t border-border/70 md:hidden">
         {rows.map((r) => (
           <li key={r.id}>
-            <Link href={`/finance/requests/${r.id}`} className="block px-5 py-4 transition-colors active:bg-paper/60">
+            <Link href={`/finance/requests/${r.id}`} className="block px-5 py-4 transition-colors active:bg-glass/60">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-basalt">{showCp ? r.cp.name : r.builder.name}</p>
-                  {showCp && showBuilder && <p className="truncate text-xs text-ink/80">to {r.builder.name}</p>}
+                  <p className="truncate text-sm font-medium text-fg">{showCp ? r.cp.name : r.builder.name}</p>
+                  {showCp && showBuilder && <p className="truncate text-xs text-fg-soft/80">to {r.builder.name}</p>}
                   <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">
                     {r.reference} · {r.invoice.invoiceNumber}
                   </p>
@@ -139,29 +139,29 @@ export function RequestTable({
             <LTr key={r.id}>
               {showCp && (
                 <LTd className="min-w-44">
-                  <Link href={`/finance/requests/${r.id}`} className="font-medium text-basalt underline-offset-4 hover:underline">
+                  <Link href={`/finance/requests/${r.id}`} className="font-medium text-fg underline-offset-4 hover:underline">
                     {r.cp.name}
                   </Link>
-                  {showBuilder && <p className="text-xs text-ink/80 2xl:hidden">to {r.builder.name}</p>}
+                  {showBuilder && <p className="text-xs text-fg-soft/80 2xl:hidden">to {r.builder.name}</p>}
                   <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">{r.reference}</p>
                 </LTd>
               )}
               {showBuilder && (
                 <LTd className={cn("min-w-36", builderColumn)}>
-                  <span className="text-basalt">{r.builder.name}</span>
+                  <span className="text-fg">{r.builder.name}</span>
                   {!showCp && <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">{r.reference}</p>}
                 </LTd>
               )}
               <LTd className="min-w-36">
-                <span className="tabular text-basalt">
+                <span className="tabular text-fg">
                   <Breakable text={r.invoice.invoiceNumber} />
                 </span>
                 <p className="text-xs text-muted-foreground">{r.invoice.project.name}</p>
               </LTd>
               <LTd align="right">
-                <Money paise={r.approvedAmountPaise} className="font-normal text-ink" />
+                <Money paise={r.approvedAmountPaise} className="font-normal text-fg-soft" />
               </LTd>
-              <LTd align="right" className="text-ink">
+              <LTd align="right" className="text-fg-soft">
                 {formatBps(r.discountRateBps)}
               </LTd>
               <LTd align="right">

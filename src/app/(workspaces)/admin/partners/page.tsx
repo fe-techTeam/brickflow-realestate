@@ -83,7 +83,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     <div className="flex items-center gap-3">
                       <Monogram name={p.name} size="sm" tone={p.status === "ACTIVE" ? "paper" : "muted"} />
                       <div>
-                        <Link href={`/admin/organisations/${p.id}`} className="font-medium text-basalt hover:underline">
+                        <Link href={`/admin/organisations/${p.id}`} className="font-medium text-fg hover:underline">
                           {p.name}
                         </Link>
                         <p className="text-xs text-muted-foreground">{p.city ?? p.legalName}</p>
@@ -101,8 +101,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                               href={`/admin/organisations/${e.builderId}`}
                               title={`${e.code} · ${e.creditPeriodDays}-day credit${e.status === "INACTIVE" ? " · inactive" : ""}`}
                               className={cn(
-                                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:border-kota/60",
-                                e.status === "ACTIVE" ? "border-border bg-paper/60 text-basalt" : "border-dashed border-border text-muted-foreground line-through",
+                                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:border-line-strong/60",
+                                e.status === "ACTIVE" ? "border-border bg-glass/60 text-fg" : "border-dashed border-border text-muted-foreground line-through",
                               )}
                             >
                               {e.builderName}
@@ -114,11 +114,11 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     )}
                   </LTd>
                   <LTd align="right">
-                    <Money paise={p.invoicePaise} compact className="text-basalt" />
+                    <Money paise={p.invoicePaise} compact className="text-fg" />
                     <p className="text-xs text-muted-foreground">{plural(p.invoiceCount, "invoice")}</p>
                   </LTd>
                   <LTd align="right">
-                    <Money paise={p.financedPaise} compact className="text-basalt" />
+                    <Money paise={p.financedPaise} compact className="text-fg" />
                     <p className="text-xs text-muted-foreground">{plural(p.financedCount, "request")}</p>
                   </LTd>
                   <LTd align="right">

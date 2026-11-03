@@ -47,30 +47,30 @@ export function LoginForm({ demoPassword, accounts = [] }: { demoPassword?: stri
                   onClick={() => selectDemo(account.email)}
                   aria-pressed={selected}
                   className={cn(
-                    "group relative flex min-w-0 flex-col items-start gap-3 rounded-xl border bg-card p-3.5 text-left transition-[border-color,box-shadow,transform] duration-200 focus-visible:ring-3 focus-visible:ring-kota/30 focus-visible:outline-none sm:flex-row sm:items-center",
+                    "group relative flex min-w-0 flex-col items-start gap-3 rounded-xl border bg-card p-3.5 text-left transition-[border-color,box-shadow,transform] duration-200 focus-visible:ring-3 focus-visible:ring-line-strong/30 focus-visible:outline-none sm:flex-row sm:items-center",
                     selected
-                      ? "border-basalt shadow-[0_0_0_3px_rgb(168_154_132/0.22),var(--shadow-card)]"
-                      : "border-border shadow-xs hover:-translate-y-px hover:border-kota/60 hover:shadow-card",
+                      ? "border-line-strong shadow-[0_0_0_3px_rgb(168_154_132/0.22),var(--shadow-card)]"
+                      : "border-border shadow-xs hover:-translate-y-px hover:border-line-strong/60 hover:shadow-card",
                   )}
                 >
                   <span
                     className={cn(
                       "flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset transition-colors duration-200",
                       selected
-                        ? "bg-gradient-to-b from-basalt-700 to-basalt-900 text-kota-300 ring-kota/40"
-                        : "bg-paper-100 text-basalt ring-paper-300 group-hover:bg-basalt group-hover:text-kota-300 group-hover:ring-basalt",
+                        ? "bg-gradient-to-b from-night to-night-deep text-fg-muted ring-line-strong/40"
+                        : "bg-glass-100 text-fg ring-line group-hover:bg-night group-hover:text-fg-muted group-hover:ring-line-strong",
                     )}
                   >
                     <Icon className="size-[1.05rem]" strokeWidth={1.6} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-[0.8125rem] leading-tight font-semibold text-basalt">{WORKSPACES[account.workspace].shortLabel}</span>
+                    <span className="block text-[0.8125rem] leading-tight font-semibold text-fg">{WORKSPACES[account.workspace].shortLabel}</span>
                     <span className="mt-0.5 block truncate text-[0.6875rem] text-muted-foreground">{account.org}</span>
                   </span>
                   <span
                     aria-hidden="true"
                     className={cn(
-                      "absolute top-2 right-2 flex size-4 items-center justify-center rounded-full bg-kota text-basalt-900 transition-all duration-200",
+                      "absolute top-2 right-2 flex size-4 items-center justify-center rounded-full bg-haze text-fg transition-all duration-200",
                       selected ? "scale-100 opacity-100" : "scale-50 opacity-0",
                     )}
                   >
@@ -128,7 +128,7 @@ export function LoginForm({ demoPassword, accounts = [] }: { demoPassword?: stri
         <Button type="submit" size="lg" className="group/submit h-12 w-full text-[0.9375rem]" disabled={pending}>
           {pending ? <Loader2 className="size-4 animate-spin" /> : null}
           {pending ? "Signing in…" : "Sign in"}
-          {!pending && <ArrowRight className="size-4 text-kota-300 transition-transform duration-200 group-hover/submit:translate-x-0.5" />}
+          {!pending && <ArrowRight className="size-4 text-fg-muted transition-transform duration-200 group-hover/submit:translate-x-0.5" />}
         </Button>
       </form>
 

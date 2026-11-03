@@ -36,7 +36,7 @@ export function Section({
       {(title || actions || eyebrow) && (
         <header className="flex flex-col gap-3 border-b hairline px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-[1.125rem]">
           <div className="min-w-0">
-            {eyebrow && <p className="eyebrow mb-1.5 text-[0.625rem] text-kota-700">{eyebrow}</p>}
+            {eyebrow && <p className="eyebrow mb-1.5 text-[0.625rem] text-fg-muted">{eyebrow}</p>}
             {title && <h2 className="heading-section">{title}</h2>}
             {description && <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground">{description}</p>}
           </div>
@@ -44,7 +44,7 @@ export function Section({
         </header>
       )}
       <div className={cn("px-5 py-5 sm:px-6", bodyClassName)}>{children}</div>
-      {footer && <footer className="border-t hairline bg-paper-100/70 px-5 py-3 text-xs text-muted-foreground sm:px-6">{footer}</footer>}
+      {footer && <footer className="border-t hairline bg-glass-100/70 px-5 py-3 text-xs text-muted-foreground sm:px-6">{footer}</footer>}
     </section>
   );
 }
@@ -65,11 +65,11 @@ export function EmptyState({
   return (
     <div className={cn("flex flex-col items-center justify-center px-6 py-14 text-center", className)}>
       <span className="relative mb-5 flex size-14 items-center justify-center">
-        <span aria-hidden="true" className="absolute -inset-3 rounded-full border border-dashed border-kota/30" />
-        <span aria-hidden="true" className="absolute inset-0 rounded-full bg-gradient-to-b from-paper-50 to-paper-200 ring-1 ring-kota/30" />
-        <Icon className="relative size-5 text-kota-700" strokeWidth={1.5} />
+        <span aria-hidden="true" className="absolute -inset-3 rounded-full border border-dashed border-line-strong/30" />
+        <span aria-hidden="true" className="absolute inset-0 rounded-full bg-gradient-to-b from-glass-50 to-glass-200 ring-1 ring-line-strong/30" />
+        <Icon className="relative size-5 text-fg-muted" strokeWidth={1.5} />
       </span>
-      <p className="font-display text-[1.1875rem] font-medium text-basalt">{title}</p>
+      <p className="font-display text-[1.1875rem] font-normal text-fg">{title}</p>
       {description && <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>}
       {action && <div className="mt-6">{action}</div>}
     </div>
@@ -110,8 +110,8 @@ export function DetailList({
           <dt className="eyebrow mb-1.5 text-[0.625rem]">{item.label}</dt>
           <dd
             className={cn(
-              "text-sm leading-relaxed break-words text-ink",
-              item.emphasis && "figure text-[1.25rem] leading-tight font-semibold text-basalt",
+              "text-sm leading-relaxed break-words text-fg-soft",
+              item.emphasis && "figure text-[1.25rem] leading-tight font-semibold text-fg",
             )}
           >
             {item.value === null || item.value === undefined ? "—" : item.emphasis ? <FigureValue value={item.value} /> : item.value}
@@ -133,11 +133,11 @@ export interface TimelineEntry {
 }
 
 const TIMELINE_NODE: Record<NonNullable<TimelineEntry["tone"]>, { ring: string; dot: string; icon: string }> = {
-  default: { ring: "bg-card ring-basalt-200", dot: "bg-basalt-400", icon: "text-basalt" },
+  default: { ring: "bg-card ring-line", dot: "bg-glass-400", icon: "text-fg" },
   success: { ring: "bg-leaf-50 ring-leaf-200", dot: "bg-leaf", icon: "text-leaf" },
-  danger: { ring: "bg-danger-soft ring-[#efc6cf]", dot: "bg-danger", icon: "text-danger" },
-  warning: { ring: "bg-warning-soft ring-[#e3ddd2]", dot: "bg-warning", icon: "text-warning" },
-  kota: { ring: "bg-kota-50 ring-kota-300", dot: "bg-kota", icon: "text-kota-700" },
+  danger: { ring: "bg-danger-soft ring-[rgba(255,123,110,0.3)]", dot: "bg-danger", icon: "text-danger" },
+  warning: { ring: "bg-warning-soft ring-[rgba(255,255,255,0.08)]", dot: "bg-warning", icon: "text-warning" },
+  kota: { ring: "bg-glass-50 ring-line", dot: "bg-haze", icon: "text-fg-muted" },
 };
 
 export function Timeline({ entries, className }: { entries: TimelineEntry[]; className?: string }) {
@@ -154,10 +154,10 @@ export function Timeline({ entries, className }: { entries: TimelineEntry[]; cla
               {Icon ? <Icon className={cn("size-3", tone.icon)} strokeWidth={2} /> : <span className={cn("size-[7px] rounded-full", tone.dot)} />}
             </span>
             <div className="min-w-0 pt-px">
-              <p className="text-sm leading-snug font-medium text-basalt">{entry.title}</p>
+              <p className="text-sm leading-snug font-medium text-fg">{entry.title}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">{entry.meta}</p>
               {entry.body && (
-                <div className="mt-2.5 rounded-lg border border-hairline border-l-2 border-l-kota/50 bg-paper-100/80 px-3.5 py-2.5 text-[0.8125rem] leading-relaxed text-ink">
+                <div className="mt-2.5 rounded-lg border border-hairline border-l-2 border-l-line-strong/50 bg-glass-100/80 px-3.5 py-2.5 text-[0.8125rem] leading-relaxed text-fg-soft">
                   {entry.body}
                 </div>
               )}
@@ -185,15 +185,15 @@ export function AmountRow({
 }) {
   const total = tone === "total";
   return (
-    <div className={cn("flex items-baseline justify-between gap-4 py-3", total && "mt-1 border-t border-basalt/15 pt-4", className)}>
+    <div className={cn("flex items-baseline justify-between gap-4 py-3", total && "mt-1 border-t border-line-strong/15 pt-4", className)}>
       <div className="min-w-0">
-        <p className={cn("text-sm", total ? "font-semibold text-basalt" : "text-ink")}>{label}</p>
+        <p className={cn("text-sm", total ? "font-semibold text-fg" : "text-fg-soft")}>{label}</p>
         {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
       </div>
       <p
         className={cn(
           "figure shrink-0 text-right",
-          total ? "text-[1.75rem] leading-none font-semibold tracking-[-0.03em] text-leaf" : "text-sm font-medium text-basalt",
+          total ? "text-[1.75rem] leading-none font-semibold tracking-[-0.03em] text-leaf" : "text-sm font-medium text-fg",
           tone === "deduct" && "text-danger",
         )}
       >

@@ -146,8 +146,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                     <Link href={`/finance/requests/${r.id}`} className="block px-5 py-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="tabular text-sm font-medium text-basalt">{r.reference}</p>
-                          <p className="truncate text-xs text-ink/80">
+                          <p className="tabular text-sm font-medium text-fg">{r.reference}</p>
+                          <p className="truncate text-xs text-fg-soft/80">
                             {r.cp.name} to {r.builder.name}
                           </p>
                         </div>
@@ -187,18 +187,18 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                   return (
                     <LTr key={r.id}>
                       <LTd className="whitespace-nowrap">
-                        <Link href={`/finance/requests/${r.id}`} className="tabular font-medium tracking-wide text-basalt underline-offset-4 hover:underline">
+                        <Link href={`/finance/requests/${r.id}`} className="tabular font-medium tracking-wide text-fg underline-offset-4 hover:underline">
                           {r.reference}
                         </Link>
-                        <p className="tabular mt-0.5 text-xs text-ink/80">{r.invoice.invoiceNumber}</p>
+                        <p className="tabular mt-0.5 text-xs text-fg-soft/80">{r.invoice.invoiceNumber}</p>
                         <p className="text-[0.6875rem] text-muted-foreground">{formatDate(r.createdAt)}</p>
                       </LTd>
                       <LTd className="min-w-44">
-                        <span className="text-basalt">{r.cp.name}</span>
+                        <span className="text-fg">{r.cp.name}</span>
                         <p className="text-xs text-muted-foreground">to {r.builder.name}</p>
                       </LTd>
                       <LTd align="right">
-                        <Money paise={r.approvedAmountPaise} className="font-normal text-ink" />
+                        <Money paise={r.approvedAmountPaise} className="font-normal text-fg-soft" />
                         <p className="mt-0.5 text-[0.6875rem] whitespace-nowrap text-muted-foreground">
                           <Money paise={r.discountAmountPaise} sign="−" size="xs" className="font-normal text-danger" /> at {formatBps(r.discountRateBps)}
                         </p>

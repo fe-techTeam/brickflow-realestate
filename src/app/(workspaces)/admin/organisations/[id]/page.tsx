@@ -26,7 +26,7 @@ async function load(id: string) {
   }
 }
 
-const mono = (value: string | null | undefined) => (value ? <span className="font-mono text-[0.8125rem] tracking-tight text-basalt">{value}</span> : "—");
+const mono = (value: string | null | undefined) => (value ? <span className="font-mono text-[0.8125rem] tracking-tight text-fg">{value}</span> : "—");
 
 export default async function OrganisationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -118,7 +118,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
               {
                 label: "Email",
                 value: org.contactEmail ? (
-                  <a className="text-basalt hover:underline" href={`mailto:${org.contactEmail}`}>
+                  <a className="text-fg hover:underline" href={`mailto:${org.contactEmail}`}>
                     {org.contactEmail}
                   </a>
                 ) : (
@@ -141,7 +141,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
           title="Financing programmes"
           description="Agreed discount terms. They are changed only in Financing configuration."
           actions={
-            <Link href="/admin/financing" className="inline-flex items-center gap-1 text-xs font-semibold text-basalt hover:text-kota-600">
+            <Link href="/admin/financing" className="inline-flex items-center gap-1 text-xs font-semibold text-fg hover:text-fg-muted">
               Financing configuration
               <ArrowRight className="size-3.5" />
             </Link>
@@ -209,7 +209,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
                     <div className="flex items-center gap-3">
                       <Monogram name={m.user.name} size="sm" tone={m.user.status === "ACTIVE" ? "paper" : "muted"} className="rounded-full" />
                       <div>
-                        <p className="font-medium text-basalt">{m.user.name}</p>
+                        <p className="font-medium text-fg">{m.user.name}</p>
                         <p className="text-xs text-muted-foreground">{m.user.email}</p>
                       </div>
                     </div>
@@ -253,7 +253,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
                 {org.projects.map((p) => (
                   <LTr key={p.id}>
                     <LTd>
-                      <p className="font-medium text-basalt">{p.name}</p>
+                      <p className="font-medium text-fg">{p.name}</p>
                       <RefCode className="text-[0.6875rem] text-muted-foreground">{p.code}</RefCode>
                     </LTd>
                     <LTd>{p.city}</LTd>
@@ -296,7 +296,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
                     <LTd>
                       <div className="flex items-center gap-3">
                         <Monogram name={e.counterparty.name} size="sm" />
-                        <Link href={`/admin/organisations/${e.counterparty.id}`} className="font-medium text-basalt hover:underline">
+                        <Link href={`/admin/organisations/${e.counterparty.id}`} className="font-medium text-fg hover:underline">
                           {e.counterparty.name}
                         </Link>
                       </div>

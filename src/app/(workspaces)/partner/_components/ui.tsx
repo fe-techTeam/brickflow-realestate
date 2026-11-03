@@ -39,8 +39,8 @@ export function Panel({
       {(title || actions || eyebrow) && (
         <div className="flex flex-col gap-3 px-5 pt-5 pb-4 sm:flex-row sm:items-end sm:justify-between sm:px-7 sm:pt-6">
           <div className="min-w-0">
-            {eyebrow && <p className="mb-1.5 text-[0.625rem] font-semibold tracking-[0.2em] text-kota-700 uppercase">{eyebrow}</p>}
-            {title && <h2 className="font-display text-[1.375rem] leading-tight font-medium">{title}</h2>}
+            {eyebrow && <p className="mb-1.5 text-[0.625rem] font-semibold tracking-[0.2em] text-fg-muted uppercase">{eyebrow}</p>}
+            {title && <h2 className="font-display text-[1.375rem] leading-tight font-normal">{title}</h2>}
             {description && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{description}</p>}
           </div>
           {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -60,10 +60,10 @@ export interface Metric {
 }
 
 const ACCENT_BAR: Record<NonNullable<Metric["accent"]>, string> = {
-  basalt: "bg-basalt",
-  kota: "bg-kota",
+  basalt: "bg-night",
+  kota: "bg-haze",
   leaf: "bg-leaf",
-  slate: "bg-ink/30",
+  slate: "bg-night/30",
 };
 
 /** Aligned row of headline figures in one surface, separated by hairlines. */
@@ -84,7 +84,7 @@ export function MetricStrip({ items, className }: { items: Metric[]; className?:
               <span aria-hidden="true" className={cn("h-3 w-[3px] rounded-full", ACCENT_BAR[item.accent ?? "basalt"])} />
               {item.label}
             </p>
-            <div className="mt-4 text-basalt">{item.value}</div>
+            <div className="mt-4 text-fg">{item.value}</div>
             {item.hint && <p className="mt-2 text-xs text-muted-foreground">{item.hint}</p>}
           </>
         );
@@ -95,7 +95,7 @@ export function MetricStrip({ items, className }: { items: Metric[]; className?:
           i > 0 && "lg:border-l",
         );
         return item.href ? (
-          <Link key={item.label} href={item.href} className={cn(cell, "transition-colors hover:bg-paper/50 focus-visible:bg-paper/60 focus-visible:outline-none")}>
+          <Link key={item.label} href={item.href} className={cn(cell, "transition-colors hover:bg-glass/50 focus-visible:bg-glass/60 focus-visible:outline-none")}>
             {body}
           </Link>
         ) : (
@@ -125,12 +125,12 @@ export function LedgerLine({
   return (
     <div className={cn("py-3", className)}>
       <div className="flex items-baseline gap-3">
-        <span className={cn("text-sm", tone === "strong" ? "font-semibold text-basalt" : tone === "muted" ? "text-muted-foreground" : "text-ink")}>{label}</span>
-        <span aria-hidden="true" className="min-w-6 flex-1 translate-y-[-3px] border-b border-dotted border-paper-400" />
+        <span className={cn("text-sm", tone === "strong" ? "font-semibold text-fg" : tone === "muted" ? "text-muted-foreground" : "text-fg-soft")}>{label}</span>
+        <span aria-hidden="true" className="min-w-6 flex-1 translate-y-[-3px] border-b border-dotted border-line" />
         <span
           className={cn(
             "text-right text-sm font-medium tabular",
-            tone === "deduct" ? "text-danger" : tone === "muted" ? "text-muted-foreground" : "text-basalt",
+            tone === "deduct" ? "text-danger" : tone === "muted" ? "text-muted-foreground" : "text-fg",
             tone === "strong" && "font-semibold",
           )}
         >
@@ -154,23 +154,23 @@ const STATUS_REGISTRY = {
 type StatusRegistry = typeof STATUS_REGISTRY;
 
 const MARK_DOT: Record<StatusTone, string> = {
-  neutral: "bg-[#b9b2a3]",
-  info: "bg-[#3b6ea0]",
-  basalt: "bg-basalt",
-  warning: "bg-[#c48a2c]",
+  neutral: "bg-[#aebbc9]",
+  info: "bg-[#8fc4ff]",
+  basalt: "bg-night",
+  warning: "bg-[#ffb36b]",
   success: "bg-leaf",
-  danger: "bg-[#b8324f]",
-  kota: "bg-kota",
+  danger: "bg-[#ff7b6e]",
+  kota: "bg-haze",
 };
 
 const MARK_TEXT: Record<StatusTone, string> = {
   neutral: "text-muted-foreground",
-  info: "text-[#25507a]",
-  basalt: "text-basalt",
+  info: "text-[#8fc4ff]",
+  basalt: "text-fg",
   warning: "text-warning",
   success: "text-leaf",
   danger: "text-danger",
-  kota: "text-kota-700",
+  kota: "text-fg-muted",
 };
 
 export function statusMeta<K extends keyof StatusRegistry>(kind: K, status: keyof StatusRegistry[K]): StatusMeta {
@@ -189,13 +189,13 @@ export function StatusMark<K extends keyof StatusRegistry>({ kind, status, class
 }
 
 const PILL: Record<StatusTone, string> = {
-  neutral: "border-[#ddd6c7] bg-paper-100 text-ink/80",
-  info: "border-[#c9d9ea] bg-[#eef3f8] text-[#25507a]",
-  basalt: "border-basalt/15 bg-basalt/[0.05] text-basalt",
+  neutral: "border-[rgba(255,255,255,0.1)] bg-glass-100 text-fg-soft/80",
+  info: "border-[rgba(143,196,255,0.3)] bg-[rgba(255,255,255,0.06)] text-[#8fc4ff]",
+  basalt: "border-line-strong/15 bg-night/[0.05] text-fg",
   warning: "border-warning/25 bg-warning-soft text-warning",
   success: "border-leaf/20 bg-leaf-50 text-leaf",
   danger: "border-danger/25 bg-danger-soft text-danger",
-  kota: "border-kota/35 bg-kota-100/70 text-kota-700",
+  kota: "border-line-strong/35 bg-glass-100/70 text-fg-muted",
 };
 
 /** Labelled status pill for page headers, e.g. "Invoice · Accepted". */
@@ -214,7 +214,7 @@ export function SimulatedTag({ className, label = "Simulated payment" }: { class
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-kota/40 bg-kota-100/50 px-2.5 py-0.5 text-[0.625rem] font-semibold tracking-[0.12em] whitespace-nowrap text-kota-700 uppercase",
+        "inline-flex items-center gap-1.5 rounded-full border border-line-strong/40 bg-glass-100/50 px-2.5 py-0.5 text-[0.625rem] font-semibold tracking-[0.12em] whitespace-nowrap text-fg-muted uppercase",
         className,
       )}
     >
@@ -271,14 +271,14 @@ export function EmptyNote({
   return (
     <div className={cn("flex flex-col items-center px-6 text-center", compact ? "py-10" : "py-14", className)}>
       <div className="relative mb-5 flex size-20 items-center justify-center">
-        <ArchMotif className="absolute inset-0 size-20 text-kota/55" />
+        <ArchMotif className="absolute inset-0 size-20 text-fg-muted/55" />
         {Icon && (
-          <span className="relative mt-5 flex size-8 items-center justify-center rounded-full bg-card text-basalt ring-1 ring-kota/40">
+          <span className="relative mt-5 flex size-8 items-center justify-center rounded-full bg-card text-fg ring-1 ring-line-strong/40">
             <Icon className="size-4" strokeWidth={1.6} />
           </span>
         )}
       </div>
-      <p className="font-display text-[1.375rem] leading-tight font-medium text-basalt">{title}</p>
+      <p className="font-display text-[1.375rem] leading-tight font-normal text-fg">{title}</p>
       {description && <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>}
       {action && <div className="mt-6">{action}</div>}
     </div>
@@ -297,7 +297,7 @@ export function Facts({ items, columns = 2, className }: { items: { label: strin
       {items.map((item) => (
         <div key={item.label} className={cn("min-w-0", item.wide && "sm:col-span-full")}>
           <dt className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">{item.label}</dt>
-          <dd className="mt-1.5 text-sm break-words text-ink">{item.value ?? "—"}</dd>
+          <dd className="mt-1.5 text-sm break-words text-fg-soft">{item.value ?? "—"}</dd>
         </div>
       ))}
     </dl>
@@ -315,11 +315,11 @@ export interface ChronicleEntry {
 }
 
 const CHRONICLE_TONE: Record<NonNullable<ChronicleEntry["tone"]>, string> = {
-  default: "border-paper-300 bg-card text-basalt",
+  default: "border-line bg-card text-fg",
   success: "border-leaf bg-leaf text-white",
-  danger: "border-[#b8324f] bg-[#b8324f] text-white",
-  warning: "border-[#c48a2c] bg-warning-soft text-warning",
-  kota: "border-kota bg-kota-100 text-kota-700",
+  danger: "border-[#ff7b6e] bg-[#ff7b6e] text-white",
+  warning: "border-[#ffb36b] bg-warning-soft text-warning",
+  kota: "border-line-strong bg-glass-100 text-fg-muted",
 };
 
 /** Vertical event history with toned markers and quoted notes. */
@@ -330,19 +330,19 @@ export function Chronicle({ entries, className }: { entries: ChronicleEntry[]; c
         const Icon = entry.icon;
         return (
           <li key={entry.id} className="relative flex gap-4 pb-6 last:pb-0">
-            {i < entries.length - 1 && <span aria-hidden="true" className="absolute top-8 bottom-1 left-[13px] w-px bg-linear-to-b from-[#d4d8d3] to-[#e4e7e3]" />}
+            {i < entries.length - 1 && <span aria-hidden="true" className="absolute top-8 bottom-1 left-[13px] w-px bg-linear-to-b from-[rgba(255,255,255,0.14)] to-[rgba(255,255,255,0.08)]" />}
             <span className={cn("relative mt-0.5 flex size-[27px] shrink-0 items-center justify-center rounded-full border", CHRONICLE_TONE[entry.tone ?? "default"])}>
               {Icon ? <Icon className="size-3.5" strokeWidth={2} /> : <span className="size-1.5 rounded-full bg-current" />}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-basalt">{entry.title}</p>
+              <p className="text-sm font-medium text-fg">{entry.title}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {entry.actor && <span className="text-ink">{entry.actor}</span>}
+                {entry.actor && <span className="text-fg-soft">{entry.actor}</span>}
                 {entry.actor && " · "}
                 {entry.at}
               </p>
               {entry.note && (
-                <blockquote className="mt-2.5 border-l-2 border-kota/50 bg-paper-100 py-2 pr-3 pl-3.5 text-[0.8125rem] leading-relaxed text-ink italic">{entry.note}</blockquote>
+                <blockquote className="mt-2.5 border-l-2 border-line-strong/50 bg-glass-100 py-2 pr-3 pl-3.5 text-[0.8125rem] leading-relaxed text-fg-soft italic">{entry.note}</blockquote>
               )}
             </div>
           </li>

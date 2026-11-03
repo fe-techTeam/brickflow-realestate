@@ -95,7 +95,7 @@ export default async function BuildersPage({ searchParams }: { searchParams: Pro
                     <div className="flex items-center gap-3">
                       <Monogram name={b.name} size="sm" tone={b.programme ? "basalt" : "muted"} />
                       <div>
-                        <Link href={`/admin/organisations/${b.id}`} className="font-medium whitespace-nowrap text-basalt hover:underline">
+                        <Link href={`/admin/organisations/${b.id}`} className="font-medium whitespace-nowrap text-fg hover:underline">
                           {b.name}
                         </Link>
                         <p className="text-xs text-muted-foreground">{b.city ?? b.legalName}</p>
@@ -117,7 +117,7 @@ export default async function BuildersPage({ searchParams }: { searchParams: Pro
                     {b.projects} · {b.empanelledPartners}
                   </LTd>
                   <LTd align="right">
-                    <Money paise={b.invoicePaise} compact className="text-basalt" />
+                    <Money paise={b.invoicePaise} compact className="text-fg" />
                     <p className="text-xs text-muted-foreground">{plural(b.invoiceCount, "invoice")}</p>
                   </LTd>
                   <LTd align="right">
@@ -125,7 +125,7 @@ export default async function BuildersPage({ searchParams }: { searchParams: Pro
                     <p className="text-xs text-muted-foreground">{plural(b.financedCount, "request")}</p>
                   </LTd>
                   <LTd align="right">
-                    <Money paise={b.outstandingPaise} compact className="text-basalt" />
+                    <Money paise={b.outstandingPaise} compact className="text-fg" />
                   </LTd>
                   <LTd>
                     <StatusBadge kind="record" status={b.status} />
