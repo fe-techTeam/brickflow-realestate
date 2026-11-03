@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownToLine, BadgeCheck, Check, CircleCheck, Landmark, Loader2, ShieldCheck, XCircle } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, BadgeCheck, Check, CircleCheck, Landmark, Loader2, ShieldCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ActionDialog } from "@/components/common/action-dialog";
 import { DemoBadge } from "@/components/common/status-badge";
@@ -34,14 +34,88 @@ type Size = "default" | "sm";
 
 function SummaryRows({ rows }: { rows: { label: string; value: ReactNode; strong?: boolean }[] }) {
   return (
-    <dl className="divide-y divide-border/70 rounded-lg border border-border bg-ivory/50 px-4">
+    <dl className="overflow-hidden rounded-lg border border-border bg-ivory/50">
       {rows.map((row) => (
-        <div key={row.label} className="flex items-baseline justify-between gap-4 py-2.5">
-          <dt className="text-xs text-muted-foreground">{row.label}</dt>
-          <dd className={cn("tabular text-right text-sm text-navy", row.strong && "font-display text-xl font-semibold text-heritage")}>{row.value}</dd>
+        <div
+          key={row.label}
+          className={cn(
+            "flex items-baseline justify-between gap-4 px-4 py-2.5",
+            row.strong ? "border-t border-gold/30 bg-card py-3.5" : "border-t border-border/50 first:border-t-0",
+          )}
+        >
+          <dt className={cn("text-xs", row.strong ? "font-semibold tracking-[0.12em] text-navy uppercase" : "text-muted-foreground")}>{row.label}</dt>
+          <dd className={cn("tabular text-right text-sm text-navy", row.strong && "text-[1.375rem] font-light tracking-[-0.01em] text-heritage")}>{row.value}</dd>
         </div>
       ))}
     </dl>
+  );
+}
+
+function AdviceSeal() {
+  return (
+    <span className="pointer-events-none absolute -top-3 -right-2 inline-flex size-[4.5rem] -rotate-12 text-gold-600/90" aria-hidden="true">
+      <svg viewBox="0 0 120 120" className="size-full">
+        <defs>
+          <path id="bf-dialog-seal" d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
+        </defs>
+        <circle cx="60" cy="60" r="57" fill="#fffdf8" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" strokeWidth="0.6" />
+        <circle cx="60" cy="60" r="33" fill="none" stroke="currentColor" strokeWidth="0.8" />
+        <text fill="currentColor" style={{ fontSize: 9.5, letterSpacing: "0.22em", fontWeight: 600 }}>
+          <textPath href="#bf-dialog-seal">DEMO RAIL · NO FUNDS MOVED · BRICKFLOW ·</textPath>
+        </text>
+        <text x="60" y="64" textAnchor="middle" fill="currentColor" style={{ fontSize: 10.5, letterSpacing: "0.14em", fontWeight: 700 }}>
+          SIMULATED
+        </text>
+      </svg>
+    </span>
+  );
+}
+
+/** Banking-style payment advice: from, to and amount. */
+function TransferAdvice({
+  beneficiaryName,
+  bankName,
+  account,
+  ifsc,
+  amountPaise,
+  reference,
+}: {
+  beneficiaryName: string;
+  bankName?: string | null;
+  account?: string;
+  ifsc?: string;
+  amountPaise: string;
+  reference?: string;
+}) {
+  return (
+    <div className="relative rounded-xl border border-border bg-[linear-gradient(180deg,#fffdf8,#f8f4ea)] p-5">
+      <AdviceSeal />
+      <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-600 uppercase">Payment advice{reference ? ` · ${reference}` : ""}</p>
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 text-xs">
+        <div className="min-w-0">
+          <p className="text-muted-foreground">From</p>
+          <p className="mt-1 font-medium text-navy">Veefin Finance</p>
+          <p className="text-muted-foreground">Disbursement pool (demo)</p>
+        </div>
+        <ArrowRight className="mt-5 size-4 text-gold-600" aria-hidden="true" />
+        <div className="min-w-0">
+          <p className="text-muted-foreground">To</p>
+          <p className="mt-1 truncate font-medium text-navy">{beneficiaryName}</p>
+          {bankName !== undefined && <p className="truncate text-muted-foreground">{bankName ?? "—"}</p>}
+          {account && (
+            <p className="tabular text-muted-foreground">
+              {account}
+              {ifsc ? ` · ${ifsc}` : ""}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-dashed border-gold/40 pt-4">
+        <span className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Amount</span>
+        <span className="tabular text-[1.75rem] leading-none font-light tracking-[-0.02em] text-heritage">{formatINR(amountPaise)}</span>
+      </div>
+    </div>
   );
 }
 
@@ -143,7 +217,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
         setError(null);
       }}>
       <DialogTrigger asChild>
-        <Button variant="gold" size={size} className={cn("tracking-wide uppercase", className)}>
+        <Button variant="gold" size={size} className={cn("font-semibold", className)}>
           <ArrowDownToLine className="size-4" />
           Initiate disbursement
         </Button>
@@ -159,14 +233,13 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
             move.
           </DialogDescription>
         </DialogHeader>
-        <SummaryRows
-          rows={[
-            { label: "Beneficiary", value: summary.beneficiaryName },
-            { label: "Bank", value: summary.bankName ?? "—" },
-            { label: "Account", value: summary.beneficiaryAccount },
-            { label: "IFSC", value: summary.beneficiaryIfsc },
-            { label: "Amount", value: formatINR(summary.netPayablePaise), strong: true },
-          ]}
+        <TransferAdvice
+          beneficiaryName={summary.beneficiaryName}
+          bankName={summary.bankName}
+          account={summary.beneficiaryAccount}
+          ifsc={summary.beneficiaryIfsc}
+          amountPaise={summary.netPayablePaise}
+          reference={summary.reference}
         />
         {error && (
           <p role="alert" className="text-sm text-destructive">
@@ -197,11 +270,13 @@ export function ConfirmTransferButton({
   requestId,
   paymentReference,
   amountPaise,
+  beneficiaryName,
   size = "default",
 }: {
   requestId: string;
   paymentReference: string;
   amountPaise: string;
+  beneficiaryName?: string;
   size?: Size;
 }) {
   const router = useRouter();
@@ -255,21 +330,29 @@ export function ConfirmTransferButton({
             opens the builder settlement. No real funds move.
           </DialogDescription>
         </DialogHeader>
-        <ol className="space-y-3 rounded-lg border border-border bg-ivory/50 p-4" aria-live="polite">
+        {beneficiaryName && <TransferAdvice beneficiaryName={beneficiaryName} amountPaise={amountPaise} reference={paymentReference} />}
+        <ol className="rounded-lg border border-border/80 bg-card px-4 py-1.5" aria-live="polite">
           {TRANSFER_STEPS.map((label, index) => {
             const done = step > index;
             const active = step === index;
             return (
-              <li key={label} className="flex items-center gap-3 text-sm">
+              <li key={label} className="relative flex items-center gap-3 py-2.5 text-sm">
+                {index < TRANSFER_STEPS.length - 1 && (
+                  <span aria-hidden="true" className={cn("absolute top-[2.1rem] -bottom-2.5 left-3 w-px", done ? "bg-heritage/60" : "bg-border")} />
+                )}
                 <span
                   className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-full ring-1 transition-colors duration-300",
-                    done ? "bg-heritage text-white ring-heritage" : active ? "bg-card text-navy ring-navy/30" : "bg-card text-muted-foreground ring-border",
+                    "relative flex size-6 shrink-0 items-center justify-center rounded-full ring-1 transition-colors duration-300",
+                    done ? "bg-heritage text-white ring-heritage" : active ? "bg-navy text-gold ring-navy" : "bg-card text-muted-foreground ring-border",
                   )}
                 >
-                  {done ? <Check className="size-3.5" /> : active ? <Loader2 className="size-3.5 animate-spin" /> : <span className="text-[0.625rem] font-semibold">{index + 1}</span>}
+                  {active && <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-navy/25" />}
+                  {done ? <Check className="size-3.5" /> : active ? <Loader2 className="size-3.5 animate-spin" /> : <span className="tabular text-[0.625rem] font-semibold">{index + 1}</span>}
                 </span>
-                <span className={cn("transition-colors", done ? "text-heritage" : active ? "font-medium text-navy" : "text-muted-foreground")}>{label}</span>
+                <span className={cn("flex-1 transition-colors", done ? "text-heritage" : active ? "font-medium text-navy" : "text-muted-foreground")}>{label}</span>
+                <span className="text-[0.625rem] font-semibold tracking-[0.16em] uppercase">
+                  {done ? <span className="text-heritage">Done</span> : active ? <span className="text-gold-600">Processing</span> : null}
+                </span>
               </li>
             );
           })}

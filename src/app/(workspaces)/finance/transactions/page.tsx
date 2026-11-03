@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Download, Receipt } from "lucide-react";
-import { DataTable, readSort, SortTh, sortRows, Td, Tr } from "@/components/common/data-table";
+import { readSort, sortRows } from "@/components/common/data-table";
 import { ListToolbar } from "@/components/common/list-toolbar";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
-import { StatCard, StatGrid } from "@/components/common/stat-card";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
-import { formatBps, formatINR, formatINRCompact, sumPaise } from "@/lib/money";
+import { formatBps, formatINRCompact, sumPaise } from "@/lib/money";
 import { FINANCING_STATUS, SETTLEMENT_STATUS } from "@/lib/status";
 import { requireWorkspace } from "@/server/auth/session";
 import { FINANCIER_REQUEST_STATUSES, listFinanceLedger, listFinancierBuilderOptions, parseLedgerFilters, type LedgerRow } from "@/server/queries/finance";
+import { Count, EmptyNote, KeyFigures, Masthead, Money, Panel } from "../_components/ledger";
+import { LedgerTable, LSortTh, LTd, LTr } from "../_components/ledger-table";
 
 export const metadata: Metadata = { title: "Transactions · Veefin Finance" };
 
@@ -28,6 +27,22 @@ const accessors: Record<(typeof SORT_KEYS)[number], (row: LedgerRow) => string |
   disbursed: (r) => r.request.disbursement?.completedAt,
   due: (r) => r.request.settlement?.dueDate ?? r.request.invoice.dueDate,
 };
+
+function SettlementCell({ row }: { row: LedgerRow }) {
+  const { request: r, settlementStatus } = row;
+  if (r.settlement && settlementStatus) {
+    return (
+      <>
+        <StatusBadge kind="settlement" status={settlementStatus} />
+        <p className="mt-1 text-[0.6875rem] text-muted-foreground">
+          {r.settlement.settledAt ? `Settled ${formatDate(r.settlement.settledAt)}` : `Due ${formatDate(r.settlement.dueDate)}`}
+        </p>
+      </>
+    );
+  }
+  if (r.status === "REJECTED") return <span className="text-muted-foreground">—</span>;
+  return <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">Opens on payout · due {formatDate(r.invoice.dueDate)}</p>;
+}
 
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await requireWorkspace("finance");
@@ -45,17 +60,20 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const exportHref = `/api/finance/reports/requests${exportParams.size ? `?${exportParams}` : ""}`;
   const disbursed = rows.filter((r) => r.request.status === "DISBURSED");
   const th = (label: string, key: (typeof SORT_KEYS)[number], align: "left" | "right" = "left") => (
-    <SortTh label={label} sortKey={key} sort={sort} searchParams={params} pathname={PATH} align={align} />
+    <LSortTh label={label} sortKey={key} sort={sort} searchParams={params} pathname={PATH} align={align} />
   );
 
   return (
     <>
-      <PageHeader
-        eyebrow="Operations"
+      <Masthead
+        eyebrow="Operations · General ledger"
         title="Transactions"
-        description="The complete ledger of financing requests across every status, with disbursement and builder settlement positions."
+        context={[
+          <span key="r">The complete ledger of financing requests</span>,
+          <span key="p">with disbursement and settlement positions</span>,
+        ]}
         actions={
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="bg-card">
             <a href={exportHref} download>
               <Download className="size-4" />
               Export CSV
@@ -64,20 +82,32 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
         }
       />
 
-      <StatGrid className="xl:grid-cols-4 2xl:grid-cols-4">
-        <StatCard label="Requests in view" value={rows.length} icon={Receipt} tone="slate" />
-        <StatCard label="Approved invoice value" value={formatINRCompact(sumPaise(rows.map((r) => r.request.approvedAmountPaise)))} hint="Across requests in view" />
-        <StatCard
-          label="Net disbursed"
-          value={formatINRCompact(sumPaise(disbursed.map((r) => r.request.disbursement?.amountPaise ?? r.request.netPayablePaise)))}
-          hint={`${disbursed.length} simulated payout${disbursed.length === 1 ? "" : "s"}`}
-          tone="heritage"
-        />
-        <StatCard label="Discount earned" value={formatINRCompact(sumPaise(disbursed.map((r) => r.request.discountAmountPaise)))} hint="On disbursed requests" tone="gold" />
-      </StatGrid>
+      <KeyFigures
+        items={[
+          { label: "Requests in view", value: <Count value={rows.length} unit={rows.length === 1 ? "record" : "records"} />, hint: "Matching the current filters" },
+          {
+            label: "Approved invoice value",
+            value: <Money paise={sumPaise(rows.map((r) => r.request.approvedAmountPaise))} compact size="lg" />,
+            hint: "Builder-approved, across requests in view",
+            accent: "navy",
+          },
+          {
+            label: "Net disbursed",
+            value: <Money paise={sumPaise(disbursed.map((r) => r.request.disbursement?.amountPaise ?? r.request.netPayablePaise))} compact size="lg" className="text-heritage" />,
+            hint: `${disbursed.length} simulated payout${disbursed.length === 1 ? "" : "s"}`,
+            accent: "heritage",
+          },
+          {
+            label: "Discount earned",
+            value: <Money paise={sumPaise(disbursed.map((r) => r.request.discountAmountPaise))} compact size="lg" />,
+            hint: "On disbursed requests",
+            accent: "gold",
+          },
+        ]}
+      />
 
-      <Section className="mt-6" title="Financing ledger" description={`${rows.length} record${rows.length === 1 ? "" : "s"}`} bodyClassName="p-0 sm:p-0">
-        <div className="border-b border-border/80 px-5 py-4 sm:px-6">
+      <Panel className="mt-8" eyebrow="Financing ledger" title="All entries" description={`${rows.length} record${rows.length === 1 ? "" : "s"} · newest first unless sorted`} bodyClassName="pb-0">
+        <div className="border-t border-border/70 py-4">
           <ListToolbar
             searchPlaceholder="Search reference, invoice, CP or builder…"
             filters={[
@@ -95,7 +125,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
           />
         </div>
         {rows.length === 0 ? (
-          <EmptyState
+          <EmptyNote
             icon={Receipt}
             title="No matching transactions"
             description="Adjust or clear the filters to see more of the ledger."
@@ -104,14 +134,46 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                 <Link href={PATH}>Clear filters</Link>
               </Button>
             }
+            className="border-t border-border/70"
           />
         ) : (
-          <div className="px-5 sm:px-6">
-            <DataTable minWidth={1000}>
+          <>
+            <ul className="-mx-5 divide-y divide-border/70 border-t border-border/70 md:hidden">
+              {rows.map((row) => {
+                const r = row.request;
+                return (
+                  <li key={r.id}>
+                    <Link href={`/finance/requests/${r.id}`} className="block px-5 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="tabular text-sm font-medium text-navy">{r.reference}</p>
+                          <p className="truncate text-xs text-slate-ink/80">
+                            {r.cp.name} to {r.builder.name}
+                          </p>
+                        </div>
+                        <StatusBadge kind="financing" status={r.status} />
+                      </div>
+                      <div className="mt-3 flex items-end justify-between gap-3">
+                        <div>
+                          <Money paise={r.netPayablePaise} size="md" className="text-heritage" />
+                          <p className="text-[0.6875rem] text-muted-foreground">
+                            on <Money paise={r.approvedAmountPaise} size="xs" className="font-normal" /> at {formatBps(r.discountRateBps)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <SettlementCell row={row} />
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+            <LedgerTable minWidth={1040} className="hidden md:block">
               <thead>
                 <tr>
                   {th("Request", "reference")}
-                  {th("Channel partner → Builder", "cp")}
+                  {th("Counterparties", "cp")}
                   {th("Approved", "approved", "right")}
                   {th("Net payable", "net", "right")}
                   {th("Status", "status")}
@@ -120,54 +182,49 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                 </tr>
               </thead>
               <tbody>
-                {rows.map(({ request: r, settlementStatus }) => (
-                  <Tr key={r.id}>
-                    <Td className="whitespace-nowrap">
-                      <Link href={`/finance/requests/${r.id}`} className="tabular font-medium text-navy hover:underline">
-                        {r.reference}
-                      </Link>
-                      <p className="tabular text-xs text-slate-ink">{r.invoice.invoiceNumber}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(r.createdAt)}</p>
-                    </Td>
-                    <Td className="min-w-48">
-                      {r.cp.name}
-                      <p className="text-xs text-muted-foreground">→ {r.builder.name}</p>
-                    </Td>
-                    <Td align="right">
-                      {formatINR(r.approvedAmountPaise)}
-                      <p className="text-xs text-muted-foreground">
-                        <span className="whitespace-nowrap">− {formatINR(r.discountAmountPaise)}</span>{" "}
-                        <span className="whitespace-nowrap">at {formatBps(r.discountRateBps)}</span>
-                      </p>
-                    </Td>
-                    <Td align="right" className="font-medium text-heritage">
-                      {formatINR(r.netPayablePaise)}
-                    </Td>
-                    <Td>
-                      <StatusBadge kind="financing" status={r.status} />
-                    </Td>
-                    <Td className="whitespace-nowrap">{formatDate(r.disbursement?.completedAt)}</Td>
-                    <Td className="min-w-40">
-                      {r.settlement && settlementStatus ? (
-                        <>
-                          <StatusBadge kind="settlement" status={settlementStatus} />
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {r.settlement.settledAt ? `Settled ${formatDate(r.settlement.settledAt)}` : `Due ${formatDate(r.settlement.dueDate)}`}
-                          </p>
-                        </>
-                      ) : r.status === "REJECTED" ? (
-                        <span className="text-muted-foreground">—</span>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Opens on disbursement · invoice due {formatDate(r.invoice.dueDate)}</p>
-                      )}
-                    </Td>
-                  </Tr>
-                ))}
+                {rows.map((row) => {
+                  const r = row.request;
+                  return (
+                    <LTr key={r.id}>
+                      <LTd className="whitespace-nowrap">
+                        <Link href={`/finance/requests/${r.id}`} className="tabular font-medium tracking-wide text-navy underline-offset-4 hover:underline">
+                          {r.reference}
+                        </Link>
+                        <p className="tabular mt-0.5 text-xs text-slate-ink/80">{r.invoice.invoiceNumber}</p>
+                        <p className="text-[0.6875rem] text-muted-foreground">{formatDate(r.createdAt)}</p>
+                      </LTd>
+                      <LTd className="min-w-44">
+                        <span className="text-navy">{r.cp.name}</span>
+                        <p className="text-xs text-muted-foreground">to {r.builder.name}</p>
+                      </LTd>
+                      <LTd align="right">
+                        <Money paise={r.approvedAmountPaise} className="font-normal text-slate-ink" />
+                        <p className="mt-0.5 text-[0.6875rem] whitespace-nowrap text-muted-foreground">
+                          <Money paise={r.discountAmountPaise} sign="−" size="xs" className="font-normal text-danger" /> at {formatBps(r.discountRateBps)}
+                        </p>
+                      </LTd>
+                      <LTd align="right">
+                        <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+                      </LTd>
+                      <LTd>
+                        <StatusBadge kind="financing" status={r.status} />
+                      </LTd>
+                      <LTd className="text-xs whitespace-nowrap">{formatDate(r.disbursement?.completedAt)}</LTd>
+                      <LTd className="min-w-36">
+                        <SettlementCell row={row} />
+                      </LTd>
+                    </LTr>
+                  );
+                })}
               </tbody>
-            </DataTable>
-          </div>
+            </LedgerTable>
+          </>
         )}
-      </Section>
+      </Panel>
+
+      <p className="mt-6 text-xs text-muted-foreground">
+        Totals are computed on the rows in view. {formatINRCompact(sumPaise(rows.map((r) => r.request.netPayablePaise)))} net payable across this selection.
+      </p>
     </>
   );
 }
