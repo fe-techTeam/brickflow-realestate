@@ -1,41 +1,36 @@
 "use client"
 
 import { Toaster as Sonner, type ToasterProps } from "sonner"
-import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
+import { CircleCheck, Info, TriangleAlert, OctagonAlert, Loader2 } from "lucide-react"
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ toastOptions, ...props }: ToasterProps) => {
   return (
     <Sonner
       theme="light"
       className="toaster group"
+      gap={10}
+      offset={20}
       icons={{
-        success: (
-          <CircleCheckIcon className="size-4" />
-        ),
-        info: (
-          <InfoIcon className="size-4" />
-        ),
-        warning: (
-          <TriangleAlertIcon className="size-4" />
-        ),
-        error: (
-          <OctagonXIcon className="size-4" />
-        ),
-        loading: (
-          <Loader2Icon className="size-4 animate-spin" />
-        ),
+        success: <CircleCheck className="size-[1.125rem]" strokeWidth={1.75} />,
+        info: <Info className="size-[1.125rem]" strokeWidth={1.75} />,
+        warning: <TriangleAlert className="size-[1.125rem]" strokeWidth={1.75} />,
+        error: <OctagonAlert className="size-[1.125rem]" strokeWidth={1.75} />,
+        loading: <Loader2 className="size-[1.125rem] animate-spin text-gold-600" strokeWidth={1.75} />,
       }}
       style={
         {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          "--border-radius": "var(--radius-lg)",
+          "--width": "380px",
         } as React.CSSProperties
       }
       toastOptions={{
+        ...toastOptions,
         classNames: {
-          toast: "cn-toast",
+          toast: "bf-toast",
+          ...toastOptions?.classNames,
         },
       }}
       {...props}

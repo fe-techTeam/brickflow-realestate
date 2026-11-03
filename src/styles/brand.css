@@ -123,3 +123,121 @@
   color: #fff;
   font-weight: 500;
 }
+
+/* Architectural scene (login, error pages) -------------------------------- */
+
+.bf-scene {
+  --px: 0;
+  --py: 0;
+}
+
+.bf-scene .bf-layer-back,
+.bf-scene .bf-layer-mid,
+.bf-scene .bf-layer-front {
+  transition: transform 900ms var(--ease-out-soft);
+  transform-box: view-box;
+}
+
+.bf-scene .bf-layer-back {
+  transform: translate3d(calc(var(--px) * -10px), calc(var(--py) * -8px), 0);
+}
+
+.bf-scene .bf-layer-mid {
+  transform: translate3d(calc(var(--px) * 8px), calc(var(--py) * 5px), 0);
+}
+
+.bf-scene .bf-layer-front {
+  transform: translate3d(calc(var(--px) * 16px), 0, 0);
+}
+
+.bf-scene .bf-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: bf-draw 2.4s var(--ease-in-out-soft) var(--d, 0s) forwards;
+}
+
+.bf-scene .bf-rise {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: bf-rise 1.6s var(--ease-out-soft) var(--d, 0s) forwards;
+}
+
+.bf-scene .bf-fade {
+  opacity: 0;
+  animation: fade-in 1.4s var(--ease-out-soft) calc(var(--d, 0s) + 0.9s) forwards;
+}
+
+.bf-scene .bf-lit {
+  opacity: 0;
+  animation:
+    fade-in 1.2s var(--ease-out-soft) calc(var(--d, 0s) + 1.6s) forwards,
+    bf-twinkle 7s ease-in-out calc(var(--t, 0s) + 3s) infinite;
+}
+
+.bf-scene .bf-glint {
+  animation: bf-twinkle 4s ease-in-out 2.5s infinite;
+}
+
+.bf-scene .bf-ripple {
+  animation: bf-ripple 9s ease-in-out infinite;
+}
+
+@keyframes bf-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes bf-rise {
+  from {
+    opacity: 0;
+    transform: scaleY(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes bf-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes bf-ripple {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-scene .bf-layer-back,
+  .bf-scene .bf-layer-mid,
+  .bf-scene .bf-layer-front {
+    transform: none;
+  }
+  .bf-scene .bf-draw {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+  .bf-scene .bf-rise,
+  .bf-scene .bf-fade,
+  .bf-scene .bf-lit {
+    opacity: 1;
+    animation: none;
+  }
+  .bf-scene .bf-glint,
+  .bf-scene .bf-ripple {
+    animation: none;
+  }
+}
