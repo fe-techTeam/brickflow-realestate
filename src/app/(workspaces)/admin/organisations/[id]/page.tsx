@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BadgePercent, Building2, FileStack, HandCoins, Handshake, Users } from "lucide-react";
-import { DataTable, Td, Th, Tr } from "@/components/common/data-table";
-import { PageHeader } from "@/components/common/page-header";
-import { DetailList, EmptyState, Section } from "@/components/common/panels";
-import { StatCard, StatGrid } from "@/components/common/stat-card";
+import { ArrowRight, BadgePercent, Building2, Handshake, Users } from "lucide-react";
 import { StatusBadge } from "@/components/common/status-badge";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { formatBps, formatINRCompact } from "@/lib/money";
 import { requireWorkspace } from "@/server/auth/session";
 import { DomainError } from "@/server/errors";
 import { getOrganisationProfile } from "@/server/queries/admin";
+import { AdminHeader, Empty, FactList, Monogram, Panel, SummaryStrip, type StripItem } from "../../_components/editorial";
+import { Count, Money, Rate } from "../../_components/figures";
 import { maskAccount, ORG_TYPE_META, plural, ROLE_LABELS } from "../../_components/labels";
+import { Ledger, LTd, LTh, LTr, RefCode } from "../../_components/ledger";
 import { OrgTypeBadge } from "../../_components/org-type-badge";
 import { RecordStatusToggle } from "../../_components/record-status-toggle";
 
@@ -28,6 +26,8 @@ async function load(id: string) {
   }
 }
 
+const mono = (value: string | null | undefined) => (value ? <span className="font-mono text-[0.8125rem] tracking-tight text-navy">{value}</span> : "—");
+
 export default async function OrganisationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { actor, profile } = await load(id);
@@ -41,242 +41,280 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
       ? org.cpRelationships.map((r) => ({ id: r.id, counterparty: r.builder, code: r.empanelmentCode, credit: r.creditPeriodDays, status: r.status, since: r.empanelledAt }))
       : [];
   const address = [org.addressLine, org.city, org.state, org.pincode].filter(Boolean).join(", ");
+  const activeMembers = org.members.filter((m) => m.user.status === "ACTIVE").length;
+  const activeProgramme = programmes.find((p) => p.status === "ACTIVE");
+
+  const strip: StripItem[] = [{ label: "Members", value: <Count value={org.members.length} size="lg" />, hint: `${activeMembers} active` }];
+  if (isBuilder) {
+    strip.push({
+      label: "Agreed discount",
+      value: activeProgramme ? <Rate bps={activeProgramme.discountRateBps} size="lg" /> : <span className="text-sm text-muted-foreground">Not configured</span>,
+      hint: activeProgramme ? `${activeProgramme.code} · ${activeProgramme.financier.name}` : "No active programme",
+      href: "/admin/financing",
+      accent: "gold",
+    });
+    strip.push({ label: "Projects · partners", value: <Count value={`${org.projects.length} · ${empanelments.length}`} size="lg" />, hint: "Registered projects and empanelled CPs" });
+  } else if (isPartner) {
+    strip.push({
+      label: "Empanelled builders",
+      value: <Count value={empanelments.length} size="lg" />,
+      hint: `${empanelments.filter((e) => e.status === "ACTIVE").length} active empanelments`,
+    });
+  } else {
+    strip.push({ label: "Programmes", value: <Count value={programmes.length} size="lg" />, hint: `${programmes.filter((p) => p.status === "ACTIVE").length} active` });
+  }
+  if (stats.invoiceCount !== null) {
+    strip.push({ label: "Invoices", value: <Money paise={stats.invoicePaise ?? 0n} compact size="lg" />, hint: plural(stats.invoiceCount, "submitted invoice") });
+  }
+  strip.push({
+    label: "Financed",
+    value: stats.financedPaise !== null ? <Money paise={stats.financedPaise} compact size="lg" className="text-heritage" /> : <span className="text-sm text-muted-foreground">Not applicable</span>,
+    hint: stats.financedCount !== null ? `${plural(stats.financedCount, "request")} approved by Veefin` : "Does not raise or approve invoices",
+    accent: "heritage",
+  });
 
   return (
     <>
-      <PageHeader
+      <AdminHeader
         back={{ href: "/admin/organisations", label: "All organisations" }}
+        leading={<Monogram name={org.name} size="lg" tone={org.status === "ACTIVE" ? "navy" : "muted"} className="hidden sm:inline-flex" />}
         eyebrow={ORG_TYPE_META[org.type].label}
         title={org.name}
-        description={org.legalName}
-        actions={
+        lede={org.legalName}
+        meta={
           <>
             <StatusBadge kind="record" status={org.status} />
-            {org.type !== "PLATFORM" && <RecordStatusToggle kind="organisation" id={org.id} name={org.name} status={org.status} orgType={org.type} size="default" />}
+            {org.city && <span>{org.city}</span>}
+            {org.gstin && <span className="font-mono tracking-tight">GSTIN {org.gstin}</span>}
+            <span>On BrickFlow since {formatDate(org.createdAt)}</span>
           </>
+        }
+        actions={
+          org.type !== "PLATFORM" ? (
+            <RecordStatusToggle kind="organisation" id={org.id} name={org.name} status={org.status} orgType={org.type} size="default" />
+          ) : undefined
         }
       />
 
-      <StatGrid className="2xl:grid-cols-4 xl:grid-cols-4">
-        <StatCard label="Members" value={org.members.length} icon={Users} hint={`${org.members.filter((m) => m.user.status === "ACTIVE").length} active`} />
-        {isBuilder || isPartner ? (
-          <StatCard
-            label={isBuilder ? "Projects · partners" : "Empanelled builders"}
-            value={isBuilder ? `${org.projects.length} · ${empanelments.length}` : empanelments.length}
-            icon={isBuilder ? Building2 : Handshake}
-            hint={isBuilder ? "Projects and empanelled channel partners" : `${empanelments.filter((e) => e.status === "ACTIVE").length} active empanelments`}
-          />
-        ) : (
-          <StatCard label="Programmes" value={programmes.length} icon={BadgePercent} hint={`${programmes.filter((p) => p.status === "ACTIVE").length} active`} />
-        )}
-        {stats.invoiceCount !== null ? (
-          <StatCard label="Invoices" value={formatINRCompact(stats.invoicePaise ?? 0n)} icon={FileStack} hint={`${plural(stats.invoiceCount, "submitted invoice")}`} />
-        ) : (
-          <StatCard label="Role on platform" value={ORG_TYPE_META[org.type].label} icon={FileStack} hint="Does not raise or approve invoices" />
-        )}
-        <StatCard
-          label="Financed value"
-          value={stats.financedPaise !== null ? formatINRCompact(stats.financedPaise) : "—"}
-          icon={HandCoins}
-          tone="heritage"
-          hint={stats.financedCount !== null ? `${plural(stats.financedCount, "request")} approved by Veefin` : "Not applicable"}
-        />
-      </StatGrid>
+      <SummaryStrip items={strip} />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Section title="Profile" description="Statutory and registration details.">
-          <DetailList
-            items={[
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel eyebrow="Dossier" title="Profile" description="Statutory and registration details.">
+          <FactList
+            facts={[
               { label: "Type", value: <OrgTypeBadge type={org.type} /> },
-              { label: "Status", value: <StatusBadge kind="record" status={org.status} /> },
-              { label: "GSTIN", value: org.gstin ? <span className="font-mono text-xs">{org.gstin}</span> : "—" },
-              { label: "PAN", value: org.pan ? <span className="font-mono text-xs">{org.pan}</span> : "—" },
+              { label: "GSTIN", value: mono(org.gstin) },
+              { label: "PAN", value: mono(org.pan) },
               { label: "RERA registration", value: org.reraNumber ?? "—" },
               { label: "Registered address", value: address || "—" },
-              { label: "On platform since", value: formatDate(org.createdAt) },
-              { label: "Last updated", value: formatDateTime(org.updatedAt) },
+              { label: "Last updated", value: <span className="tabular">{formatDateTime(org.updatedAt)}</span> },
             ]}
           />
-        </Section>
-        <Section title="Contact & banking" description="Primary contact and the payout account on record (masked).">
-          <DetailList
-            items={[
+        </Panel>
+        <Panel eyebrow="Dossier" title="Contact & banking" description="Primary contact and the payout account on record (masked).">
+          <FactList
+            facts={[
               { label: "Contact person", value: org.contactName ?? "—" },
-              { label: "Email", value: org.contactEmail ? <a className="text-navy hover:underline" href={`mailto:${org.contactEmail}`}>{org.contactEmail}</a> : "—" },
-              { label: "Phone", value: org.contactPhone ?? "—" },
+              {
+                label: "Email",
+                value: org.contactEmail ? (
+                  <a className="text-navy hover:underline" href={`mailto:${org.contactEmail}`}>
+                    {org.contactEmail}
+                  </a>
+                ) : (
+                  "—"
+                ),
+              },
+              { label: "Phone", value: org.contactPhone ? <span className="tabular">{org.contactPhone}</span> : "—" },
               { label: "Bank", value: org.bankName ?? "—" },
-              { label: "Account number", value: maskAccount(org.bankAccountNumber) ? <span className="tabular font-mono text-xs">{maskAccount(org.bankAccountNumber)}</span> : "—" },
-              { label: "IFSC", value: org.bankIfsc ? <span className="font-mono text-xs">{org.bankIfsc}</span> : "—" },
+              { label: "Account number", value: mono(maskAccount(org.bankAccountNumber)) },
+              { label: "IFSC", value: mono(org.bankIfsc) },
             ]}
           />
-        </Section>
+        </Panel>
       </div>
 
-      <Section className="mt-6" title="Members" description="Users who belong to this organisation and their platform role.">
+      {(isBuilder || org.type === "FINANCIER") && (
+        <Panel
+          className="mt-6"
+          eyebrow="Pricing"
+          title="Financing programmes"
+          description="Agreed discount terms. They are changed only in Financing configuration."
+          actions={
+            <Link href="/admin/financing" className="inline-flex items-center gap-1 text-xs font-semibold text-navy hover:text-gold-600">
+              Financing configuration
+              <ArrowRight className="size-3.5" />
+            </Link>
+          }
+        >
+          {programmes.length === 0 ? (
+            <Empty icon={BadgePercent} title="No programmes" description="No financing programme has been configured." className="py-10" />
+          ) : (
+            <Ledger minWidth={760}>
+              <thead>
+                <tr>
+                  <LTh>Programme</LTh>
+                  <LTh>{isBuilder ? "Financier" : "Builder"}</LTh>
+                  <LTh align="right">Agreed discount</LTh>
+                  <LTh>Effective window</LTh>
+                  <LTh>Status</LTh>
+                </tr>
+              </thead>
+              <tbody>
+                {programmes.map((p) => (
+                  <LTr key={p.id}>
+                    <LTd>
+                      <RefCode>{p.code}</RefCode>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{p.name}</p>
+                    </LTd>
+                    <LTd>{isBuilder ? p.financier.name : p.builder.name}</LTd>
+                    <LTd align="right">
+                      <Rate bps={p.discountRateBps} size="lg" />
+                    </LTd>
+                    <LTd className="tabular text-xs whitespace-nowrap">
+                      {formatDate(p.effectiveFrom)} – {p.effectiveTo ? formatDate(p.effectiveTo) : "open-ended"}
+                    </LTd>
+                    <LTd>
+                      <StatusBadge kind="programme" status={p.status} />
+                    </LTd>
+                  </LTr>
+                ))}
+              </tbody>
+            </Ledger>
+          )}
+        </Panel>
+      )}
+
+      <Panel className="mt-6" eyebrow="People" title="Members" description="Users who belong to this organisation and their platform role.">
         {org.members.length === 0 ? (
-          <EmptyState icon={Users} title="No members" description="No user accounts are linked to this organisation." />
+          <Empty icon={Users} title="No members" description="No user accounts are linked to this organisation." className="py-10" />
         ) : (
-          <DataTable minWidth={820}>
+          <Ledger minWidth={820}>
             <thead>
               <tr>
-                <Th>Name</Th>
-                <Th>Role</Th>
-                <Th>Designation</Th>
-                <Th>Status</Th>
-                <Th>Last sign-in</Th>
-                <Th align="right">Actions</Th>
+                <LTh>Name</LTh>
+                <LTh>Role</LTh>
+                <LTh>Designation</LTh>
+                <LTh>Status</LTh>
+                <LTh>Last sign-in</LTh>
+                <LTh align="right">
+                  <span className="sr-only">Actions</span>
+                </LTh>
               </tr>
             </thead>
             <tbody>
               {org.members.map((m) => (
-                <Tr key={m.id}>
-                  <Td>
-                    <p className="font-medium text-navy">{m.user.name}</p>
-                    <p className="text-xs text-muted-foreground">{m.user.email}</p>
-                  </Td>
-                  <Td>{ROLE_LABELS[m.role.key] ?? m.role.name}</Td>
-                  <Td>{m.designation ?? "—"}</Td>
-                  <Td>
+                <LTr key={m.id}>
+                  <LTd>
+                    <div className="flex items-center gap-3">
+                      <Monogram name={m.user.name} size="sm" tone={m.user.status === "ACTIVE" ? "ivory" : "muted"} className="rounded-full" />
+                      <div>
+                        <p className="font-medium text-navy">{m.user.name}</p>
+                        <p className="text-xs text-muted-foreground">{m.user.email}</p>
+                      </div>
+                    </div>
+                  </LTd>
+                  <LTd>{ROLE_LABELS[m.role.key] ?? m.role.name}</LTd>
+                  <LTd>{m.designation ?? "—"}</LTd>
+                  <LTd>
                     <StatusBadge kind="record" status={m.user.status} />
-                  </Td>
-                  <Td className="text-xs">{m.user.lastLoginAt ? formatDateTime(m.user.lastLoginAt) : "Never"}</Td>
-                  <Td align="right">
+                  </LTd>
+                  <LTd className="tabular text-xs whitespace-nowrap">{m.user.lastLoginAt ? formatDateTime(m.user.lastLoginAt) : "Never"}</LTd>
+                  <LTd align="right">
                     {m.user.id === actor.userId ? (
                       <span className="text-xs text-muted-foreground">You</span>
                     ) : (
                       <RecordStatusToggle kind="user" id={m.user.id} name={m.user.name} status={m.user.status} />
                     )}
-                  </Td>
-                </Tr>
+                  </LTd>
+                </LTr>
               ))}
             </tbody>
-          </DataTable>
+          </Ledger>
         )}
-      </Section>
+      </Panel>
 
       {isBuilder && (
-        <Section className="mt-6" title="Projects" description="Projects channel partners can invoice against.">
+        <Panel className="mt-6" eyebrow="Portfolio" title="Projects" description="Projects channel partners can invoice against.">
           {org.projects.length === 0 ? (
-            <EmptyState icon={Building2} title="No projects" description="This builder has not registered any projects yet." />
+            <Empty icon={Building2} title="No projects" description="This builder has not registered any projects yet." className="py-10" />
           ) : (
-            <DataTable minWidth={760}>
+            <Ledger minWidth={760}>
               <thead>
                 <tr>
-                  <Th>Code</Th>
-                  <Th>Project</Th>
-                  <Th>City</Th>
-                  <Th>Location</Th>
-                  <Th>RERA</Th>
-                  <Th>Status</Th>
+                  <LTh>Project</LTh>
+                  <LTh>City</LTh>
+                  <LTh>Location</LTh>
+                  <LTh>RERA</LTh>
+                  <LTh>Status</LTh>
                 </tr>
               </thead>
               <tbody>
                 {org.projects.map((p) => (
-                  <Tr key={p.id}>
-                    <Td className="font-mono text-xs">{p.code}</Td>
-                    <Td className="font-medium text-navy">{p.name}</Td>
-                    <Td>{p.city}</Td>
-                    <Td>{p.location ?? "—"}</Td>
-                    <Td className="font-mono text-xs">{p.reraNumber ?? "—"}</Td>
-                    <Td>
+                  <LTr key={p.id}>
+                    <LTd>
+                      <p className="font-medium text-navy">{p.name}</p>
+                      <RefCode className="text-[0.6875rem] text-muted-foreground">{p.code}</RefCode>
+                    </LTd>
+                    <LTd>{p.city}</LTd>
+                    <LTd>{p.location ?? "—"}</LTd>
+                    <LTd className="font-mono text-xs tracking-tight">{p.reraNumber ?? "—"}</LTd>
+                    <LTd>
                       <StatusBadge kind="record" status={p.status} />
-                    </Td>
-                  </Tr>
+                    </LTd>
+                  </LTr>
                 ))}
               </tbody>
-            </DataTable>
+            </Ledger>
           )}
-        </Section>
+        </Panel>
       )}
 
       {(isBuilder || isPartner) && (
-        <Section
+        <Panel
           className="mt-6"
+          eyebrow="Relationships"
           title="Empanelments"
           description={isBuilder ? "Channel partners empanelled with this builder." : "Builders this channel partner is empanelled with."}
         >
           {empanelments.length === 0 ? (
-            <EmptyState icon={Handshake} title="No empanelments" description="No CP–builder relationships are recorded." />
+            <Empty icon={Handshake} title="No empanelments" description="No CP–builder relationships are recorded." className="py-10" />
           ) : (
-            <DataTable minWidth={720}>
+            <Ledger minWidth={720}>
               <thead>
                 <tr>
-                  <Th>{isBuilder ? "Channel partner" : "Builder"}</Th>
-                  <Th>Empanelment code</Th>
-                  <Th align="right">Credit period</Th>
-                  <Th>Empanelled</Th>
-                  <Th>Status</Th>
+                  <LTh>{isBuilder ? "Channel partner" : "Builder"}</LTh>
+                  <LTh>Empanelment code</LTh>
+                  <LTh align="right">Credit period</LTh>
+                  <LTh>Empanelled</LTh>
+                  <LTh>Status</LTh>
                 </tr>
               </thead>
               <tbody>
                 {empanelments.map((e) => (
-                  <Tr key={e.id}>
-                    <Td>
-                      <Link href={`/admin/organisations/${e.counterparty.id}`} className="font-medium text-navy hover:underline">
-                        {e.counterparty.name}
-                      </Link>
-                    </Td>
-                    <Td className="font-mono text-xs">{e.code}</Td>
-                    <Td align="right">{e.credit} days</Td>
-                    <Td>{formatDate(e.since)}</Td>
-                    <Td>
+                  <LTr key={e.id}>
+                    <LTd>
+                      <div className="flex items-center gap-3">
+                        <Monogram name={e.counterparty.name} size="sm" />
+                        <Link href={`/admin/organisations/${e.counterparty.id}`} className="font-medium text-navy hover:underline">
+                          {e.counterparty.name}
+                        </Link>
+                      </div>
+                    </LTd>
+                    <LTd>
+                      <RefCode>{e.code}</RefCode>
+                    </LTd>
+                    <LTd align="right">{e.credit} days</LTd>
+                    <LTd className="tabular">{formatDate(e.since)}</LTd>
+                    <LTd>
                       <StatusBadge kind="record" status={e.status} />
-                    </Td>
-                  </Tr>
+                    </LTd>
+                  </LTr>
                 ))}
               </tbody>
-            </DataTable>
+            </Ledger>
           )}
-        </Section>
-      )}
-
-      {(isBuilder || org.type === "FINANCIER") && (
-        <Section
-          className="mt-6"
-          title="Financing programmes"
-          description="Agreed discount terms. Edit them in Financing configuration."
-          actions={
-            <Link href="/admin/financing" className="text-xs font-medium text-navy hover:underline">
-              Open financing configuration
-            </Link>
-          }
-        >
-          {programmes.length === 0 ? (
-            <EmptyState icon={BadgePercent} title="No programmes" description="No financing programme has been configured." />
-          ) : (
-            <DataTable minWidth={760}>
-              <thead>
-                <tr>
-                  <Th>Code</Th>
-                  <Th>{isBuilder ? "Financier" : "Builder"}</Th>
-                  <Th align="right">Discount</Th>
-                  <Th>Effective</Th>
-                  <Th>Status</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {programmes.map((p) => (
-                  <Tr key={p.id}>
-                    <Td>
-                      <p className="font-mono text-xs text-navy">{p.code}</p>
-                      <p className="text-xs text-muted-foreground">{p.name}</p>
-                    </Td>
-                    <Td>{isBuilder ? p.financier.name : p.builder.name}</Td>
-                    <Td align="right" className="font-display text-lg font-semibold text-heritage">
-                      {formatBps(p.discountRateBps)}
-                    </Td>
-                    <Td className="text-xs">
-                      {formatDate(p.effectiveFrom)} – {p.effectiveTo ? formatDate(p.effectiveTo) : "open-ended"}
-                    </Td>
-                    <Td>
-                      <StatusBadge kind="programme" status={p.status} />
-                    </Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </DataTable>
-          )}
-        </Section>
+        </Panel>
       )}
     </>
   );

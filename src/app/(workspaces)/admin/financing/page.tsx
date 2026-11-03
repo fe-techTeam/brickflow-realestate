@@ -1,52 +1,45 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BadgePercent, Handshake, Lock, ShieldCheck } from "lucide-react";
+import { BadgePercent } from "lucide-react";
 import type { ProgrammeStatus } from "@/generated/prisma/enums";
-import { DataTable, Td, Th, Tr } from "@/components/common/data-table";
 import { ListToolbar } from "@/components/common/list-toolbar";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
 import { StatusBadge } from "@/components/common/status-badge";
 import { formatDate } from "@/lib/format";
-import { bpsToDecimalString, formatBps } from "@/lib/money";
+import { bpsToDecimalString } from "@/lib/money";
 import { PROGRAMME_STATUS } from "@/lib/status";
 import { requireWorkspace } from "@/server/auth/session";
 import { getProgrammeConfigContext } from "@/server/queries/admin";
 import { listProgrammes } from "@/server/services/admin";
+import { AdminHeader, Empty, Panel } from "../_components/editorial";
+import { Rate } from "../_components/figures";
 import { param, plural } from "../_components/labels";
+import { Ledger, LTd, LTh, LTr, RefCode } from "../_components/ledger";
 import { ProgrammeFormDialog } from "./_components/programme-form-dialog";
-import { ProgrammeStatusAction } from "./_components/programme-status-action";
+import { RateCard, UnconfiguredCard, type RateCardData } from "./_components/rate-card";
 import type { ProgrammeRow } from "./_components/types";
 
 export const metadata: Metadata = { title: "Financing configuration" };
 
 const isoDate = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
 
-/** Status transitions offered as one-click actions for each programme status. */
-const QUICK_ACTIONS: Record<ProgrammeStatus, ("ACTIVE" | "SUSPENDED" | "CLOSED")[]> = {
-  DRAFT: ["ACTIVE", "CLOSED"],
-  ACTIVE: ["SUSPENDED", "CLOSED"],
-  SUSPENDED: ["ACTIVE", "CLOSED"],
-  CLOSED: [],
-};
-
 const PRINCIPLES = [
   {
-    icon: Handshake,
     title: "Agreed off-platform",
     body: "Each builder and Veefin negotiate a fixed discount outside BrickFlow. The Super Admin records it here as a financing programme.",
   },
   {
-    icon: BadgePercent,
     title: "One fixed rate per builder",
     body: "Every early-payment offer for that builder's invoices uses the active programme's rate: no bidding, tiers or per-invoice pricing.",
   },
   {
-    icon: Lock,
     title: "Read-only for everyone else",
     body: "Channel partners and builders see the rate on offers and reports but cannot change it. Accepted requests keep a snapshot of their terms.",
   },
 ];
+
+const NUMERALS = ["I", "II", "III"];
+
+const STATUS_ORDER: Record<ProgrammeStatus, number> = { ACTIVE: 0, SUSPENDED: 1, DRAFT: 2, CLOSED: 3 };
 
 export default async function FinancingConfigurationPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await requireWorkspace("admin");
@@ -57,159 +50,221 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
 
   const [programmes, context] = await Promise.all([listProgrammes(actor), getProgrammeConfigContext(actor)]);
   const activeByBuilder = Object.fromEntries(programmes.filter((p) => p.status === "ACTIVE").map((p) => [p.builder.id, p.code]));
-  const visible = programmes.filter(
-    (p) =>
-      (!status || p.status === status) &&
-      (!q || [p.code, p.name, p.builder.name, p.financier.name].some((v) => v.toLowerCase().includes(q))),
-  );
 
-  const rows = visible.map((p) => {
-    const row: ProgrammeRow = {
-      id: p.id,
-      code: p.code,
-      builderName: p.builder.name,
-      financierName: p.financier.name,
-      discountRateBps: p.discountRateBps,
+  const toRow = (p: (typeof programmes)[number]): ProgrammeRow => ({
+    id: p.id,
+    code: p.code,
+    builderName: p.builder.name,
+    financierName: p.financier.name,
+    discountRateBps: p.discountRateBps,
+    status: p.status,
+    openOffers: context.openOffersByProgramme[p.id] ?? 0,
+    requests: p._count.requests,
+    values: {
+      name: p.name,
+      discountRate: bpsToDecimalString(p.discountRateBps),
       status: p.status,
-      openOffers: context.openOffersByProgramme[p.id] ?? 0,
-      requests: p._count.requests,
-      values: {
-        name: p.name,
-        discountRate: bpsToDecimalString(p.discountRateBps),
-        status: p.status,
-        effectiveFrom: isoDate(p.effectiveFrom),
-        effectiveTo: isoDate(p.effectiveTo),
-        offerValidityDays: String(p.offerValidityDays),
-        terms: p.terms,
-      },
-    };
-    return { row, source: p };
+      effectiveFrom: isoDate(p.effectiveFrom),
+      effectiveTo: isoDate(p.effectiveTo),
+      offerValidityDays: String(p.offerValidityDays),
+      terms: p.terms,
+    },
   });
 
+  const cards: RateCardData[] = programmes
+    .filter((p) => p.status !== "CLOSED")
+    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.builder.name.localeCompare(b.builder.name))
+    .map((p) => ({
+      row: toRow(p),
+      builderId: p.builder.id,
+      builderInactive: p.builder.status === "INACTIVE",
+      name: p.name,
+      effectiveFrom: p.effectiveFrom,
+      effectiveTo: p.effectiveTo,
+      offerValidityDays: p.offerValidityDays,
+      offers: p._count.offers,
+    }));
+
+  const visible = programmes.filter(
+    (p) => (!status || p.status === status) && (!q || [p.code, p.name, p.builder.name, p.financier.name].some((v) => v.toLowerCase().includes(q))),
+  );
   const buildersWithoutActive = context.builders.filter((b) => !activeByBuilder[b.id]);
+  const counts = Object.fromEntries((Object.keys(PROGRAMME_STATUS) as ProgrammeStatus[]).map((s) => [s, programmes.filter((p) => p.status === s).length]));
 
   return (
     <>
-      <PageHeader
-        eyebrow="Platform"
+      <AdminHeader
+        eyebrow="Platform · Pricing"
         title="Financing configuration"
-        description="The discount rate a channel partner pays for early payment is set per builder financing programme. This page is the only place it can be changed."
+        lede="The discount a channel partner pays for early payment is agreed off-platform between each builder and Veefin, then recorded here. This is the only place on BrickFlow where a rate can be set."
+        meta={
+          <>
+            {(["ACTIVE", "DRAFT", "SUSPENDED", "CLOSED"] as ProgrammeStatus[]).map((s) => (
+              <span key={s} className="inline-flex items-center gap-2">
+                <StatusBadge kind="programme" status={s} />
+                <span className="tabular font-medium text-navy">{counts[s]}</span>
+              </span>
+            ))}
+          </>
+        }
         actions={<ProgrammeFormDialog mode="create" builders={context.builders} financiers={context.financiers} activeByBuilder={activeByBuilder} />}
       />
 
-      <section className="surface mb-6 animate-fade-up overflow-hidden" aria-labelledby="pricing-rule">
-        <div className="grid gap-0 lg:grid-cols-[1.1fr_2fr]">
-          <div className="bg-navy px-6 py-6 text-white">
-            <p className="eyebrow text-gold">Pricing rule</p>
-            <h2 id="pricing-rule" className="mt-2 text-2xl font-semibold text-white">
-              Fixed discount on the approved amount
+      <section aria-labelledby="rate-book" className="mb-12">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-gold-600 uppercase">The rate book</p>
+            <h2 id="rate-book" className="mt-1.5 text-[1.75rem] leading-tight font-semibold">
+              Programmes in force
             </h2>
-            <p className="tabular mt-4 rounded-md bg-white/[0.06] px-3 py-2.5 font-mono text-xs leading-relaxed text-white/85">
-              discount = approved amount × rate
-              <br />
-              net payable to CP = approved amount − discount
-            </p>
-            <p className="mt-3 text-xs text-white/60">Calculated on the server in paise and rounded half-up to the nearest paisa. No other charges apply.</p>
           </div>
-          <ul className="grid gap-px bg-border sm:grid-cols-3">
-            {PRINCIPLES.map(({ icon: Icon, title, body }) => (
-              <li key={title} className="bg-card px-5 py-5">
-                <span className="flex size-8 items-center justify-center rounded-md bg-sage text-heritage">
-                  <Icon className="size-4" strokeWidth={1.75} />
-                </span>
-                <p className="mt-3 text-sm font-semibold text-navy">{title}</p>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {buildersWithoutActive.length > 0 && (
-        <div className="mb-6 flex animate-fade-up gap-3 rounded-lg border border-[#efd9ae] bg-[#fbf1df] px-4 py-3 text-sm text-[#6d4710]">
-          <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <p>
-            <span className="font-medium">{buildersWithoutActive.map((b) => b.name).join(", ")}</span>{" "}
-            {buildersWithoutActive.length === 1 ? "has" : "have"} no active programme, so {buildersWithoutActive.length === 1 ? "its" : "their"} channel
-            partners cannot request early payment.
+          <p className="hidden max-w-sm text-right text-xs leading-relaxed text-muted-foreground md:block">
+            Active, suspended and draft programmes. Closed programmes remain in the register below.
           </p>
         </div>
-      )}
+        {cards.length === 0 && buildersWithoutActive.length === 0 ? (
+          <Panel>
+            <Empty icon={BadgePercent} title="No programmes yet" description="Create the first programme to let channel partners request early payment." />
+          </Panel>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {cards.map((c) => (
+              <RateCard key={c.row.id} data={c} />
+            ))}
+            {buildersWithoutActive
+              .filter((b) => !cards.some((c) => c.builderId === b.id))
+              .map((b) => (
+                <UnconfiguredCard key={b.id} name={b.name}>
+                  <ProgrammeFormDialog
+                    mode="create"
+                    trigger="subtle"
+                    presetBuilderId={b.id}
+                    builders={context.builders}
+                    financiers={context.financiers}
+                    activeByBuilder={activeByBuilder}
+                  />
+                </UnconfiguredCard>
+              ))}
+          </div>
+        )}
+        {buildersWithoutActive.length > 0 && (
+          <p className="mt-5 flex items-start gap-2.5 text-[0.8125rem] text-warning">
+            <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full bg-warning" />
+            <span>
+              <span className="font-semibold">{buildersWithoutActive.map((b) => b.name).join(", ")}</span>{" "}
+              {buildersWithoutActive.length === 1 ? "has" : "have"} no active programme, so {buildersWithoutActive.length === 1 ? "its" : "their"} channel partners
+              cannot request early payment.
+            </span>
+          </p>
+        )}
+      </section>
 
-      <Section
-        title="Programmes"
-        description={`${programmes.length} configured · ${Object.keys(activeByBuilder).length} active. A builder can have only one active programme at a time.`}
+      <section aria-labelledby="pricing-rule" className="mb-12 grid animate-fade-up overflow-hidden rounded-xl border border-border/90 bg-card lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+        <div className="relative bg-navy px-7 py-8 text-white">
+          <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-16 size-56 rounded-full bg-gold/10 blur-3xl" />
+          <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-gold uppercase">The pricing rule</p>
+          <h2 id="pricing-rule" className="mt-2 text-[1.625rem] leading-tight font-semibold text-white">
+            A fixed discount on the approved amount
+          </h2>
+          <dl className="mt-6 space-y-3 border-l border-gold/50 pl-4 font-sans text-[0.875rem]">
+            <div>
+              <dt className="text-[0.6875rem] text-white/50">Discount</dt>
+              <dd className="text-white/90">Approved amount × agreed rate</dd>
+            </div>
+            <div>
+              <dt className="text-[0.6875rem] text-white/50">Partner receives</dt>
+              <dd className="text-white/90">Approved amount − discount</dd>
+            </div>
+          </dl>
+          <p className="mt-6 text-xs leading-relaxed text-white/55">Calculated on the server in paise and rounded half-up to the nearest paisa. No other charges apply.</p>
+        </div>
+        <ol className="grid divide-y divide-border/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {PRINCIPLES.map(({ title, body }, i) => (
+            <li key={title} className="px-6 py-7">
+              <span className="font-display text-[1.75rem] leading-none font-semibold text-gold">{NUMERALS[i]}</span>
+              <p className="mt-4 text-sm font-semibold text-navy">{title}</p>
+              <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-muted-foreground">{body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <Panel
+        eyebrow="Register"
+        title="All programmes"
+        description={`${plural(programmes.length, "programme")} configured · ${Object.keys(activeByBuilder).length} active. A builder can have only one active programme at a time.`}
         bodyClassName="space-y-5"
       >
         <ListToolbar
           searchPlaceholder="Search code, builder or financier…"
           filters={[{ param: "status", label: "Statuses", options: Object.entries(PROGRAMME_STATUS).map(([value, meta]) => ({ value, label: meta.label })) }]}
         />
-        {rows.length === 0 ? (
-          <EmptyState
+        {visible.length === 0 ? (
+          <Empty
             icon={BadgePercent}
             title={programmes.length === 0 ? "No programmes yet" : "No programmes match"}
             description={programmes.length === 0 ? "Create the first programme to let channel partners request early payment." : "Try a different search or clear the filters."}
           />
         ) : (
-          <DataTable minWidth={1040}>
+          <Ledger minWidth={980}>
             <thead>
               <tr>
-                <Th>Programme</Th>
-                <Th>Builder · financier</Th>
-                <Th align="right">Agreed discount</Th>
-                <Th>Status</Th>
-                <Th>Effective</Th>
-                <Th align="right">Actions</Th>
+                <LTh>Programme</LTh>
+                <LTh>Builder · financier</LTh>
+                <LTh align="right">Agreed discount</LTh>
+                <LTh>Status</LTh>
+                <LTh>Effective window</LTh>
+                <LTh align="right">Validity</LTh>
+                <LTh align="right">
+                  <span className="sr-only">Actions</span>
+                </LTh>
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ row, source: p }) => {
+              {visible.map((p) => {
+                const row = toRow(p);
                 return (
-                  <Tr key={row.id}>
-                    <Td className="max-w-52">
-                      <p className="font-mono text-xs font-medium text-navy">{p.code}</p>
-                      <p className="truncate text-xs text-muted-foreground" title={p.name}>
+                  <LTr key={p.id}>
+                    <LTd className="max-w-60">
+                      <RefCode>{p.code}</RefCode>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground" title={p.name}>
                         {p.name}
                       </p>
-                    </Td>
-                    <Td>
-                      <Link href={`/admin/organisations/${p.builder.id}`} className="text-navy hover:underline">
+                    </LTd>
+                    <LTd>
+                      <Link href={`/admin/organisations/${p.builder.id}`} className="font-medium text-navy hover:underline">
                         {p.builder.name}
                       </Link>
                       <p className="text-xs text-muted-foreground">{p.financier.name}</p>
-                      {p.builder.status === "INACTIVE" && <p className="text-xs text-[#8a5a12]">Builder inactive</p>}
-                    </Td>
-                    <Td align="right">
-                      <span className="tabular font-display text-[1.625rem] leading-none font-semibold text-heritage">{formatBps(p.discountRateBps)}</span>
-                    </Td>
-                    <Td>
+                      {p.builder.status === "INACTIVE" && <p className="text-xs text-warning">Builder inactive</p>}
+                    </LTd>
+                    <LTd align="right">
+                      <Rate bps={p.discountRateBps} size="lg" />
+                    </LTd>
+                    <LTd>
                       <StatusBadge kind="programme" status={p.status} />
-                      <p className="mt-1.5 text-xs whitespace-nowrap text-muted-foreground">
+                      <p className="tabular mt-1.5 text-xs whitespace-nowrap text-muted-foreground">
                         {plural(p._count.offers, "offer")} · {plural(p._count.requests, "request")}
                       </p>
                       {row.openOffers > 0 && <p className="text-xs text-gold-600">{row.openOffers} open</p>}
-                    </Td>
-                    <Td className="text-xs whitespace-nowrap">
-                      <p>From {formatDate(p.effectiveFrom)}</p>
-                      <p className="text-muted-foreground">{p.effectiveTo ? `To ${formatDate(p.effectiveTo)}` : "Open-ended"}</p>
-                      <p className="text-muted-foreground">Offers valid {p.offerValidityDays} days</p>
-                    </Td>
-                    <Td align="right">
-                      <div className="flex justify-end gap-2">
-                        <ProgrammeFormDialog mode="edit" programme={row} />
-                        {QUICK_ACTIONS[p.status].map((target) => (
-                          <ProgrammeStatusAction key={target} programme={row} target={target} />
-                        ))}
-                      </div>
-                    </Td>
-                  </Tr>
+                    </LTd>
+                    <LTd className="tabular text-xs whitespace-nowrap">
+                      <p className="text-navy">{formatDate(p.effectiveFrom)}</p>
+                      <p className="text-muted-foreground">{p.effectiveTo ? `to ${formatDate(p.effectiveTo)}` : "open-ended"}</p>
+                    </LTd>
+                    <LTd align="right" className="text-xs whitespace-nowrap">
+                      {p.offerValidityDays} days
+                    </LTd>
+                    <LTd align="right">
+                      <ProgrammeFormDialog mode="edit" programme={row} />
+                    </LTd>
+                  </LTr>
                 );
               })}
             </tbody>
-          </DataTable>
+          </Ledger>
         )}
-      </Section>
+      </Panel>
     </>
   );
 }

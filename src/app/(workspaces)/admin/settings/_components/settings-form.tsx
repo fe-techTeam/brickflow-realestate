@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { updateSettingsAction } from "@/server/actions/admin";
 import type { SettingKey } from "@/server/services/admin";
 
@@ -48,66 +49,90 @@ export function SettingsForm({ fields, initial }: { fields: SettingField[]; init
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-6">
-      {fields.map((field) => {
-        const id = `setting-${field.key.replace(/\W/g, "-")}`;
-        const props = INPUT_PROPS[field.key];
-        const error = errors[field.key]?.[0];
-        const common = {
-          id,
-          value: values[field.key],
-          disabled: pending,
-          "aria-invalid": Boolean(error),
-          "aria-describedby": `${id}-help`,
-          maxLength: props.maxLength,
-        };
-        return (
-          <div key={field.key} className="grid gap-2 sm:grid-cols-[16rem_1fr] sm:gap-6">
-            <div>
-              <Label htmlFor={id}>{field.label}</Label>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{field.description}</p>
+    <form onSubmit={submit} noValidate>
+      <div className="divide-y divide-border/70 border-t border-border/70">
+        {fields.map((field) => {
+          const id = `setting-${field.key.replace(/\W/g, "-")}`;
+          const props = INPUT_PROPS[field.key];
+          const error = errors[field.key]?.[0];
+          const changed = values[field.key] !== initial[field.key];
+          const common = {
+            id,
+            value: values[field.key],
+            disabled: pending,
+            "aria-invalid": Boolean(error),
+            "aria-describedby": `${id}-help`,
+            maxLength: props.maxLength,
+          };
+          return (
+            <div key={field.key} className="grid gap-3 py-6 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-8">
+              <div>
+                <Label htmlFor={id} className="flex items-center gap-2 text-sm font-semibold text-navy">
+                  {field.label}
+                  {changed && (
+                    <>
+                      <span className="size-1.5 rounded-full bg-gold" aria-hidden="true" />
+                      <span className="sr-only">(changed)</span>
+                    </>
+                  )}
+                </Label>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{field.description}</p>
+              </div>
+              <div className="grid gap-1.5">
+                {props.multiline ? (
+                  <Textarea {...common} rows={3} className="bg-card leading-relaxed" onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))} />
+                ) : (
+                  <Input
+                    {...common}
+                    type={props.type}
+                    inputMode={props.inputMode}
+                    min={props.type === "number" ? 1 : undefined}
+                    max={props.type === "number" ? 365 : undefined}
+                    className={cn("h-10 bg-card md:max-w-md", props.type === "number" && "tabular md:max-w-40")}
+                    onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                  />
+                )}
+                <p id={`${id}-help`} role={error ? "alert" : undefined} className={error ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+                  {error ??
+                    (props.maxLength && props.multiline
+                      ? `${values[field.key].length}/${props.maxLength} characters · default: “${field.defaultValue}”`
+                      : `Default: ${field.defaultValue}`)}
+                </p>
+              </div>
             </div>
-            <div className="grid gap-1.5">
-              {props.multiline ? (
-                <Textarea {...common} rows={3} onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))} />
-              ) : (
-                <Input
-                  {...common}
-                  type={props.type}
-                  inputMode={props.inputMode}
-                  min={props.type === "number" ? 1 : undefined}
-                  max={props.type === "number" ? 365 : undefined}
-                  className="h-9 sm:max-w-md"
-                  onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                />
-              )}
-              <p id={`${id}-help`} role={error ? "alert" : undefined} className={error ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-                {error ??
-                  (props.maxLength && props.multiline
-                    ? `${values[field.key].length}/${props.maxLength} characters · default: “${field.defaultValue}”`
-                    : `Default: ${field.defaultValue}`)}
-              </p>
-            </div>
-          </div>
-        );
-      })}
-      <div className="flex flex-wrap justify-end gap-2 border-t border-border/80 pt-5">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={pending || !dirty}
-          onClick={() => {
-            setValues(initial);
-            setErrors({});
-          }}
-        >
-          <RotateCcw className="size-4" />
-          Discard changes
-        </Button>
-        <Button type="submit" disabled={pending || !dirty}>
-          {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-          Save settings
-        </Button>
+          );
+        })}
+      </div>
+      <div className="-mx-5 -mb-6 flex flex-col-reverse gap-3 border-t border-border/80 bg-ivory/50 px-5 py-4 sm:-mx-7 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          {dirty ? (
+            <span className="inline-flex items-center gap-2 font-medium text-gold-600">
+              <span className="size-1.5 rounded-full bg-gold" aria-hidden="true" />
+              Unsaved changes
+            </span>
+          ) : (
+            "All preferences are saved."
+          )}
+        </p>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="bg-card"
+            disabled={pending || !dirty}
+            onClick={() => {
+              setValues(initial);
+              setErrors({});
+            }}
+          >
+            <RotateCcw className="size-4" />
+            Discard changes
+          </Button>
+          <Button type="submit" disabled={pending || !dirty}>
+            {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4 text-gold" />}
+            Save settings
+          </Button>
+        </div>
       </div>
     </form>
   );
