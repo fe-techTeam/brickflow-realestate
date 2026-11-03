@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
-import { ArrowRight, Building2, Handshake, Landmark, Loader2, ShieldCheck, type LucideIcon } from "lucide-react";
+import { useActionState, useState } from "react";
+import { ArrowRight, Building2, Check, CircleAlert, Handshake, Landmark, Loader2, ShieldCheck, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,59 +16,82 @@ const ICONS: Record<WorkspaceKey, LucideIcon> = {
   admin: ShieldCheck,
 };
 
-export function LoginForm({ demoPassword }: { demoPassword: string }) {
+/** The demo password is only ever written into the masked password field; it is never rendered as text. */
+export function LoginForm({ demoPassword }: { demoPassword?: string }) {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(loginAction, {});
   const [email, setEmail] = useState(state.email ?? "");
   const [password, setPassword] = useState("");
-  const formRef = useRef<HTMLFormElement>(null);
+  const showDemo = Boolean(demoPassword);
 
   function selectDemo(accountEmail: string) {
     setEmail(accountEmail);
-    setPassword(demoPassword);
+    if (demoPassword) setPassword(demoPassword);
   }
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="eyebrow mb-3 text-gold-600">Demo workspaces</p>
-        <div className="grid gap-2.5 sm:grid-cols-2">
-          {DEMO_ACCOUNTS.map((account) => {
-            const Icon = ICONS[account.workspace];
-            const selected = email === account.email;
-            return (
-              <button
-                key={account.email}
-                type="button"
-                onClick={() => selectDemo(account.email)}
-                aria-pressed={selected}
-                className={cn(
-                  "group flex items-start gap-3 rounded-lg border bg-card p-3.5 text-left transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  selected ? "border-gold shadow-[0_0_0_3px_rgba(196,164,106,0.18)]" : "border-border hover:border-gold/60",
-                )}
-              >
-                <span
+      {showDemo && (
+        <div>
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <p className="eyebrow text-[0.625rem]">Demo workspaces</p>
+            <p className="text-[0.6875rem] text-muted-foreground">Select one to fill its credentials</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5" role="group" aria-label="Demo workspaces">
+            {DEMO_ACCOUNTS.map((account) => {
+              const Icon = ICONS[account.workspace];
+              const selected = email === account.email;
+              return (
+                <button
+                  key={account.email}
+                  type="button"
+                  onClick={() => selectDemo(account.email)}
+                  aria-pressed={selected}
                   className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-md transition-colors",
-                    selected ? "bg-navy text-gold" : "bg-ivory-200 text-navy group-hover:bg-navy group-hover:text-gold",
+                    "group relative flex min-w-0 flex-col items-start gap-3 rounded-xl border bg-card p-3.5 text-left transition-[border-color,box-shadow,transform] duration-200 focus-visible:ring-3 focus-visible:ring-gold/30 focus-visible:outline-none sm:flex-row sm:items-center",
+                    selected
+                      ? "border-navy shadow-[0_0_0_3px_rgb(196_164_106/0.22),var(--shadow-card)]"
+                      : "border-border shadow-xs hover:-translate-y-px hover:border-gold/60 hover:shadow-card",
                   )}
                 >
-                  <Icon className="size-4" strokeWidth={1.75} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-navy">{WORKSPACES[account.workspace].shortLabel}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{account.org}</span>
-                </span>
-              </button>
-            );
-          })}
+                  <span
+                    className={cn(
+                      "flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset transition-colors duration-200",
+                      selected
+                        ? "bg-gradient-to-b from-navy-700 to-navy-900 text-gold-300 ring-gold/40"
+                        : "bg-ivory-100 text-navy ring-ivory-300 group-hover:bg-navy group-hover:text-gold-300 group-hover:ring-navy",
+                    )}
+                  >
+                    <Icon className="size-[1.05rem]" strokeWidth={1.6} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[0.8125rem] leading-tight font-semibold text-navy">{WORKSPACES[account.workspace].shortLabel}</span>
+                    <span className="mt-0.5 block truncate text-[0.6875rem] text-muted-foreground">{account.org}</span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "absolute top-2 right-2 flex size-4 items-center justify-center rounded-full bg-gold text-navy-900 transition-all duration-200",
+                      selected ? "scale-100 opacity-100" : "scale-50 opacity-0",
+                    )}
+                  >
+                    <Check className="size-2.5" strokeWidth={3} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Select a workspace to fill in its demo credentials, or enter them manually. Shared demo password:{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.7rem] text-navy">{demoPassword}</code>
-        </p>
-      </div>
+      )}
 
-      <form ref={formRef} action={formAction} className="space-y-4" noValidate>
+      {showDemo && (
+        <div className="flex items-center gap-4" aria-hidden="true">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Credentials</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+      )}
+
+      <form action={formAction} className="space-y-5" noValidate>
         <div className="grid gap-2">
           <Label htmlFor="email">Work email</Label>
           <Input
@@ -80,7 +103,7 @@ export function LoginForm({ demoPassword }: { demoPassword: string }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="name@company.com"
-            className="h-11 bg-card"
+            className="h-11"
           />
         </div>
         <div className="grid gap-2">
@@ -93,20 +116,22 @@ export function LoginForm({ demoPassword }: { demoPassword: string }) {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="h-11 bg-card"
+            className="h-11"
           />
         </div>
         {state.error && (
-          <p role="alert" className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          <p role="alert" className="flex items-start gap-2.5 rounded-lg border border-danger/15 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
+            <CircleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={1.75} />
             {state.error}
           </p>
         )}
-        <Button type="submit" size="lg" className="w-full" disabled={pending}>
+        <Button type="submit" size="lg" className="group/submit h-12 w-full text-[0.9375rem]" disabled={pending}>
           {pending ? <Loader2 className="size-4 animate-spin" /> : null}
           {pending ? "Signing in…" : "Sign in"}
-          {!pending && <ArrowRight className="size-4" />}
+          {!pending && <ArrowRight className="size-4 text-gold-300 transition-transform duration-200 group-hover/submit:translate-x-0.5" />}
         </Button>
       </form>
+
     </div>
   );
 }
