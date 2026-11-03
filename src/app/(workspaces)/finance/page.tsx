@@ -52,26 +52,26 @@ function QueueLane({
         total={items.length > 0 ? <>{formatINRCompact(total)} net</> : undefined}
         action={
           items.length > 0 ? (
-            <Link href={href} className="text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase transition-colors hover:text-navy">
+            <Link href={href} className="text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase transition-colors hover:text-basalt">
               View all
             </Link>
           ) : undefined
         }
       />
       {items.length === 0 ? (
-        <p className="mt-3 flex items-center gap-2.5 rounded-lg border border-dashed border-border bg-ivory/30 px-4 py-3.5 text-[0.8125rem] text-muted-foreground">
-          <CircleCheck className="size-4 text-heritage/70" strokeWidth={1.75} aria-hidden="true" />
+        <p className="mt-3 flex items-center gap-2.5 rounded-lg border border-dashed border-border bg-paper/30 px-4 py-3.5 text-[0.8125rem] text-muted-foreground">
+          <CircleCheck className="size-4 text-leaf/70" strokeWidth={1.75} aria-hidden="true" />
           {empty}
         </p>
       ) : (
         <ul className="mt-3 divide-y divide-border/70 overflow-hidden rounded-lg border border-border/80">
           {items.slice(0, 4).map((r) => (
-            <li key={r.id} className="flex flex-col gap-3 bg-card px-4 py-4 transition-colors hover:bg-ivory/30 sm:flex-row sm:items-center sm:gap-4">
+            <li key={r.id} className="flex flex-col gap-3 bg-card px-4 py-4 transition-colors hover:bg-paper/30 sm:flex-row sm:items-center sm:gap-4">
               <div className="flex min-w-0 flex-1 items-center gap-3.5">
-                <Monogram name={r.cp.name} size="sm" tone="ivory" />
+                <Monogram name={r.cp.name} size="sm" tone="paper" />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-navy">
-                    {r.cp.name} <span className="font-normal text-gold-600">→</span> {r.builder.name}
+                  <p className="truncate text-sm font-medium text-basalt">
+                    {r.cp.name} <span className="font-normal text-kota-600">→</span> {r.builder.name}
                   </p>
                   <p className="tabular mt-0.5 truncate text-[0.6875rem] tracking-wide text-muted-foreground">
                     {r.reference} · {r.invoice.invoiceNumber} · {formatBps(r.discountRateBps)}
@@ -80,7 +80,7 @@ function QueueLane({
               </div>
               <div className="flex items-center justify-between gap-5 pl-[2.875rem] sm:justify-end sm:pl-0">
                 <div className="text-left sm:text-right">
-                  <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+                  <Money paise={r.netPayablePaise} className="font-semibold text-leaf" />
                   <p className="text-[0.6875rem] text-muted-foreground">Waiting {waitingFor(since(r), now)}</p>
                 </div>
                 <RequestActionLink id={r.id} status={r.status} />
@@ -106,7 +106,7 @@ function Watchlist({ items }: { items: WatchlistItem[] }) {
             <div
               className={cn(
                 "flex w-12 shrink-0 flex-col items-center justify-center rounded-lg border py-1.5",
-                overdue ? "border-danger/25 bg-danger-soft/60 text-danger" : "border-gold/35 bg-ivory/70 text-navy",
+                overdue ? "border-danger/25 bg-danger-soft/60 text-danger" : "border-kota/35 bg-paper/70 text-basalt",
               )}
             >
               <span className="tabular font-display text-xl leading-none font-semibold">{dueDay.format(item.dueDate)}</span>
@@ -114,14 +114,14 @@ function Watchlist({ items }: { items: WatchlistItem[] }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-3">
-                <Link href={`/finance/requests/${item.request.id}`} className="truncate text-sm font-medium text-navy underline-offset-4 hover:underline">
+                <Link href={`/finance/requests/${item.request.id}`} className="truncate text-sm font-medium text-basalt underline-offset-4 hover:underline">
                   {item.request.builder.name}
                 </Link>
                 <StatusBadge kind="settlement" status={item.status} />
               </div>
               <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">{item.request.reference}</p>
               <div className="mt-1.5 flex items-baseline justify-between gap-3">
-                <Money paise={item.amountPaise} className="text-navy" />
+                <Money paise={item.amountPaise} className="text-basalt" />
                 <p className={overdue ? "text-xs font-medium text-danger" : "text-xs text-muted-foreground"}>
                   {overdue
                     ? `${Math.abs(item.daysToDue)} day${item.daysToDue === -1 ? "" : "s"} overdue`
@@ -148,7 +148,7 @@ function HeroFigure({ label, paise, hint, accent }: { label: string; paise: bigi
         </p>
         <p className="mt-1.5 text-xs text-white/50 sm:hidden">{hint}</p>
       </div>
-      <Money paise={paise} compact size="lg" className="block text-white sm:mt-3" symbolClassName="text-gold" />
+      <Money paise={paise} compact size="lg" className="block text-white sm:mt-3" symbolClassName="text-kota" />
       <p className="mt-2 hidden text-xs text-white/50 sm:block">{hint}</p>
     </div>
   );
@@ -165,10 +165,10 @@ export default async function FinanceOverviewPage() {
 
   const context = [
     <span key="p">
-      <strong className="font-semibold text-navy">{o.pendingCount}</strong> request{o.pendingCount === 1 ? "" : "s"} awaiting approval
+      <strong className="font-semibold text-basalt">{o.pendingCount}</strong> request{o.pendingCount === 1 ? "" : "s"} awaiting approval
     </span>,
     <span key="e">
-      <strong className="tabular font-semibold text-navy">{formatINRCompact(exposure)}</strong> exposure
+      <strong className="tabular font-semibold text-basalt">{formatINRCompact(exposure)}</strong> exposure
     </span>,
   ];
 
@@ -190,12 +190,12 @@ export default async function FinanceOverviewPage() {
 
       <section
         aria-label="Portfolio position"
-        className="surface-navy relative animate-fade-up overflow-hidden shadow-[0_30px_60px_-30px_rgba(13,30,48,0.65)]"
+        className="surface-basalt relative animate-fade-up overflow-hidden shadow-[0_30px_60px_-30px_rgba(26, 35, 33,0.65)]"
       >
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
-          <div className="absolute -top-40 -right-24 size-[34rem] rounded-full bg-[radial-gradient(circle,rgba(196,164,106,0.16),transparent_62%)]" />
-          <svg className="absolute -right-20 -bottom-24 size-[28rem] text-gold/[0.09]" viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="0.5">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-kota/70 to-transparent" />
+          <div className="absolute -top-40 -right-24 size-[34rem] rounded-full bg-[radial-gradient(circle,rgba(168, 154, 132,0.16),transparent_62%)]" />
+          <svg className="absolute -right-20 -bottom-24 size-[28rem] text-kota/[0.09]" viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="0.5">
             {Array.from({ length: 14 }, (_, i) => (
               <circle key={i} cx="100" cy="100" r={20 + i * 6} />
             ))}
@@ -204,20 +204,20 @@ export default async function FinanceOverviewPage() {
 
         <div className="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.6fr)] lg:gap-10 lg:p-10">
           <div className="min-w-0">
-            <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-gold uppercase">Total exposure</p>
-            <Money paise={exposure} size="hero" className="mt-4 block text-white" symbolClassName="text-gold" />
+            <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-kota uppercase">Total exposure</p>
+            <Money paise={exposure} size="hero" className="mt-4 block text-white" symbolClassName="text-kota" />
             <p className="mt-3 max-w-sm text-[0.8125rem] leading-relaxed text-white/60">
               Builder settlements outstanding plus approved requests not yet paid out, at builder-approved value.
             </p>
             <div className="mt-6 max-w-md">
               <div className="flex h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
-                <span className="bg-navy-300" style={{ width: `${outstandingShare}%` }} />
-                <span className="bg-gold" style={{ width: `${exposure > 0n ? 100 - outstandingShare : 0}%` }} />
+                <span className="bg-basalt-300" style={{ width: `${outstandingShare}%` }} />
+                <span className="bg-kota" style={{ width: `${exposure > 0n ? 100 - outstandingShare : 0}%` }} />
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-4 text-xs">
                 <div>
                   <dt className="flex items-center gap-1.5 text-white/50">
-                    <span aria-hidden="true" className="size-1.5 rounded-full bg-navy-300" />
+                    <span aria-hidden="true" className="size-1.5 rounded-full bg-basalt-300" />
                     Outstanding settlements
                   </dt>
                   <dd className="mt-1">
@@ -227,7 +227,7 @@ export default async function FinanceOverviewPage() {
                 </div>
                 <div>
                   <dt className="flex items-center gap-1.5 text-white/50">
-                    <span aria-hidden="true" className="size-1.5 rounded-full bg-gold" />
+                    <span aria-hidden="true" className="size-1.5 rounded-full bg-kota" />
                     Committed, not paid
                   </dt>
                   <dd className="mt-1">
@@ -241,13 +241,13 @@ export default async function FinanceOverviewPage() {
 
           <div className="flex min-w-0 flex-col justify-between gap-8 lg:border-l lg:border-white/10 lg:pl-10">
             <div className="grid divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-              <HeroFigure label="Financed" paise={o.financedValue} hint={`${o.financedCount} approved or disbursed`} accent="bg-[#7fb8a2]" />
-              <HeroFigure label="Disbursed" paise={o.disbursedValue} hint={`${o.disbursedCount} simulated payout${o.disbursedCount === 1 ? "" : "s"}`} accent="bg-[#7fb8a2]" />
+              <HeroFigure label="Financed" paise={o.financedValue} hint={`${o.financedCount} approved or disbursed`} accent="bg-[#8cbb97]" />
+              <HeroFigure label="Disbursed" paise={o.disbursedValue} hint={`${o.disbursedCount} simulated payout${o.disbursedCount === 1 ? "" : "s"}`} accent="bg-[#8cbb97]" />
               <HeroFigure
                 label="Pending"
                 paise={o.pendingNetValue}
                 hint={o.pendingCount ? `${o.pendingCount} awaiting a decision` : "Queue is clear"}
-                accent="bg-gold"
+                accent="bg-kota"
               />
             </div>
             <div className="flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
@@ -267,12 +267,12 @@ export default async function FinanceOverviewPage() {
                     Disbursements
                   </Link>
                 </Button>
-                <Button asChild variant="gold" size="lg" className="px-5 font-semibold">
+                <Button asChild variant="accent" size="lg" className="px-5 font-semibold">
                   <Link href="/finance/requests?status=PENDING_APPROVAL">
                     <ListChecks className="size-4" />
                     Review requests
                     {o.pendingCount > 0 && (
-                      <span className="tabular ml-0.5 rounded-full bg-navy px-1.5 py-px text-[0.6875rem] font-semibold text-gold">{o.pendingCount}</span>
+                      <span className="tabular ml-0.5 rounded-full bg-basalt px-1.5 py-px text-[0.6875rem] font-semibold text-kota">{o.pendingCount}</span>
                     )}
                   </Link>
                 </Button>
@@ -323,9 +323,9 @@ export default async function FinanceOverviewPage() {
         >
           <Watchlist items={o.watchlist} />
           {o.watchlist.length > 0 && (
-            <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-navy/10 pt-4">
+            <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-basalt/10 pt-4">
               <span className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Total outstanding</span>
-              <Money paise={o.outstandingValue} size="md" className="text-navy" />
+              <Money paise={o.outstandingValue} size="md" className="text-basalt" />
             </div>
           )}
         </Panel>
@@ -337,7 +337,7 @@ export default async function FinanceOverviewPage() {
           title="Disbursed volume"
           description={
             <>
-              Net paid to channel partners · <span className="tabular font-medium text-navy">{formatINR(monthlyTotal)}</span> in total
+              Net paid to channel partners · <span className="tabular font-medium text-basalt">{formatINR(monthlyTotal)}</span> in total
             </>
           }
           actions={<SimulatedTag />}
@@ -360,12 +360,12 @@ export default async function FinanceOverviewPage() {
             ].map((row) => (
               <li key={row.label}>
                 <Link href={row.href} className="group flex items-center gap-4 py-4">
-                  <span className="tabular w-10 font-sans text-[1.625rem] leading-none font-light text-navy">{row.value}</span>
+                  <span className="tabular w-10 font-sans text-[1.625rem] leading-none font-light text-basalt">{row.value}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-navy">{row.label}</span>
+                    <span className="block text-sm font-medium text-basalt">{row.label}</span>
                     <span className="block text-xs text-muted-foreground">{row.hint}</span>
                   </span>
-                  <ArrowRight className="size-4 text-muted-foreground/50 transition-all group-hover:translate-x-0.5 group-hover:text-gold-600" aria-hidden="true" />
+                  <ArrowRight className="size-4 text-muted-foreground/50 transition-all group-hover:translate-x-0.5 group-hover:text-kota-600" aria-hidden="true" />
                 </Link>
               </li>
             ))}
@@ -374,7 +374,7 @@ export default async function FinanceOverviewPage() {
       </div>
 
       <p className="mt-8 flex items-start gap-3 text-xs leading-relaxed text-muted-foreground">
-        <span aria-hidden="true" className="mt-2 h-px w-6 shrink-0 bg-gold" />
+        <span aria-hidden="true" className="mt-2 h-px w-6 shrink-0 bg-kota" />
         Discount rates are agreed with each builder and configured by the BrickFlow Super Admin; every request keeps the rate accepted by the channel partner.
       </p>
     </>

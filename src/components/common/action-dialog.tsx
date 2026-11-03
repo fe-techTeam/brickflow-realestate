@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, CircleAlert, Landmark, Loader2, Sparkles, type LucideIcon } from "lucide-react";
+import { BadgeCheck, CircleAlert, Landmark, Loader2, HandCoins, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,13 +20,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/server/action-result";
 
-type ButtonVariant = "default" | "gold" | "success" | "outline" | "secondary" | "ghost" | "destructive" | "link";
+type ButtonVariant = "default" | "accent" | "success" | "outline" | "secondary" | "ghost" | "destructive" | "link";
 
 const MEDALLION: Partial<Record<ButtonVariant, { icon: LucideIcon; className: string }>> = {
-  default: { icon: Landmark, className: "bg-navy-50 text-navy ring-navy-200" },
-  success: { icon: BadgeCheck, className: "bg-heritage-50 text-heritage ring-heritage-200" },
-  gold: { icon: Sparkles, className: "bg-gold-50 text-gold-700 ring-gold-300" },
-  destructive: { icon: CircleAlert, className: "bg-danger-soft text-danger ring-[#e9c7bf]" },
+  default: { icon: Landmark, className: "bg-basalt-50 text-basalt ring-basalt-200" },
+  success: { icon: BadgeCheck, className: "bg-leaf-50 text-leaf ring-leaf-200" },
+  accent: { icon: HandCoins, className: "bg-gulmohar-50 text-gulmohar-700 ring-gulmohar-200" },
+  destructive: { icon: CircleAlert, className: "bg-danger-soft text-danger ring-[#efc6cf]" },
 };
 
 export interface ActionDialogField {
@@ -131,7 +131,7 @@ export function ActionDialog<T, I = Record<string, string>>({
               <MedallionIcon className="size-5" strokeWidth={1.6} />
             </span>
           )}
-          {eyebrow && <p className="eyebrow mb-1.5 text-[0.625rem] text-gold-700">{eyebrow}</p>}
+          {eyebrow && <p className="eyebrow mb-1.5 text-[0.625rem] text-kota-700">{eyebrow}</p>}
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription className="mt-2">{description}</DialogDescription>}
         </DialogHeader>

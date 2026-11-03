@@ -47,12 +47,12 @@ export function ViewTabs({
             aria-current={active ? "page" : undefined}
             className={cn(
               "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
-              active ? "bg-navy text-white" : "text-muted-foreground hover:bg-muted hover:text-navy",
+              active ? "bg-basalt text-white" : "text-muted-foreground hover:bg-muted hover:text-basalt",
             )}
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className={cn("tabular rounded-full px-1.5 text-[0.6875rem]", active ? "bg-white/15 text-white" : "bg-muted text-slate-ink")}>{tab.count}</span>
+              <span className={cn("tabular rounded-full px-1.5 text-[0.6875rem]", active ? "bg-white/15 text-white" : "bg-muted text-ink")}>{tab.count}</span>
             )}
           </Link>
         );

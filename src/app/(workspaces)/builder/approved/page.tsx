@@ -65,7 +65,7 @@ export default async function ApprovedInvoicesPage({ searchParams }: { searchPar
       <MetricStrip className="mb-6 grid-cols-1 sm:mb-8 sm:grid-cols-2 xl:grid-cols-4">
         <Metric
           label="Approved invoices"
-          accent="heritage"
+          accent="leaf"
           value={<Figure unit={all.length === 1 ? "invoice" : "invoices"}>{all.length}</Figure>}
           caption={
             <>
@@ -73,10 +73,10 @@ export default async function ApprovedInvoicesPage({ searchParams }: { searchPar
             </>
           }
         />
-        <Metric label="Approved value" accent="heritage" value={<Money paise={approvedValue} compact size="xl" className="font-normal" />} caption="Total approved amount payable" />
+        <Metric label="Approved value" accent="leaf" value={<Money paise={approvedValue} compact size="xl" className="font-normal" />} caption="Total approved amount payable" />
         <Metric
           label="Financed by Veefin"
-          accent="gold"
+          accent="kota"
           value={<Money paise={sumPaise(financed.map((i) => i.approvedAmountPaise))} compact size="xl" className="font-normal" />}
           caption={`${plural(financed.length, "invoice")} with early payment requested or paid`}
           href="/builder/financed"
@@ -147,14 +147,14 @@ export default async function ApprovedInvoicesPage({ searchParams }: { searchPar
                       <Ref>{invoice.reference}</Ref>
                     </Td>
                     <Td>
-                      <p className="font-medium text-navy">{invoice.cp.name}</p>
+                      <p className="font-medium text-basalt">{invoice.cp.name}</p>
                       <p className="mt-1 text-[0.75rem] text-muted-foreground">{invoice.project.name}</p>
                     </Td>
                     <Td align="right">
-                      <Money paise={invoice.amountPaise} className="text-slate-ink" />
+                      <Money paise={invoice.amountPaise} className="text-ink" />
                     </Td>
                     <Td align="right">
-                      {invoice.approvedAmountPaise !== null ? <Money paise={invoice.approvedAmountPaise} className="font-semibold text-heritage" /> : "—"}
+                      {invoice.approvedAmountPaise !== null ? <Money paise={invoice.approvedAmountPaise} className="font-semibold text-leaf" /> : "—"}
                       {partial && <p className="mt-0.5 text-[0.6875rem] text-[#8a5a12]">Partial approval</p>}
                     </Td>
                     <Td className="whitespace-nowrap">{formatDate(invoice.decidedAt)}</Td>

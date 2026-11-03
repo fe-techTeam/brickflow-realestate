@@ -16,8 +16,8 @@ export interface MonthlyDatum {
 }
 
 const MONTHLY_SERIES: SeriesDef[] = [
-  { key: "submitted", label: "Invoice value submitted", color: CHART_COLORS.navySoft },
-  { key: "approved", label: "Approved value", color: CHART_COLORS.heritage },
+  { key: "submitted", label: "Invoice value submitted", color: CHART_COLORS.basaltSoft },
+  { key: "approved", label: "Approved value", color: CHART_COLORS.leaf },
 ];
 
 export function MonthlyVolumeChart({ data }: { data: MonthlyDatum[] }) {
@@ -75,12 +75,12 @@ export function TurnaroundChart({ data }: { data: { label: string; count: number
                 <ChartTooltip
                   active={active}
                   label={`Decided in ${String(label).toLowerCase()}`}
-                  rows={(payload ?? []).map((p) => ({ name: "Invoices", value: p.value, color: CHART_COLORS.navy, dataKey: p.dataKey }))}
+                  rows={(payload ?? []).map((p) => ({ name: "Invoices", value: p.value, color: CHART_COLORS.basalt, dataKey: p.dataKey }))}
                   format={(v) => String(v)}
                 />
               )}
             />
-            <Bar dataKey="count" name="Invoices" fill={CHART_COLORS.navy} radius={[4, 4, 0, 0]} animationDuration={700} maxBarSize={48} />
+            <Bar dataKey="count" name="Invoices" fill={CHART_COLORS.basalt} radius={[4, 4, 0, 0]} animationDuration={700} maxBarSize={48} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -98,8 +98,8 @@ export interface ProjectFinancingDatum {
 }
 
 const FINANCING_SERIES: SeriesDef[] = [
-  { key: "financed", label: "Financed by Veefin", color: CHART_COLORS.gold },
-  { key: "notFinanced", label: "Not financed", color: CHART_COLORS.navy },
+  { key: "financed", label: "Financed by Veefin", color: CHART_COLORS.kota },
+  { key: "notFinanced", label: "Not financed", color: CHART_COLORS.basalt },
 ];
 
 export function FinancingByProjectChart({ data }: { data: ProjectFinancingDatum[] }) {
@@ -123,8 +123,8 @@ export function FinancingByProjectChart({ data }: { data: ProjectFinancingDatum[
                 />
               )}
             />
-            <Bar dataKey="financed" name="Financed by Veefin" stackId="value" fill={CHART_COLORS.gold} stroke="#ffffff" strokeWidth={2} maxBarSize={30} animationDuration={700} />
-            <Bar dataKey="notFinanced" name="Not financed" stackId="value" fill={CHART_COLORS.navy} stroke="#ffffff" strokeWidth={2} radius={[0, 3, 3, 0]} animationDuration={700} maxBarSize={30} />
+            <Bar dataKey="financed" name="Financed by Veefin" stackId="value" fill={CHART_COLORS.kota} stroke="#ffffff" strokeWidth={2} maxBarSize={30} animationDuration={700} />
+            <Bar dataKey="notFinanced" name="Not financed" stackId="value" fill={CHART_COLORS.basalt} stroke="#ffffff" strokeWidth={2} radius={[0, 3, 3, 0]} animationDuration={700} maxBarSize={30} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -145,9 +145,9 @@ export interface SettlementProfileDatum {
 }
 
 const SETTLEMENT_COLORS: Record<SettlementProfileDatum["status"], string> = {
-  SETTLED: CHART_COLORS.heritage,
-  NOT_DUE: CHART_COLORS.navy,
-  DUE: CHART_COLORS.gold,
+  SETTLED: CHART_COLORS.leaf,
+  NOT_DUE: CHART_COLORS.basalt,
+  DUE: CHART_COLORS.kota,
   OVERDUE: CHART_COLORS.rose,
 };
 

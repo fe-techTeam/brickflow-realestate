@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, BadgePercent, CheckCircle2, FileStack, FileUp, MessageSquareWarning, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BadgePercent, CheckCircle2, FileStack, FileUp, MessageSquareWarning, HandCoins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calculateDiscount } from "@/lib/financing";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -47,7 +47,7 @@ export default async function PartnerOverviewPage() {
         title={`${greeting(now)}, ${firstName}`}
         description={
           <>
-            Your portfolio holds {plural(stats.invoiceCount, "invoice")} worth <span className="font-medium whitespace-nowrap text-navy tabular">{formatINRCompact(stats.totalInvoiceAmount)}</span> across{" "}
+            Your portfolio holds {plural(stats.invoiceCount, "invoice")} worth <span className="font-medium whitespace-nowrap text-basalt tabular">{formatINRCompact(stats.totalInvoiceAmount)}</span> across{" "}
             {plural(stats.builderCount, "builder")}
             {opportunityCount > 0
               ? `, with ${plural(opportunityCount, "invoice")} ready for early payment.`
@@ -101,7 +101,7 @@ export default async function PartnerOverviewPage() {
                   kicker="Clarification requested"
                   title={invoice.invoiceNumber}
                   meta={invoice.latestReviewNote ?? `${invoice.builder.name} has asked for more information.`}
-                  amount={<Money paise={invoice.amountPaise} className="text-navy" />}
+                  amount={<Money paise={invoice.amountPaise} className="text-basalt" />}
                   action={
                     <Button variant="outline" size="sm" asChild>
                       <Link href={`/partner/invoices/${invoice.id}#respond`}>Respond</Link>
@@ -112,12 +112,12 @@ export default async function PartnerOverviewPage() {
               {overview.openOffers.map((offer) => (
                 <QueueItem
                   key={offer.id}
-                  tone="gold"
+                  tone="kota"
                   icon={BadgePercent}
                   kicker={`Open offer · ${formatBps(offer.discountRateBps)}`}
                   title={`${offer.invoice.invoiceNumber} · ${offer.invoice.builder.name}`}
                   meta={`Valid until ${formatDateTime(offer.validUntil)}`}
-                  amount={<Money paise={offer.netPayablePaise} className="font-semibold text-heritage" />}
+                  amount={<Money paise={offer.netPayablePaise} className="font-semibold text-leaf" />}
                   action={<OfferLauncher invoice={offerInvoice(offer.invoice)} offer={toOfferDto(offer)} label="Review offer" variant="outline" />}
                 />
               ))}
@@ -126,23 +126,23 @@ export default async function PartnerOverviewPage() {
                 return (
                   <QueueItem
                     key={invoice.id}
-                    tone="heritage"
-                    icon={Sparkles}
+                    tone="leaf"
+                    icon={HandCoins}
                     kicker={`Eligible for early payment${rate !== undefined ? ` · ${formatBps(rate)}` : ""}`}
                     title={`${invoice.invoiceNumber} · ${invoice.builder.name}`}
                     meta={`Approved ${formatDate(invoice.decidedAt ?? invoice.updatedAt)} · ${invoice.project.name}`}
-                    amount={<Money paise={invoice.approvedAmountPaise ?? 0n} className="text-navy" />}
+                    amount={<Money paise={invoice.approvedAmountPaise ?? 0n} className="text-basalt" />}
                     action={<OfferLauncher invoice={offerInvoice(invoice)} />}
                   />
                 );
               })}
             </ul>
           )}
-          <p className="-mx-5 mt-auto flex items-start gap-2.5 border-t border-hairline bg-ivory-100 px-5 py-4 text-xs leading-relaxed text-muted-foreground sm:-mx-7 sm:px-7">
-            <BadgePercent className="mt-px size-3.5 shrink-0 text-gold-700" />
+          <p className="-mx-5 mt-auto flex items-start gap-2.5 border-t border-hairline bg-paper-100 px-5 py-4 text-xs leading-relaxed text-muted-foreground sm:-mx-7 sm:px-7">
+            <BadgePercent className="mt-px size-3.5 shrink-0 text-kota-700" />
             <span>
               Early payment is priced at the fixed rate agreed between Veefin and each builder, with no other charges.{" "}
-              <Link href="/partner/offers" className="font-medium whitespace-nowrap text-navy hover:underline">
+              <Link href="/partner/offers" className="font-medium whitespace-nowrap text-basalt hover:underline">
                 Financing offers
               </Link>
             </span>
@@ -160,7 +160,7 @@ export default async function PartnerOverviewPage() {
           eyebrow="Ledger"
           title="Recent invoices"
           actions={
-            <Button variant="ghost" size="sm" asChild className="text-navy">
+            <Button variant="ghost" size="sm" asChild className="text-basalt">
               <Link href="/partner/invoices">
                 View all
                 <ArrowRight />
@@ -185,10 +185,10 @@ export default async function PartnerOverviewPage() {
               <ul className="-mx-5 divide-y divide-hairline border-t border-hairline md:hidden">
                 {overview.recentInvoices.map((invoice) => (
                   <li key={invoice.id}>
-                    <Link href={`/partner/invoices/${invoice.id}`} className="block px-5 py-4 active:bg-ivory/60">
+                    <Link href={`/partner/invoices/${invoice.id}`} className="block px-5 py-4 active:bg-paper/60">
                       <div className="flex items-baseline justify-between gap-3">
-                        <p className="font-medium text-navy">{invoice.invoiceNumber}</p>
-                        <Money paise={invoice.amountPaise} className="font-medium text-navy" />
+                        <p className="font-medium text-basalt">{invoice.invoiceNumber}</p>
+                        <Money paise={invoice.amountPaise} className="font-medium text-basalt" />
                       </div>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {invoice.builder.name} · {formatDate(invoice.invoiceDate)}
@@ -218,7 +218,7 @@ export default async function PartnerOverviewPage() {
                       </Td>
                       <Td className="text-[0.8125rem] whitespace-nowrap">{formatDate(invoice.invoiceDate)}</Td>
                       <Td align="right">
-                        <Money paise={invoice.amountPaise} className="font-medium text-navy" />
+                        <Money paise={invoice.amountPaise} className="font-medium text-basalt" />
                       </Td>
                       <Td className="pl-8">
                         <div className="flex flex-col items-start gap-1.5">
@@ -246,14 +246,14 @@ export default async function PartnerOverviewPage() {
             <ul className="-mx-5 divide-y divide-hairline border-t border-hairline sm:-mx-7">
               {overview.recentRequests.map((request) => (
                 <li key={request.id}>
-                  <Link href={`/partner/invoices/${request.invoice.id}`} className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-ivory-50 sm:px-7">
+                  <Link href={`/partner/invoices/${request.invoice.id}`} className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-paper-50 sm:px-7">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-navy">{request.invoice.invoiceNumber}</p>
+                      <p className="text-sm font-medium text-basalt">{request.invoice.invoiceNumber}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{request.reference}</p>
                       <StatusMark kind="financing" status={request.status} className="mt-2 text-xs" />
                     </div>
                     <div className="text-right">
-                      <Money paise={request.netPayablePaise} className={cn("font-semibold", request.status === "REJECTED" ? "text-muted-foreground line-through" : "text-heritage")} />
+                      <Money paise={request.netPayablePaise} className={cn("font-semibold", request.status === "REJECTED" ? "text-muted-foreground line-through" : "text-leaf")} />
                       <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
                         {formatBps(request.discountRateBps)} · {formatDate(request.acceptedAt)}
                       </p>
@@ -263,7 +263,7 @@ export default async function PartnerOverviewPage() {
               ))}
             </ul>
           )}
-          <Link href="/partner/transactions" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-navy hover:underline">
+          <Link href="/partner/transactions" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-basalt hover:underline">
             All transactions
             <ArrowUpRight className="size-3.5" />
           </Link>
@@ -313,16 +313,16 @@ function PortfolioHero({ overview }: { overview: Overview }) {
   ];
 
   return (
-    <section className="surface-navy relative isolate animate-fade-up overflow-hidden">
-      <FacadePattern className="inset-y-0 right-0 -z-10 h-full w-[70%] text-gold/[0.13]" />
-      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-gold/60 to-transparent" />
+    <section className="surface-basalt relative isolate animate-fade-up overflow-hidden">
+      <FacadePattern className="inset-y-0 right-0 -z-10 h-full w-[70%] text-kota/[0.13]" />
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-kota/60 to-transparent" />
 
       <div className="grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="px-6 py-8 sm:px-10 sm:py-10">
           {first ? (
             <>
-              <p className="text-[0.6875rem] font-semibold tracking-[0.22em] text-gold uppercase">Available to you today</p>
-              <Money paise={available} size="display" className="mt-5 block font-light text-[#ecdcb6]" />
+              <p className="text-[0.6875rem] font-semibold tracking-[0.22em] text-kota uppercase">Available to you today</p>
+              <Money paise={available} size="display" className="mt-5 block font-light text-[#e3ddd2]" />
               <p className="mt-4 max-w-md text-sm leading-relaxed text-white/70">
                 {candidates.length === 1 ? (
                   <>
@@ -339,7 +339,7 @@ function PortfolioHero({ overview }: { overview: Overview }) {
                 {candidates.length === 1 ? (
                   first.launcher
                 ) : (
-                  <Button variant="gold" size="lg" asChild>
+                  <Button variant="accent" size="lg" asChild>
                     <Link href="/partner/offers">
                       <BadgePercent />
                       Review {candidates.length} opportunities
@@ -351,13 +351,13 @@ function PortfolioHero({ overview }: { overview: Overview }) {
             </>
           ) : (
             <>
-              <p className="text-[0.6875rem] font-semibold tracking-[0.22em] text-gold uppercase">Portfolio value</p>
-              <CompactMoney paise={stats.totalInvoiceAmount} size="display" className="mt-5 block font-light text-[#ecdcb6]" />
+              <p className="text-[0.6875rem] font-semibold tracking-[0.22em] text-kota uppercase">Portfolio value</p>
+              <CompactMoney paise={stats.totalInvoiceAmount} size="display" className="mt-5 block font-light text-[#e3ddd2]" />
               <p className="mt-4 max-w-md text-sm leading-relaxed text-white/70">
                 Nothing is ready for early payment right now. When a builder approves an invoice, you can receive it early at the agreed discount rate.
               </p>
               <div className="mt-7">
-                <Button variant="gold" size="lg" asChild>
+                <Button variant="accent" size="lg" asChild>
                   <Link href="/partner/invoices/new">
                     <FileUp />
                     Upload invoice
@@ -381,7 +381,7 @@ function PortfolioHero({ overview }: { overview: Overview }) {
             >
               <dt className="flex items-center justify-between gap-2 text-[0.625rem] font-semibold tracking-[0.18em] text-white/55 uppercase">
                 {step.label}
-                <ArrowUpRight className="size-3.5 text-gold/0 transition-colors group-hover:text-gold/80" />
+                <ArrowUpRight className="size-3.5 text-kota/0 transition-colors group-hover:text-kota/80" />
               </dt>
               <dd>
                 <CompactMoney paise={step.value} size="xl" className="block font-light text-white" />
@@ -397,8 +397,8 @@ function PortfolioHero({ overview }: { overview: Overview }) {
 
 const QUEUE_TONE = {
   warning: { ring: "bg-warning-soft text-warning ring-warning/25", kicker: "text-warning" },
-  gold: { ring: "bg-gold-100/70 text-gold-700 ring-gold/40", kicker: "text-gold-700" },
-  heritage: { ring: "bg-heritage-50 text-heritage ring-heritage/20", kicker: "text-heritage" },
+  kota: { ring: "bg-kota-100/70 text-kota-700 ring-kota/40", kicker: "text-kota-700" },
+  leaf: { ring: "bg-leaf-50 text-leaf ring-leaf/20", kicker: "text-leaf" },
 } as const;
 
 function QueueItem({
@@ -411,7 +411,7 @@ function QueueItem({
   action,
 }: {
   tone: keyof typeof QUEUE_TONE;
-  icon: typeof Sparkles;
+  icon: typeof HandCoins;
   kicker: string;
   title: string;
   meta: string;
@@ -426,7 +426,7 @@ function QueueItem({
       <div className="min-w-0 flex-1">
         <p className={cn("text-[0.625rem] font-semibold tracking-[0.16em] uppercase", QUEUE_TONE[tone].kicker)}>{kicker}</p>
         <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
-          <p className="text-sm font-medium text-navy">{title}</p>
+          <p className="text-sm font-medium text-basalt">{title}</p>
           {amount}
         </div>
         <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{meta}</p>

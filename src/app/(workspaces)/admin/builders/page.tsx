@@ -45,18 +45,18 @@ export default async function BuildersPage({ searchParams }: { searchParams: Pro
             hint: `${withProgramme} with an active programme`,
             href: "/admin/financing",
           },
-          { label: "Invoice value", value: <Money paise={sumPaise(builders.map((b) => b.invoicePaise))} compact size="lg" />, hint: "Submitted by channel partners", accent: "navy" },
+          { label: "Invoice value", value: <Money paise={sumPaise(builders.map((b) => b.invoicePaise))} compact size="lg" />, hint: "Submitted by channel partners", accent: "basalt" },
           {
             label: "Financed",
-            value: <Money paise={sumPaise(builders.map((b) => b.financedPaise))} compact size="lg" className="text-heritage" />,
+            value: <Money paise={sumPaise(builders.map((b) => b.financedPaise))} compact size="lg" className="text-leaf" />,
             hint: "Approved by Veefin",
-            accent: "heritage",
+            accent: "leaf",
           },
           {
             label: "Settlement due",
             value: <Money paise={sumPaise(builders.map((b) => b.outstandingPaise))} compact size="lg" />,
             hint: "Owed by builders to Veefin",
-            accent: "gold",
+            accent: "kota",
           },
         ]}
       />
@@ -93,9 +93,9 @@ export default async function BuildersPage({ searchParams }: { searchParams: Pro
                 <LTr key={b.id}>
                   <LTd>
                     <div className="flex items-center gap-3">
-                      <Monogram name={b.name} size="sm" tone={b.programme ? "navy" : "muted"} />
+                      <Monogram name={b.name} size="sm" tone={b.programme ? "basalt" : "muted"} />
                       <div>
-                        <Link href={`/admin/organisations/${b.id}`} className="font-medium whitespace-nowrap text-navy hover:underline">
+                        <Link href={`/admin/organisations/${b.id}`} className="font-medium whitespace-nowrap text-basalt hover:underline">
                           {b.name}
                         </Link>
                         <p className="text-xs text-muted-foreground">{b.city ?? b.legalName}</p>
@@ -117,15 +117,15 @@ export default async function BuildersPage({ searchParams }: { searchParams: Pro
                     {b.projects} · {b.empanelledPartners}
                   </LTd>
                   <LTd align="right">
-                    <Money paise={b.invoicePaise} compact className="text-navy" />
+                    <Money paise={b.invoicePaise} compact className="text-basalt" />
                     <p className="text-xs text-muted-foreground">{plural(b.invoiceCount, "invoice")}</p>
                   </LTd>
                   <LTd align="right">
-                    <Money paise={b.financedPaise} compact className="text-heritage" />
+                    <Money paise={b.financedPaise} compact className="text-leaf" />
                     <p className="text-xs text-muted-foreground">{plural(b.financedCount, "request")}</p>
                   </LTd>
                   <LTd align="right">
-                    <Money paise={b.outstandingPaise} compact className="text-navy" />
+                    <Money paise={b.outstandingPaise} compact className="text-basalt" />
                   </LTd>
                   <LTd>
                     <StatusBadge kind="record" status={b.status} />

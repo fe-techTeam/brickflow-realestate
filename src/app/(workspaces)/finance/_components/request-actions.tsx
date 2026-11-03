@@ -34,17 +34,17 @@ type Size = "default" | "sm";
 
 function SummaryRows({ rows }: { rows: { label: string; value: ReactNode; strong?: boolean }[] }) {
   return (
-    <dl className="overflow-hidden rounded-lg border border-border bg-ivory/50">
+    <dl className="overflow-hidden rounded-lg border border-border bg-paper/50">
       {rows.map((row) => (
         <div
           key={row.label}
           className={cn(
             "flex items-baseline justify-between gap-4 px-4 py-2.5",
-            row.strong ? "border-t border-gold/30 bg-card py-3.5" : "border-t border-border/50 first:border-t-0",
+            row.strong ? "border-t border-kota/30 bg-card py-3.5" : "border-t border-border/50 first:border-t-0",
           )}
         >
-          <dt className={cn("text-xs", row.strong ? "font-semibold tracking-[0.12em] text-navy uppercase" : "text-muted-foreground")}>{row.label}</dt>
-          <dd className={cn("tabular text-right text-sm text-navy", row.strong && "text-[1.375rem] font-light tracking-[-0.01em] text-heritage")}>{row.value}</dd>
+          <dt className={cn("text-xs", row.strong ? "font-semibold tracking-[0.12em] text-basalt uppercase" : "text-muted-foreground")}>{row.label}</dt>
+          <dd className={cn("tabular text-right text-sm text-basalt", row.strong && "text-[1.375rem] font-light tracking-[-0.01em] text-leaf")}>{row.value}</dd>
         </div>
       ))}
     </dl>
@@ -53,12 +53,12 @@ function SummaryRows({ rows }: { rows: { label: string; value: ReactNode; strong
 
 function AdviceSeal() {
   return (
-    <span className="pointer-events-none absolute -top-3 -right-2 inline-flex size-[4.5rem] -rotate-12 text-gold-600/90" aria-hidden="true">
+    <span className="pointer-events-none absolute -top-3 -right-2 inline-flex size-[4.5rem] -rotate-12 text-kota-600/90" aria-hidden="true">
       <svg viewBox="0 0 120 120" className="size-full">
         <defs>
           <path id="bf-dialog-seal" d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
         </defs>
-        <circle cx="60" cy="60" r="57" fill="#fffdf8" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="60" cy="60" r="57" fill="#fafbf9" stroke="currentColor" strokeWidth="1.6" />
         <circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" strokeWidth="0.6" />
         <circle cx="60" cy="60" r="33" fill="none" stroke="currentColor" strokeWidth="0.8" />
         <text fill="currentColor" style={{ fontSize: 9.5, letterSpacing: "0.22em", fontWeight: 600 }}>
@@ -89,19 +89,19 @@ function TransferAdvice({
   reference?: string;
 }) {
   return (
-    <div className="relative rounded-xl border border-border bg-[linear-gradient(180deg,#fffdf8,#f8f4ea)] p-5">
+    <div className="relative rounded-xl border border-border bg-[linear-gradient(180deg,#fafbf9,#f8f4ea)] p-5">
       <AdviceSeal />
-      <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-600 uppercase">Payment advice{reference ? ` · ${reference}` : ""}</p>
+      <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-kota-600 uppercase">Payment advice{reference ? ` · ${reference}` : ""}</p>
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 text-xs">
         <div className="min-w-0">
           <p className="text-muted-foreground">From</p>
-          <p className="mt-1 font-medium text-navy">Veefin Finance</p>
+          <p className="mt-1 font-medium text-basalt">Veefin Finance</p>
           <p className="text-muted-foreground">Disbursement pool (demo)</p>
         </div>
-        <ArrowRight className="mt-5 size-4 text-gold-600" aria-hidden="true" />
+        <ArrowRight className="mt-5 size-4 text-kota-600" aria-hidden="true" />
         <div className="min-w-0">
           <p className="text-muted-foreground">To</p>
-          <p className="mt-1 truncate font-medium text-navy">{beneficiaryName}</p>
+          <p className="mt-1 truncate font-medium text-basalt">{beneficiaryName}</p>
           {bankName !== undefined && <p className="truncate text-muted-foreground">{bankName ?? "—"}</p>}
           {account && (
             <p className="tabular text-muted-foreground">
@@ -111,9 +111,9 @@ function TransferAdvice({
           )}
         </div>
       </div>
-      <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-dashed border-gold/40 pt-4">
+      <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-dashed border-kota/40 pt-4">
         <span className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Amount</span>
-        <span className="tabular text-[1.75rem] leading-none font-light tracking-[-0.02em] text-heritage">{formatINR(amountPaise)}</span>
+        <span className="tabular text-[1.75rem] leading-none font-light tracking-[-0.02em] text-leaf">{formatINR(amountPaise)}</span>
       </div>
     </div>
   );
@@ -217,7 +217,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
         setError(null);
       }}>
       <DialogTrigger asChild>
-        <Button variant="gold" size={size} className={cn("font-semibold", className)}>
+        <Button variant="accent" size={size} className={cn("font-semibold", className)}>
           <ArrowDownToLine className="size-4" />
           Initiate disbursement
         </Button>
@@ -225,7 +225,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="font-display text-2xl font-semibold text-navy">Initiate disbursement</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-semibold text-basalt">Initiate disbursement</DialogTitle>
             <DemoBadge />
           </div>
           <DialogDescription className="text-sm leading-relaxed">
@@ -252,7 +252,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
               Cancel
             </Button>
           </DialogClose>
-          <Button variant="gold" onClick={confirm} disabled={pending}>
+          <Button variant="accent" onClick={confirm} disabled={pending}>
             {pending && <Loader2 className="size-4 animate-spin" />}
             Initiate simulated payout
           </Button>
@@ -322,11 +322,11 @@ export function ConfirmTransferButton({
       <DialogContent className="sm:max-w-lg" showCloseButton={!processing}>
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="font-display text-2xl font-semibold text-navy">Confirm simulated transfer</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-semibold text-basalt">Confirm simulated transfer</DialogTitle>
             <DemoBadge />
           </div>
           <DialogDescription className="text-sm leading-relaxed">
-            Confirms payout {paymentReference} of <span className="tabular font-medium text-navy">{formatINR(amountPaise)}</span>, generates a demo UTR and
+            Confirms payout {paymentReference} of <span className="tabular font-medium text-basalt">{formatINR(amountPaise)}</span>, generates a demo UTR and
             opens the builder settlement. No real funds move.
           </DialogDescription>
         </DialogHeader>
@@ -338,27 +338,27 @@ export function ConfirmTransferButton({
             return (
               <li key={label} className="relative flex items-center gap-3 py-2.5 text-sm">
                 {index < TRANSFER_STEPS.length - 1 && (
-                  <span aria-hidden="true" className={cn("absolute top-[2.1rem] -bottom-2.5 left-3 w-px", done ? "bg-heritage/60" : "bg-border")} />
+                  <span aria-hidden="true" className={cn("absolute top-[2.1rem] -bottom-2.5 left-3 w-px", done ? "bg-leaf/60" : "bg-border")} />
                 )}
                 <span
                   className={cn(
                     "relative flex size-6 shrink-0 items-center justify-center rounded-full ring-1 transition-colors duration-300",
-                    done ? "bg-heritage text-white ring-heritage" : active ? "bg-navy text-gold ring-navy" : "bg-card text-muted-foreground ring-border",
+                    done ? "bg-leaf text-white ring-leaf" : active ? "bg-basalt text-kota ring-basalt" : "bg-card text-muted-foreground ring-border",
                   )}
                 >
-                  {active && <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-navy/25" />}
+                  {active && <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-basalt/25" />}
                   {done ? <Check className="size-3.5" /> : active ? <Loader2 className="size-3.5 animate-spin" /> : <span className="tabular text-[0.625rem] font-semibold">{index + 1}</span>}
                 </span>
-                <span className={cn("flex-1 transition-colors", done ? "text-heritage" : active ? "font-medium text-navy" : "text-muted-foreground")}>{label}</span>
+                <span className={cn("flex-1 transition-colors", done ? "text-leaf" : active ? "font-medium text-basalt" : "text-muted-foreground")}>{label}</span>
                 <span className="text-[0.625rem] font-semibold tracking-[0.16em] uppercase">
-                  {done ? <span className="text-heritage">Done</span> : active ? <span className="text-gold-600">Processing</span> : null}
+                  {done ? <span className="text-leaf">Done</span> : active ? <span className="text-kota-600">Processing</span> : null}
                 </span>
               </li>
             );
           })}
         </ol>
         {step === 3 && (
-          <p className="flex items-center gap-2 text-sm font-medium text-heritage">
+          <p className="flex items-center gap-2 text-sm font-medium text-leaf">
             <CircleCheck className="size-4" /> Transfer confirmed
           </p>
         )}
@@ -440,9 +440,9 @@ export function MarkSettledButton({
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={submit} className="grid gap-4" noValidate>
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl font-semibold text-navy">Record builder settlement</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-semibold text-basalt">Record builder settlement</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
-              Confirm that {builderName} has paid <span className="tabular font-medium text-navy">{formatINR(amountPaise)}</span> against {requestReference}.
+              Confirm that {builderName} has paid <span className="tabular font-medium text-basalt">{formatINR(amountPaise)}</span> against {requestReference}.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">

@@ -14,7 +14,7 @@ export default function PartnerError({ error, retry }: { error: unknown; retry: 
 
   return (
     <div className="surface mx-auto mt-10 max-w-xl animate-fade-up px-6 py-14 text-center sm:px-10">
-      <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-[#f8e7e4] text-danger">
+      <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-[#f9e6ea] text-danger">
         <AlertTriangle className="size-5" strokeWidth={1.6} />
       </span>
       <h1 className="mt-5 font-display text-[1.75rem] font-medium">We couldn&apos;t load this page</h1>

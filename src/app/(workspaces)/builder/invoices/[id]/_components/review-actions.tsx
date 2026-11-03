@@ -90,9 +90,9 @@ export function ReviewActions({
         />
       </div>
       {status === "SUBMITTED" && (
-        <div className="mt-2 flex items-center justify-between gap-3 border-t border-dashed border-[#e3dccb] pt-4">
+        <div className="mt-2 flex items-center justify-between gap-3 border-t border-dashed border-[#dfe2de] pt-4">
           <p className="text-[0.75rem] leading-snug text-muted-foreground">Let {cpName} know you have started reviewing.</p>
-          <Button variant="ghost" size="sm" className="shrink-0 text-navy" onClick={markUnderReview} disabled={pending}>
+          <Button variant="ghost" size="sm" className="shrink-0 text-basalt" onClick={markUnderReview} disabled={pending}>
             {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />}
             Mark under review
           </Button>

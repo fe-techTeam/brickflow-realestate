@@ -89,19 +89,19 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
             label: "Approved invoice value",
             value: <Money paise={sumPaise(rows.map((r) => r.request.approvedAmountPaise))} compact size="lg" />,
             hint: "Builder-approved, across requests in view",
-            accent: "navy",
+            accent: "basalt",
           },
           {
             label: "Net disbursed",
-            value: <Money paise={sumPaise(disbursed.map((r) => r.request.disbursement?.amountPaise ?? r.request.netPayablePaise))} compact size="lg" className="text-heritage" />,
+            value: <Money paise={sumPaise(disbursed.map((r) => r.request.disbursement?.amountPaise ?? r.request.netPayablePaise))} compact size="lg" className="text-leaf" />,
             hint: `${disbursed.length} simulated payout${disbursed.length === 1 ? "" : "s"}`,
-            accent: "heritage",
+            accent: "leaf",
           },
           {
             label: "Discount earned",
             value: <Money paise={sumPaise(disbursed.map((r) => r.request.discountAmountPaise))} compact size="lg" />,
             hint: "On disbursed requests",
-            accent: "gold",
+            accent: "kota",
           },
         ]}
       />
@@ -146,8 +146,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                     <Link href={`/finance/requests/${r.id}`} className="block px-5 py-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="tabular text-sm font-medium text-navy">{r.reference}</p>
-                          <p className="truncate text-xs text-slate-ink/80">
+                          <p className="tabular text-sm font-medium text-basalt">{r.reference}</p>
+                          <p className="truncate text-xs text-ink/80">
                             {r.cp.name} to {r.builder.name}
                           </p>
                         </div>
@@ -155,7 +155,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                       </div>
                       <div className="mt-3 flex items-end justify-between gap-3">
                         <div>
-                          <Money paise={r.netPayablePaise} size="md" className="text-heritage" />
+                          <Money paise={r.netPayablePaise} size="md" className="text-leaf" />
                           <p className="text-[0.6875rem] text-muted-foreground">
                             on <Money paise={r.approvedAmountPaise} size="xs" className="font-normal" /> at {formatBps(r.discountRateBps)}
                           </p>
@@ -187,24 +187,24 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                   return (
                     <LTr key={r.id}>
                       <LTd className="whitespace-nowrap">
-                        <Link href={`/finance/requests/${r.id}`} className="tabular font-medium tracking-wide text-navy underline-offset-4 hover:underline">
+                        <Link href={`/finance/requests/${r.id}`} className="tabular font-medium tracking-wide text-basalt underline-offset-4 hover:underline">
                           {r.reference}
                         </Link>
-                        <p className="tabular mt-0.5 text-xs text-slate-ink/80">{r.invoice.invoiceNumber}</p>
+                        <p className="tabular mt-0.5 text-xs text-ink/80">{r.invoice.invoiceNumber}</p>
                         <p className="text-[0.6875rem] text-muted-foreground">{formatDate(r.createdAt)}</p>
                       </LTd>
                       <LTd className="min-w-44">
-                        <span className="text-navy">{r.cp.name}</span>
+                        <span className="text-basalt">{r.cp.name}</span>
                         <p className="text-xs text-muted-foreground">to {r.builder.name}</p>
                       </LTd>
                       <LTd align="right">
-                        <Money paise={r.approvedAmountPaise} className="font-normal text-slate-ink" />
+                        <Money paise={r.approvedAmountPaise} className="font-normal text-ink" />
                         <p className="mt-0.5 text-[0.6875rem] whitespace-nowrap text-muted-foreground">
                           <Money paise={r.discountAmountPaise} sign="−" size="xs" className="font-normal text-danger" /> at {formatBps(r.discountRateBps)}
                         </p>
                       </LTd>
                       <LTd align="right">
-                        <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+                        <Money paise={r.netPayablePaise} className="font-semibold text-leaf" />
                       </LTd>
                       <LTd>
                         <StatusBadge kind="financing" status={r.status} />

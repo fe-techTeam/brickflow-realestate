@@ -45,7 +45,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
         lede="An append-only record of every state change on the platform: who did what, when, and with which values."
         meta={
           <span className="inline-flex items-center gap-1.5">
-            <Lock className="size-3.5 text-gold-600" strokeWidth={1.6} aria-hidden="true" />
+            <Lock className="size-3.5 text-kota-600" strokeWidth={1.6} aria-hidden="true" />
             Entries cannot be edited or deleted
           </span>
         }

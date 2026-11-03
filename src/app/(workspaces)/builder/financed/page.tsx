@@ -59,19 +59,19 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
       <MetricStrip className="mb-6 grid-cols-1 sm:mb-8 sm:grid-cols-2 xl:grid-cols-4">
         <Metric
           label="Financed value"
-          accent="heritage"
+          accent="leaf"
           value={<Money paise={sumPaise(live.map((r) => r.approvedAmountPaise))} compact size="xl" className="font-normal" />}
           caption={`${plural(live.length, "request")}, excluding rejected`}
         />
         <Metric
           label="Net paid to partners"
-          accent="navy"
+          accent="basalt"
           value={<Money paise={sumPaise(disbursed.map((r) => r.netPayablePaise))} compact size="xl" className="font-normal" />}
           caption={`${plural(disbursed.length, "simulated disbursement")} completed`}
         />
         <Metric
           label="Partner discount"
-          accent="gold"
+          accent="kota"
           value={<Money paise={sumPaise(live.map((r) => r.discountAmountPaise))} compact size="xl" className="font-normal" />}
           caption="Deducted from the partner's payout, never charged to you"
         />
@@ -138,22 +138,22 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
                       </p>
                       <Ref>{r.reference}</Ref>
                     </Td>
-                    <Td className="font-medium text-navy">{r.cp.name}</Td>
+                    <Td className="font-medium text-basalt">{r.cp.name}</Td>
                     <Td align="right">
-                      <Money paise={r.approvedAmountPaise} className="text-navy" />
+                      <Money paise={r.approvedAmountPaise} className="text-basalt" />
                     </Td>
                     <Td align="right">
-                      <Money paise={r.discountAmountPaise} sign="minus" className="text-[#93342a]" />
+                      <Money paise={r.discountAmountPaise} sign="minus" className="text-[#8a1f37]" />
                       <p className="mt-1 text-[0.6875rem] text-muted-foreground">at {formatBps(r.discountRateBps)}</p>
                     </Td>
                     <Td align="right">
-                      <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+                      <Money paise={r.netPayablePaise} className="font-semibold text-leaf" />
                     </Td>
                     <Td>
                       <StatusBadge kind="financing" status={r.status} />
                       {r.disbursement ? (
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-[0.6875rem] whitespace-nowrap text-slate-ink">{r.disbursement.reference}</span>
+                          <span className="font-mono text-[0.6875rem] whitespace-nowrap text-ink">{r.disbursement.reference}</span>
                           <DemoBadge />
                         </div>
                       ) : (
@@ -166,7 +166,7 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
                       ) : (
                         <span className="text-[0.75rem] text-muted-foreground">{r.status === "REJECTED" ? "No settlement" : "After disbursement"}</span>
                       )}
-                      <p className="mt-1.5 text-[0.75rem] text-slate-ink">Due {formatDate(r.settlement?.dueDate ?? r.invoice.dueDate)}</p>
+                      <p className="mt-1.5 text-[0.75rem] text-ink">Due {formatDate(r.settlement?.dueDate ?? r.invoice.dueDate)}</p>
                     </Td>
                   </Tr>
                 );

@@ -6,7 +6,7 @@ import { Trend, type TrendProps } from "./trend";
 
 /**
  * One headline figure with its label and context, for the top of a dashboard.
- * `variant="navy"` is the deep brand panel with a champagne figure; `ivory` is a light editorial panel.
+ * `variant="basalt"` is the deep brand panel with a stone figure; `paper` is a light editorial panel.
  * `aside` renders supporting figures (e.g. KeyFigure list) beside the headline on wide screens.
  */
 export function HeroMetric({
@@ -17,7 +17,7 @@ export function HeroMetric({
   trend,
   aside,
   footer,
-  variant = "navy",
+  variant = "basalt",
   className,
 }: {
   label: ReactNode;
@@ -27,15 +27,15 @@ export function HeroMetric({
   trend?: TrendProps;
   aside?: ReactNode;
   footer?: ReactNode;
-  variant?: "navy" | "ivory";
+  variant?: "basalt" | "paper";
   className?: string;
 }) {
-  const dark = variant === "navy";
+  const dark = variant === "basalt";
   return (
     <section
       className={cn(
         "relative isolate animate-fade-up overflow-hidden rounded-xl p-6 sm:p-8",
-        dark ? "surface-navy" : "surface bg-gradient-to-br from-card via-card to-gold-50",
+        dark ? "surface-basalt" : "surface bg-gradient-to-br from-card via-card to-kota-50",
         className,
       )}
     >
@@ -47,18 +47,18 @@ export function HeroMetric({
               <span
                 className={cn(
                   "flex size-9 items-center justify-center rounded-lg ring-1 ring-inset",
-                  dark ? "bg-white/[0.06] text-gold ring-gold/30" : "bg-gold-50 text-gold-700 ring-gold-200",
+                  dark ? "bg-white/[0.06] text-kota ring-kota/30" : "bg-kota-50 text-kota-700 ring-kota-200",
                 )}
               >
                 <Icon className="size-[1.05rem]" strokeWidth={1.6} />
               </span>
             )}
-            <p className={cn("eyebrow", dark ? "text-gold-300/90" : "text-gold-700")}>{label}</p>
+            <p className={cn("eyebrow", dark ? "text-kota-300/90" : "text-kota-700")}>{label}</p>
           </div>
           <p
             className={cn(
               "figure mt-5 text-[2.5rem] leading-none font-semibold tracking-[-0.035em] sm:text-[3.25rem]",
-              dark ? "text-white" : "text-navy",
+              dark ? "text-white" : "text-basalt",
             )}
           >
             <FigureValue value={value} display />
@@ -85,7 +85,7 @@ function HeroBackdrop({ dark }: { dark: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className={cn("pointer-events-none absolute right-0 bottom-0 -z-10 h-full w-[55%] max-w-[520px]", dark ? "text-gold/[0.12]" : "text-navy/[0.06]")}
+      className={cn("pointer-events-none absolute right-0 bottom-0 -z-10 h-full w-[55%] max-w-[520px]", dark ? "text-kota/[0.12]" : "text-basalt/[0.06]")}
       viewBox="0 0 520 260"
       preserveAspectRatio="xMaxYMax meet"
       fill="none"

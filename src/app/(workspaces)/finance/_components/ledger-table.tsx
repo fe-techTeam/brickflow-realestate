@@ -24,7 +24,7 @@ export function LTh({ children, align = "left", className }: { children?: ReactN
     <th
       scope="col"
       className={cn(
-        "border-y border-navy/10 bg-ivory/45 px-3.5 py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
+        "border-y border-basalt/10 bg-paper/45 px-3.5 py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
         edge,
         align === "right" && "text-right",
         align === "center" && "text-center",
@@ -41,7 +41,7 @@ export function LTd({ children, align = "left", className }: { children?: ReactN
   return (
     <td
       className={cn(
-        "border-b border-border/60 px-3.5 py-4 align-middle text-slate-ink",
+        "border-b border-border/60 px-3.5 py-4 align-middle text-ink",
         edge,
         align === "right" && "tabular text-right",
         align === "center" && "text-center",
@@ -54,7 +54,7 @@ export function LTd({ children, align = "left", className }: { children?: ReactN
 }
 
 export function LTr({ children, className }: { children: ReactNode; className?: string }) {
-  return <tr className={cn("transition-colors last:[&>td]:border-b-0 hover:bg-ivory/40", className)}>{children}</tr>;
+  return <tr className={cn("transition-colors last:[&>td]:border-b-0 hover:bg-paper/40", className)}>{children}</tr>;
 }
 
 export function sortHref(searchParams: Record<string, string | string[] | undefined>, pathname: string, key: string, dir: "asc" | "desc") {
@@ -89,7 +89,7 @@ export function LSortTh({
       <Link
         href={sortHref(searchParams, pathname, sortKey, active && sort.dir === "desc" ? "asc" : "desc")}
         scroll={false}
-        className={cn("inline-flex items-center gap-1 transition-colors hover:text-navy", active && "text-navy")}
+        className={cn("inline-flex items-center gap-1 transition-colors hover:text-basalt", active && "text-basalt")}
         aria-label={`Sort by ${label}`}
       >
         {label}
@@ -103,8 +103,8 @@ export function LSortTh({
 export function Stack({ primary, secondary, tertiary }: { primary: ReactNode; secondary?: ReactNode; tertiary?: ReactNode }) {
   return (
     <div className="min-w-0">
-      <div className="text-navy">{primary}</div>
-      {secondary && <div className="mt-0.5 text-xs text-slate-ink/80">{secondary}</div>}
+      <div className="text-basalt">{primary}</div>
+      {secondary && <div className="mt-0.5 text-xs text-ink/80">{secondary}</div>}
       {tertiary && <div className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">{tertiary}</div>}
     </div>
   );

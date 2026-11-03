@@ -12,23 +12,23 @@ import {
 } from "@/lib/status";
 
 const TONE_CLASSES: Record<StatusTone, string> = {
-  neutral: "bg-ivory-100 text-slate-ink-soft ring-ivory-300",
+  neutral: "bg-paper-100 text-ink-soft ring-paper-300",
   info: "bg-info-soft text-info ring-[#cddcea]",
-  navy: "bg-navy-50 text-navy ring-navy-200",
-  warning: "bg-warning-soft text-warning ring-[#ecd6a8]",
-  success: "bg-heritage-50 text-heritage ring-heritage-200",
-  danger: "bg-danger-soft text-danger ring-[#e9c7bf]",
-  gold: "bg-gold-50 text-gold-700 ring-gold-300/70",
+  basalt: "bg-basalt-50 text-basalt ring-basalt-200",
+  warning: "bg-warning-soft text-warning ring-[#e3ddd2]",
+  success: "bg-leaf-50 text-leaf ring-leaf-200",
+  danger: "bg-danger-soft text-danger ring-[#efc6cf]",
+  kota: "bg-kota-50 text-kota-700 ring-kota-300/70",
 };
 
 const DOT_CLASSES: Record<StatusTone, string> = {
-  neutral: "bg-slate-ink/35",
+  neutral: "bg-ink/35",
   info: "bg-info",
-  navy: "bg-navy",
+  basalt: "bg-basalt",
   warning: "bg-[#c48a2c]",
-  success: "bg-heritage-500",
+  success: "bg-leaf-500",
   danger: "bg-danger",
-  gold: "bg-gold",
+  kota: "bg-kota",
 };
 
 const REGISTRY = {
@@ -65,5 +65,5 @@ export function StatusBadge<K extends StatusKind>({ kind, status, className }: {
 }
 
 export function DemoBadge({ className }: { className?: string }) {
-  return <ToneBadge meta={{ label: "Simulated", tone: "gold" }} className={className} />;
+  return <ToneBadge meta={{ label: "Simulated", tone: "kota" }} className={className} />;
 }

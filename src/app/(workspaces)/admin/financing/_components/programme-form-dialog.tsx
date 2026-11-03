@@ -47,9 +47,9 @@ function Field({
 }) {
   return (
     <div className={cn("grid content-start gap-1.5", className)}>
-      <Label htmlFor={id} className="text-[0.6875rem] font-semibold tracking-[0.12em] text-slate-ink/80 uppercase">
+      <Label htmlFor={id} className="text-[0.6875rem] font-semibold tracking-[0.12em] text-ink/80 uppercase">
         {label}
-        {required && <span className="text-gold-600"> *</span>}
+        {required && <span className="text-kota-600"> *</span>}
       </Label>
       {children}
       {errors?.length ? <FieldError id={`${id}-error`} errors={errors} /> : hint ? <p className="text-xs leading-snug text-muted-foreground">{hint}</p> : null}
@@ -183,8 +183,8 @@ export function ProgrammeFormDialog(props: Props) {
             Configure programme
           </Button>
         ) : (
-          <Button size="lg" className="shadow-[0_10px_24px_-12px_rgba(20,43,67,0.6)]">
-            <Plus className="size-4 text-gold" />
+          <Button size="lg" className="shadow-[0_10px_24px_-12px_rgba(34, 45, 43,0.6)]">
+            <Plus className="size-4 text-kota" />
             Create programme
           </Button>
         )}
@@ -193,11 +193,11 @@ export function ProgrammeFormDialog(props: Props) {
         <form onSubmit={submit} noValidate className="grid md:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="px-5 pt-7 pb-6 sm:px-8">
             <DialogHeader className="gap-0 text-left">
-              <p className="flex items-center gap-2.5 text-[0.625rem] font-semibold tracking-[0.22em] text-gold-600 uppercase">
-                <span aria-hidden="true" className="h-px w-5 bg-gold" />
+              <p className="flex items-center gap-2.5 text-[0.625rem] font-semibold tracking-[0.22em] text-kota-600 uppercase">
+                <span aria-hidden="true" className="h-px w-5 bg-kota" />
                 {editing ? "Amend financing mandate" : "New financing mandate"}
               </p>
-              <DialogTitle className="mt-2.5 font-display text-[1.875rem] leading-tight font-semibold text-navy">
+              <DialogTitle className="mt-2.5 font-display text-[1.875rem] leading-tight font-semibold text-basalt">
                 {editing ? `Edit ${props.programme.code}` : "Create financing programme"}
               </DialogTitle>
               <DialogDescription className="mt-2 text-[0.8125rem] leading-relaxed text-muted-foreground">
@@ -311,9 +311,9 @@ export function ProgrammeFormDialog(props: Props) {
                     placeholder="2.5"
                     aria-invalid={Boolean(errors.discountRate?.length)}
                     aria-describedby={describedBy("discountRate")}
-                    className="tabular h-12 border-gold/50 bg-card pr-10 font-sans text-[1.5rem] font-light tracking-[-0.02em] text-navy focus-visible:border-gold"
+                    className="tabular h-12 border-kota/50 bg-card pr-10 font-sans text-[1.5rem] font-light tracking-[-0.02em] text-basalt focus-visible:border-kota"
                   />
-                  <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-lg font-light text-gold-600">%</span>
+                  <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-lg font-light text-kota-600">%</span>
                 </div>
               </Field>
 
@@ -415,14 +415,14 @@ export function ProgrammeFormDialog(props: Props) {
             </div>
           </div>
 
-          <aside className="flex flex-col gap-5 border-t border-border/80 bg-ivory/80 px-5 pt-7 pb-6 sm:px-7 md:border-t-0 md:border-l">
+          <aside className="flex flex-col gap-5 border-t border-border/80 bg-paper/80 px-5 pt-7 pb-6 sm:px-7 md:border-t-0 md:border-l">
             <RatePreview rate={values.discountRate} currentBps={editing ? props.programme.discountRateBps : undefined} />
 
-            <div className="flex gap-3 rounded-lg border-l-2 border-heritage bg-sage/50 px-3.5 py-3 text-xs leading-relaxed text-heritage">
+            <div className="flex gap-3 rounded-lg border-l-2 border-leaf bg-leaf-100/50 px-3.5 py-3 text-xs leading-relaxed text-leaf">
               <ShieldCheck className="mt-0.5 size-4 shrink-0" strokeWidth={1.6} aria-hidden="true" />
               <div>
                 <p className="font-semibold">Snapshot protected</p>
-                <p className="mt-0.5 text-heritage/90">
+                <p className="mt-0.5 text-leaf/90">
                   {editing
                     ? `Accepted financing requests (${props.programme.requests}) keep the rate and amounts agreed at acceptance and are never repriced.`
                     : "Once a channel partner accepts an offer, its rate and amounts are frozen. Later changes never reprice it."}
@@ -434,7 +434,7 @@ export function ProgrammeFormDialog(props: Props) {
               <div
                 className={cn(
                   "flex gap-3 rounded-lg border-l-2 px-3.5 py-3 text-xs leading-relaxed transition-colors",
-                  termsChanged ? "border-warning/70 bg-warning-soft text-warning" : "border-border bg-card text-slate-ink",
+                  termsChanged ? "border-warning/70 bg-warning-soft text-warning" : "border-border bg-card text-ink",
                 )}
               >
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" strokeWidth={1.6} aria-hidden="true" />
@@ -450,10 +450,10 @@ export function ProgrammeFormDialog(props: Props) {
             )}
 
             {!editing && (
-              <div className="flex gap-3 rounded-lg border-l-2 border-gold bg-card px-3.5 py-3 text-xs leading-relaxed text-slate-ink">
-                <Stamp className="mt-0.5 size-4 shrink-0 text-gold-600" strokeWidth={1.6} aria-hidden="true" />
+              <div className="flex gap-3 rounded-lg border-l-2 border-kota bg-card px-3.5 py-3 text-xs leading-relaxed text-ink">
+                <Stamp className="mt-0.5 size-4 shrink-0 text-kota-600" strokeWidth={1.6} aria-hidden="true" />
                 <div>
-                  <p className="font-semibold text-navy">One active programme per builder</p>
+                  <p className="font-semibold text-basalt">One active programme per builder</p>
                   <p className="mt-0.5">Save as draft to prepare new terms while the current programme stays live.</p>
                 </div>
               </div>
@@ -469,7 +469,7 @@ export function ProgrammeFormDialog(props: Props) {
                 </Button>
               </DialogClose>
               <Button type="submit" disabled={pending} className="min-w-40">
-                {pending ? <Loader2 className="size-4 animate-spin" /> : <Stamp className="size-4 text-gold" />}
+                {pending ? <Loader2 className="size-4 animate-spin" /> : <Stamp className="size-4 text-kota" />}
                 {editing ? "Save changes" : "Create programme"}
               </Button>
             </div>

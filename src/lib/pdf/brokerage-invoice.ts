@@ -44,12 +44,13 @@ export function splitGstInclusive(totalPaise: bigint, ratePercent: number, mode:
   return { taxablePaise, cgstPaise, sgstPaise: tax - cgstPaise, igstPaise: 0n, totalPaise };
 }
 
-const NAVY = rgb(0x14 / 255, 0x2b / 255, 0x43 / 255);
-const GOLD = rgb(0xc4 / 255, 0xa4 / 255, 0x6a / 255);
-const INK = rgb(0x30 / 255, 0x3d / 255, 0x4d / 255);
-const MUTED = rgb(0.42, 0.46, 0.52);
-const RULE = rgb(0.87, 0.85, 0.8);
-const IVORY = rgb(0xf5 / 255, 0xf2 / 255, 0xea / 255);
+// A channel partner's own letterhead, so deliberately neutral rather than in platform colours.
+const HEAD = rgb(0x22 / 255, 0x2a / 255, 0x28 / 255);
+const LABEL = rgb(0x6b / 255, 0x5e / 255, 0x4b / 255);
+const INK = rgb(0x2a / 255, 0x33 / 255, 0x31 / 255);
+const MUTED = rgb(0.4, 0.43, 0.42);
+const RULE = rgb(0.86, 0.87, 0.85);
+const SHADE = rgb(0xf0 / 255, 0xf1 / 255, 0xee / 255);
 
 const inr = (paise: bigint) => `INR ${formatINR(paise, { symbol: false })}`;
 const date = (d: Date) => new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(d);
@@ -86,10 +87,10 @@ function rightText(page: PDFPage, value: string, right: number, y: number, font:
 }
 
 function partyBlock(page: PDFPage, fonts: Fonts, title: string, party: InvoiceParty, x: number, y: number, width: number): number {
-  text(page, title.toUpperCase(), x, y, fonts.bold, 7, GOLD);
+  text(page, title.toUpperCase(), x, y, fonts.bold, 7, LABEL);
   let cursor = y - 15;
   for (const line of wrap(party.legalName, fonts.bold, 10.5, width)) {
-    text(page, line, x, cursor, fonts.bold, 10.5, NAVY);
+    text(page, line, x, cursor, fonts.bold, 10.5, HEAD);
     cursor -= 13;
   }
   for (const line of party.addressLines.flatMap((l) => wrap(l, fonts.regular, 8.5, width))) {
@@ -136,18 +137,18 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
   const margin = 44;
   const contentWidth = width - margin * 2;
 
-  page.drawRectangle({ x: 0, y: height - 8, width, height: 8, color: NAVY });
-  page.drawRectangle({ x: 0, y: height - 10, width, height: 2, color: GOLD });
+  page.drawRectangle({ x: 0, y: height - 8, width, height: 8, color: HEAD });
+  page.drawRectangle({ x: 0, y: height - 10, width, height: 2, color: LABEL });
 
   let y = height - 58;
   const supplierName = data.supplier.legalName;
   for (const line of wrap(supplierName, fonts.display, 19, contentWidth * 0.58)) {
-    text(page, line, margin, y, fonts.display, 19, NAVY);
+    text(page, line, margin, y, fonts.display, 19, HEAD);
     y -= 21;
   }
   text(page, "Real estate channel partner · Brokerage & advisory services", margin, y + 4, fonts.regular, 8.5, MUTED);
 
-  rightText(page, "TAX INVOICE", width - margin, height - 56, fonts.display, 22, NAVY);
+  rightText(page, "TAX INVOICE", width - margin, height - 56, fonts.display, 22, HEAD);
   rightText(page, "Original for recipient", width - margin, height - 70, fonts.italic, 8, MUTED);
 
   const metaTop = height - 92;
@@ -159,7 +160,7 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
   ];
   metaRows.forEach(([label, value], i) => {
     const rowY = metaTop - i * 13;
-    rightText(page, value, width - margin, rowY, fonts.bold, 8.5, NAVY);
+    rightText(page, value, width - margin, rowY, fonts.bold, 8.5, HEAD);
     rightText(page, label, width - margin - 130, rowY, fonts.regular, 8.5, MUTED);
   });
 
@@ -172,14 +173,14 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
   const rightEnd = partyBlock(page, fonts, "Bill To (Builder)", data.recipient, margin + contentWidth / 2 + 12, top, colWidth);
   y = Math.min(leftEnd, rightEnd) - 8;
 
-  page.drawRectangle({ x: margin, y: y - 38, width: contentWidth, height: 38, color: IVORY });
-  text(page, "PROJECT", margin + 12, y - 14, fonts.bold, 7, GOLD);
-  text(page, `${data.project.name} (${data.project.code}), ${data.project.city}`, margin + 12, y - 28, fonts.bold, 9.5, NAVY);
+  page.drawRectangle({ x: margin, y: y - 38, width: contentWidth, height: 38, color: SHADE });
+  text(page, "PROJECT", margin + 12, y - 14, fonts.bold, 7, LABEL);
+  text(page, `${data.project.name} (${data.project.code}), ${data.project.city}`, margin + 12, y - 28, fonts.bold, 9.5, HEAD);
   if (data.project.reraNumber) rightText(page, `Project RERA: ${data.project.reraNumber}`, width - margin - 12, y - 28, fonts.regular, 8.5);
   y -= 58;
 
   const cols = { no: margin, desc: margin + 26, sac: margin + contentWidth - 170, amt: width - margin };
-  page.drawRectangle({ x: margin, y: y - 6, width: contentWidth, height: 20, color: NAVY });
+  page.drawRectangle({ x: margin, y: y - 6, width: contentWidth, height: 20, color: HEAD });
   text(page, "#", cols.no + 8, y, fonts.bold, 8, rgb(1, 1, 1));
   text(page, "DESCRIPTION OF SERVICE", cols.desc, y, fonts.bold, 8, rgb(1, 1, 1));
   text(page, "SAC", cols.sac, y, fonts.bold, 8, rgb(1, 1, 1));
@@ -193,7 +194,7 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
     text(page, String(index + 1), cols.no + 8, y, fonts.regular, 9);
     let rowY = y;
     for (const l of descLines) {
-      text(page, l, cols.desc, rowY, fonts.bold, 9, NAVY);
+      text(page, l, cols.desc, rowY, fonts.bold, 9, HEAD);
       rowY -= 12;
     }
     for (const l of detailLines) {
@@ -225,15 +226,15 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
     y -= 15;
   }
   y -= 10;
-  page.drawRectangle({ x: sumX - 10, y: y - 10, width: cols.amt - sumX + 10, height: 26, color: NAVY });
-  text(page, "TOTAL INVOICE VALUE", sumX, y, fonts.bold, 8.5, GOLD);
+  page.drawRectangle({ x: sumX - 10, y: y - 10, width: cols.amt - sumX + 10, height: 26, color: HEAD });
+  text(page, "TOTAL INVOICE VALUE", sumX, y, fonts.bold, 8.5, LABEL);
   rightText(page, inr(breakdown.totalPaise), cols.amt - 8, y, fonts.bold, 10.5, rgb(1, 1, 1));
   y -= 30;
 
-  text(page, "Amount in words", margin, y, fonts.bold, 7.5, GOLD);
+  text(page, "Amount in words", margin, y, fonts.bold, 7.5, LABEL);
   y -= 12;
   for (const l of wrap(amountInWordsINR(breakdown.totalPaise), fonts.italic, 9, contentWidth)) {
-    text(page, l, margin, y, fonts.italic, 9, NAVY);
+    text(page, l, margin, y, fonts.italic, 9, HEAD);
     y -= 12;
   }
   if (!gst) {
@@ -247,7 +248,7 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
 
   let left = footerTop - 18;
   if (data.supplier.bank) {
-    text(page, "BANK DETAILS FOR PAYMENT", margin, left, fonts.bold, 7, GOLD);
+    text(page, "BANK DETAILS FOR PAYMENT", margin, left, fonts.bold, 7, LABEL);
     left -= 14;
     const bankRows: [string, string][] = [
       ["Account name", data.supplier.legalName],
@@ -262,7 +263,7 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
     }
   }
   left -= 8;
-  text(page, "TERMS & DECLARATION", margin, left, fonts.bold, 7, GOLD);
+  text(page, "TERMS & DECLARATION", margin, left, fonts.bold, 7, LABEL);
   left -= 13;
   const notes = data.notes ?? [];
   for (const note of notes) {
@@ -273,13 +274,13 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
   }
 
   const signX = width - margin - 190;
-  text(page, `For ${data.supplier.legalName}`.slice(0, 48), signX, footerTop - 18, fonts.bold, 8.5, NAVY);
+  text(page, `For ${data.supplier.legalName}`.slice(0, 48), signX, footerTop - 18, fonts.bold, 8.5, HEAD);
   page.drawRectangle({ x: signX, y: footerTop - 92, width: 190, height: 60, borderColor: RULE, borderWidth: 0.8, borderDashArray: [3, 3] });
   text(page, "Signature & company seal", signX + 48, footerTop - 66, fonts.italic, 7.5, MUTED);
   page.drawLine({ start: { x: signX, y: footerTop - 104 }, end: { x: signX + 190, y: footerTop - 104 }, thickness: 0.6, color: INK });
-  text(page, "Authorised Signatory", signX, footerTop - 116, fonts.bold, 8.5, NAVY);
+  text(page, "Authorised Signatory", signX, footerTop - 116, fonts.bold, 8.5, HEAD);
 
-  page.drawRectangle({ x: 0, y: 0, width, height: 30, color: IVORY });
+  page.drawRectangle({ x: 0, y: 0, width, height: 30, color: SHADE });
   text(page, "This is a computer-generated invoice for demonstration purposes. All entities and identifiers are fictional.", margin, 12, fonts.italic, 7, MUTED);
   rightText(page, "Page 1 of 1", width - margin, 12, fonts.regular, 7, MUTED);
 

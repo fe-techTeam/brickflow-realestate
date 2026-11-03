@@ -5,14 +5,14 @@ import { cn } from "@/lib/utils";
 const FULL_INR = /^(-?)₹([\d,]+)(?:\.(\d{2}))?$/;
 const COMPACT_INR = /^(-?)₹([\d,]+(?:\.\d+)?)\s(L|Cr)$/;
 
-type MoneyTone = "inherit" | "navy" | "positive" | "negative" | "gold" | "muted";
+type MoneyTone = "inherit" | "basalt" | "positive" | "negative" | "kota" | "muted";
 
 const TONE: Record<MoneyTone, string> = {
   inherit: "",
-  navy: "text-navy",
-  positive: "text-heritage",
+  basalt: "text-basalt",
+  positive: "text-leaf",
   negative: "text-danger",
-  gold: "text-gold-600",
+  kota: "text-kota-600",
   muted: "text-muted-foreground",
 };
 

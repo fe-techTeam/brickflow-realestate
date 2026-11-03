@@ -20,7 +20,7 @@ export default async function ProgrammesPage() {
         title="Financing programmes"
         context={[
           <span key="n">
-            <strong className="font-semibold text-navy">{programmes.length}</strong> programme{programmes.length === 1 ? "" : "s"}
+            <strong className="font-semibold text-basalt">{programmes.length}</strong> programme{programmes.length === 1 ? "" : "s"}
           </span>,
           <span key="a">{active} active</span>,
           <span key="r" className="text-muted-foreground">
@@ -29,12 +29,12 @@ export default async function ProgrammesPage() {
         ]}
       />
 
-      <aside className="mb-8 grid animate-fade-up gap-4 rounded-xl border border-gold/30 bg-[linear-gradient(135deg,#fbf8f1,#f3ede0)] px-6 py-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-6">
-        <span className="flex size-11 items-center justify-center rounded-full bg-card text-gold-600 ring-1 ring-gold/40">
+      <aside className="mb-8 grid animate-fade-up gap-4 rounded-xl border border-kota/30 bg-[linear-gradient(135deg,#f7f5f1,#eceeeb)] px-6 py-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-6">
+        <span className="flex size-11 items-center justify-center rounded-full bg-card text-kota-600 ring-1 ring-kota/40">
           <BadgePercent className="size-5" strokeWidth={1.5} aria-hidden="true" />
         </span>
-        <p className="text-[0.8125rem] leading-relaxed text-slate-ink">
-          Discount rates are agreed between Veefin and each builder <strong className="font-semibold text-navy">off-platform</strong> and configured in BrickFlow
+        <p className="text-[0.8125rem] leading-relaxed text-ink">
+          Discount rates are agreed between Veefin and each builder <strong className="font-semibold text-basalt">off-platform</strong> and configured in BrickFlow
           by the Super Admin. Channel partners always see the fixed agreed rate; a rate change applies to new offers only, and every accepted request keeps the rate
           in its snapshot.
         </p>
@@ -49,7 +49,7 @@ export default async function ProgrammesPage() {
           {programmes.map((p) => (
             <article
               key={p.id}
-              className="animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]"
+              className="animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-30px_rgba(34, 45, 43,0.3)]"
             >
               <FacilityCard
                 className="rounded-none shadow-none"
@@ -71,19 +71,19 @@ export default async function ProgrammesPage() {
                   ].map((item) => (
                     <div key={item.label} className="min-w-0 px-4 py-3">
                       <dt className="text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">{item.label}</dt>
-                      <dd className={typeof item.value === "number" ? "tabular mt-1 text-xl font-light text-navy" : "mt-1.5 truncate text-sm text-navy"}>{item.value}</dd>
+                      <dd className={typeof item.value === "number" ? "tabular mt-1 text-xl font-light text-basalt" : "mt-1.5 truncate text-sm text-basalt"}>{item.value}</dd>
                     </div>
                   ))}
                 </dl>
-                <p className="mt-5 text-[0.625rem] font-semibold tracking-[0.2em] text-gold-600 uppercase">Terms</p>
-                <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-slate-ink">{p.terms}</p>
+                <p className="mt-5 text-[0.625rem] font-semibold tracking-[0.2em] text-kota-600 uppercase">Terms</p>
+                <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-ink">{p.terms}</p>
                 {p._count.requests > 0 && (
                   <Link
                     href={`/finance/requests?builder=${p.builder.id}`}
-                    className="group mt-5 inline-flex items-center gap-1.5 text-xs font-semibold tracking-[0.06em] text-navy"
+                    className="group mt-5 inline-flex items-center gap-1.5 text-xs font-semibold tracking-[0.06em] text-basalt"
                   >
                     View {p._count.requests} request{p._count.requests === 1 ? "" : "s"} for {p.builder.name}
-                    <ArrowRight className="size-3.5 text-gold-600 transition-transform group-hover:translate-x-0.5" />
+                    <ArrowRight className="size-3.5 text-kota-600 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 )}
               </div>

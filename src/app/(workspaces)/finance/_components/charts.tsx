@@ -21,17 +21,17 @@ const categoryTick = { ...chartAxisTick, fill: CHART_COLORS.inkStrong };
 function BarGradients() {
   return (
     <defs>
-      <linearGradient id="fin-navy" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#2c4a68" />
+      <linearGradient id="fin-basalt" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#3a4945" />
         <stop offset="100%" stopColor={CHART_COLORS.primary} />
       </linearGradient>
-      <linearGradient id="fin-gold" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#d6bc8a" />
-        <stop offset="100%" stopColor={CHART_COLORS.goldDeep} />
+      <linearGradient id="fin-kota" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#c4b9a7" />
+        <stop offset="100%" stopColor={CHART_COLORS.kotaDeep} />
       </linearGradient>
-      <linearGradient id="fin-heritage-h" x1="0" y1="0" x2="1" y2="0">
+      <linearGradient id="fin-leaf-h" x1="0" y1="0" x2="1" y2="0">
         <stop offset="0%" stopColor={CHART_COLORS.positive} />
-        <stop offset="100%" stopColor="#2b7259" />
+        <stop offset="100%" stopColor="#3f8752" />
       </linearGradient>
     </defs>
   );
@@ -43,7 +43,7 @@ export interface MonthlyVolumeDatum {
   count: number;
 }
 
-/** Disbursed volume per month; the latest month is picked out in gold. */
+/** Disbursed volume per month; the latest month is picked out in stone. */
 export function MonthlyVolumeChart({ data, height = 260 }: { data: MonthlyVolumeDatum[]; height?: number }) {
   const points = data.map((d) => ({ label: d.label, value: Number(d.paise), count: d.count }));
   const lastIndex = points.length - 1;
@@ -56,7 +56,7 @@ export function MonthlyVolumeChart({ data, height = 260 }: { data: MonthlyVolume
       emptyText="No simulated payouts in this period yet. Volume appears here once a disbursement is confirmed."
       legend={[
         { label: "Disbursed, net to channel partners", color: CHART_COLORS.primary },
-        { label: "Current month", color: CHART_COLORS.gold },
+        { label: "Current month", color: CHART_COLORS.kota },
       ]}
       table={{ headers: ["Month", "Payouts", "Disbursed"], rows: data.map((d) => [d.label, d.count, formatINR(d.paise)]) }}
     >
@@ -73,7 +73,7 @@ export function MonthlyVolumeChart({ data, height = 260 }: { data: MonthlyVolume
             return (
               <ChartTooltipCard
                 title={point.label}
-                rows={[{ label: "Disbursed", value: inr(point.value), color: CHART_COLORS.gold }]}
+                rows={[{ label: "Disbursed", value: inr(point.value), color: CHART_COLORS.kota }]}
                 footer={`${point.count} simulated payout${point.count === 1 ? "" : "s"}`}
               />
             );
@@ -81,7 +81,7 @@ export function MonthlyVolumeChart({ data, height = 260 }: { data: MonthlyVolume
         />
         <Bar dataKey="value" name="Disbursed" {...chartBarProps} maxBarSize={30}>
           {points.map((p, i) => (
-            <Cell key={p.label} fill={i === lastIndex ? "url(#fin-gold)" : "url(#fin-navy)"} />
+            <Cell key={p.label} fill={i === lastIndex ? "url(#fin-kota)" : "url(#fin-basalt)"} />
           ))}
         </Bar>
       </BarChart>
@@ -120,7 +120,7 @@ export function BuilderValueChart({ data, seriesLabel, emptyText }: { data: Buil
             return <ChartTooltipCard title={point.name} rows={[{ label: seriesLabel, value: inr(point.value), color: CHART_COLORS.positive }]} />;
           }}
         />
-        <Bar dataKey="value" name={seriesLabel} fill="url(#fin-heritage-h)" radius={[0, 4, 4, 0]} maxBarSize={16} />
+        <Bar dataKey="value" name={seriesLabel} fill="url(#fin-leaf-h)" radius={[0, 4, 4, 0]} maxBarSize={16} />
       </BarChart>
     </ChartFrame>
   );
@@ -145,7 +145,7 @@ export function ExposureChart({ data }: { data: ExposureDatum[] }) {
       emptyText="No open exposure. Every disbursed request has been settled and nothing is awaiting payout."
       legend={[
         { label: "Outstanding settlement", color: CHART_COLORS.primary },
-        { label: "Approved, not disbursed", color: CHART_COLORS.gold },
+        { label: "Approved, not disbursed", color: CHART_COLORS.kota },
       ]}
       table={{
         headers: ["Builder", "Outstanding settlement", "Approved, not disbursed"],
@@ -166,7 +166,7 @@ export function ExposureChart({ data }: { data: ExposureDatum[] }) {
                 title={point.name}
                 rows={[
                   { label: "Outstanding settlement", value: inr(point.outstanding), color: CHART_COLORS.primary },
-                  { label: "Approved, not disbursed", value: inr(point.committed), color: CHART_COLORS.gold },
+                  { label: "Approved, not disbursed", value: inr(point.committed), color: CHART_COLORS.kota },
                 ]}
                 footer={`Total ${inr(point.outstanding + point.committed)}`}
               />
@@ -178,7 +178,7 @@ export function ExposureChart({ data }: { data: ExposureDatum[] }) {
           dataKey="committed"
           name="Approved, not disbursed"
           stackId="exposure"
-          fill={CHART_COLORS.gold}
+          fill={CHART_COLORS.kota}
           stroke={CHART_COLORS.surface}
           strokeWidth={2}
           radius={[0, 4, 4, 0]}
@@ -197,12 +197,12 @@ export interface AgeingDatum {
   count: number;
 }
 
-/** Ordinal risk scale from not-yet-due (navy) to long overdue (deep red). */
+/** Ordinal risk scale from not-yet-due (basalt) to long overdue (deep red). */
 const AGEING_COLORS: Record<string, string> = {
   "not-due-30": CHART_COLORS.primarySoft,
   "not-due": CHART_COLORS.primary,
   "overdue-30": CHART_COLORS.warning,
-  "overdue-60": "#b5473a",
+  "overdue-60": "#b8324f",
   "overdue-60+": CHART_COLORS.negative,
 };
 

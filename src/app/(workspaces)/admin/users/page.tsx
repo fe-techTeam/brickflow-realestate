@@ -58,13 +58,13 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       <SummaryStrip
         items={[
           { label: "Accounts", value: <Count value={all.length} size="lg" />, hint: "Across every workspace" },
-          { label: "Active", value: <Count value={active} size="lg" />, hint: `${all.length - active} deactivated`, accent: "heritage" },
-          { label: "Signed in this week", value: <Count value={recent} size="lg" />, hint: "Last seven days", accent: "navy" },
+          { label: "Active", value: <Count value={active} size="lg" />, hint: `${all.length - active} deactivated`, accent: "leaf" },
+          { label: "Signed in this week", value: <Count value={recent} size="lg" />, hint: "Last seven days", accent: "basalt" },
           {
             label: "Blocked by organisation",
             value: <Count value={blockedByOrg} size="lg" />,
             hint: blockedByOrg ? "Active users of inactive organisations" : "None at the moment",
-            accent: "gold",
+            accent: "kota",
           },
         ]}
       />
@@ -115,18 +115,18 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   <LTr key={m.id} className={m.user.status === "INACTIVE" ? "bg-muted/30" : undefined}>
                     <LTd>
                       <div className="flex items-center gap-3">
-                        <Monogram name={m.user.name} size="sm" tone={self ? "navy" : m.user.status === "ACTIVE" ? "ivory" : "muted"} className="rounded-full" />
+                        <Monogram name={m.user.name} size="sm" tone={self ? "basalt" : m.user.status === "ACTIVE" ? "paper" : "muted"} className="rounded-full" />
                         <div className="min-w-0">
-                          <p className="font-medium text-navy">
+                          <p className="font-medium text-basalt">
                             {m.user.name}
-                            {self && <span className="ml-2 text-xs font-normal text-gold-600">(you)</span>}
+                            {self && <span className="ml-2 text-xs font-normal text-kota-600">(you)</span>}
                           </p>
                           <p className="text-xs text-muted-foreground">{m.user.email}</p>
                         </div>
                       </div>
                     </LTd>
                     <LTd>
-                      <Link href={`/admin/organisations/${m.organisation.id}`} className="text-navy hover:underline">
+                      <Link href={`/admin/organisations/${m.organisation.id}`} className="text-basalt hover:underline">
                         {m.organisation.name}
                       </Link>
                       <div className="mt-1 flex flex-wrap gap-1.5">

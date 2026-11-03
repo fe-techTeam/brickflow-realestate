@@ -14,11 +14,11 @@ import { Money } from "../../../_components/money";
 import { formatDueIn } from "../../../_lib/dates";
 
 const EVENT: Partial<Record<FinancingStatus, { icon: LucideIcon; tone: ChronicleTone }>> = {
-  ACCEPTED_BY_CP: { icon: Send, tone: "gold" },
+  ACCEPTED_BY_CP: { icon: Send, tone: "kota" },
   PENDING_APPROVAL: { icon: Hourglass, tone: "amber" },
-  APPROVED: { icon: ShieldCheck, tone: "heritage" },
-  DISBURSEMENT_INITIATED: { icon: Banknote, tone: "navy" },
-  DISBURSED: { icon: BadgeCheck, tone: "heritage" },
+  APPROVED: { icon: ShieldCheck, tone: "leaf" },
+  DISBURSEMENT_INITIATED: { icon: Banknote, tone: "basalt" },
+  DISBURSED: { icon: BadgeCheck, tone: "leaf" },
   REJECTED: { icon: XCircle, tone: "rose" },
 };
 
@@ -38,16 +38,16 @@ function Stepper({ steps }: { steps: Step[] }) {
           {i > 0 && (
             <span
               aria-hidden="true"
-              className={cn("absolute top-[0.8125rem] right-1/2 hidden h-px w-full sm:block", step.state === "upcoming" ? "bg-[#e3dccb]" : "bg-heritage/50")}
+              className={cn("absolute top-[0.8125rem] right-1/2 hidden h-px w-full sm:block", step.state === "upcoming" ? "bg-[#dfe2de]" : "bg-leaf/50")}
             />
           )}
           <span
             className={cn(
               "relative z-10 flex size-[1.625rem] shrink-0 items-center justify-center rounded-full ring-4 ring-card",
-              step.state === "done" && "bg-heritage text-white",
-              step.state === "current" && "bg-gold-100 text-gold-600 ring-[#f6efe1] outline-1 outline-gold/60",
+              step.state === "done" && "bg-leaf text-white",
+              step.state === "current" && "bg-kota-100 text-kota-600 ring-[#f6efe1] outline-1 outline-kota/60",
               step.state === "upcoming" && "border border-dashed border-[#cfc6b2] bg-card text-muted-foreground",
-              step.state === "failed" && "bg-[#b5473a] text-white",
+              step.state === "failed" && "bg-[#b8324f] text-white",
             )}
           >
             {step.state === "done" ? (
@@ -59,7 +59,7 @@ function Stepper({ steps }: { steps: Step[] }) {
             )}
           </span>
           <div className="min-w-0">
-            <p className={cn("text-[0.8125rem] font-medium", step.state === "upcoming" ? "text-muted-foreground" : "text-navy")}>{step.label}</p>
+            <p className={cn("text-[0.8125rem] font-medium", step.state === "upcoming" ? "text-muted-foreground" : "text-basalt")}>{step.label}</p>
             <p className="mt-0.5 text-[0.6875rem] leading-snug text-muted-foreground">{step.detail}</p>
           </div>
         </li>
@@ -130,14 +130,14 @@ export function FinancingPanel({ invoice, originalDueDate, creditPeriodDays }: {
       }
       actions={<StatusBadge kind="financing" status={request.status} />}
     >
-      <div className="rounded-lg border border-[#efe9dc] bg-[#fdfcf9] px-4 py-5 sm:px-3">
+      <div className="rounded-lg border border-[#eceeeb] bg-[#fbfbfa] px-4 py-5 sm:px-3">
         <Stepper steps={steps} />
       </div>
 
       <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-8">
         <div>
           <p className="mb-1 text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Early-payment statement</p>
-          <div className="divide-y divide-[#f0ebe0]">
+          <div className="divide-y divide-[#eceeeb]">
             <LedgerLine label="Original invoice amount" hint="As submitted, incl. GST" value={<Money paise={invoice.amountPaise} />} tone="muted" />
             <LedgerLine label="Approved amount" hint="Approved by you; basis for the discount" value={<Money paise={request.approvedAmountPaise} />} />
             <LedgerLine label="Financing rate" hint="Fixed by programme" value={<span className="tabular font-sans">{formatBps(request.discountRateBps)}</span>} />
@@ -153,9 +153,9 @@ export function FinancingPanel({ invoice, originalDueDate, creditPeriodDays }: {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl bg-navy p-5 text-white shadow-[0_18px_36px_-24px_rgba(13,30,48,0.8)] sm:p-6">
+          <div className="rounded-xl bg-basalt p-5 text-white shadow-[0_18px_36px_-24px_rgba(26, 35, 33,0.8)] sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="flex items-center gap-2 whitespace-nowrap text-[0.625rem] font-semibold tracking-[0.18em] text-gold uppercase">
+              <p className="flex items-center gap-2 whitespace-nowrap text-[0.625rem] font-semibold tracking-[0.18em] text-kota uppercase">
                 <Landmark className="size-3.5" />
                 Settlement with Veefin
               </p>
@@ -172,7 +172,7 @@ export function FinancingPanel({ invoice, originalDueDate, creditPeriodDays }: {
                     </>
                   ) : (
                     <>
-                      Due {formatDate(settlement.dueDate)} · <span className="text-gold">{formatDueIn(settlement.dueDate)}</span>
+                      Due {formatDate(settlement.dueDate)} · <span className="text-kota">{formatDueIn(settlement.dueDate)}</span>
                     </>
                   )}
                 </p>
@@ -190,7 +190,7 @@ export function FinancingPanel({ invoice, originalDueDate, creditPeriodDays }: {
             )}
           </div>
 
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-[#efe9dc] px-5 py-4">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-[#eceeeb] px-5 py-4">
             <Fact label="Disbursement reference" className="col-span-2">
               {disbursement ? (
                 <span className="flex flex-wrap items-center gap-2">
@@ -216,8 +216,8 @@ export function FinancingPanel({ invoice, originalDueDate, creditPeriodDays }: {
       <div className="mt-6">{terms}</div>
 
       {request.events.length > 0 && (
-        <details className="group mt-7 border-t border-[#efe9dc] pt-5">
-          <summary className="flex cursor-pointer list-none items-center justify-between text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase select-none hover:text-navy">
+        <details className="group mt-7 border-t border-[#eceeeb] pt-5">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase select-none hover:text-basalt">
             Financing history · {request.events.length} {request.events.length === 1 ? "event" : "events"}
             <ArrowRight className="size-3.5 transition-transform group-open:rotate-90" />
           </summary>
@@ -240,7 +240,7 @@ export function FinancingPanel({ invoice, originalDueDate, creditPeriodDays }: {
       )}
       <p className="mt-6 text-[0.75rem] text-muted-foreground">
         Settlement position across all invoices is on the{" "}
-        <Link href="/builder/settlements" className="text-navy decoration-gold/60 underline-offset-4 hover:underline">
+        <Link href="/builder/settlements" className="text-basalt decoration-kota/60 underline-offset-4 hover:underline">
           Settlements
         </Link>{" "}
         page.

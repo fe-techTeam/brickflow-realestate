@@ -106,12 +106,12 @@ export default async function OrganisationProfilePage() {
                     <Tr key={member.id}>
                       <Td>
                         <div className="flex items-center gap-3">
-                          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-navy font-display text-sm font-semibold text-gold">{initials(member.user.name)}</span>
+                          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-basalt font-display text-sm font-semibold text-kota">{initials(member.user.name)}</span>
                           <div className="min-w-0">
-                            <p className="font-medium text-navy">
+                            <p className="font-medium text-basalt">
                               {member.user.name}
                               {member.user.id === actor.userId && (
-                                <span className="ml-2 rounded-full bg-gold-100 px-1.5 py-px text-[0.625rem] font-semibold tracking-wide text-gold-700 uppercase">You</span>
+                                <span className="ml-2 rounded-full bg-kota-100 px-1.5 py-px text-[0.625rem] font-semibold tracking-wide text-kota-700 uppercase">You</span>
                               )}
                             </p>
                             <p className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">{member.user.email}</p>
@@ -119,7 +119,7 @@ export default async function OrganisationProfilePage() {
                         </div>
                       </Td>
                       <Td>
-                        <p className="text-[0.8125rem] text-navy">{member.role.name}</p>
+                        <p className="text-[0.8125rem] text-basalt">{member.role.name}</p>
                         {member.designation && <p className="mt-0.5 text-xs text-muted-foreground">{member.designation}</p>}
                       </Td>
                       <Td className="text-[0.8125rem] whitespace-nowrap">{member.user.lastLoginAt ? formatDateTime(member.user.lastLoginAt) : "Never"}</Td>
@@ -136,13 +136,13 @@ export default async function OrganisationProfilePage() {
 
         <aside className="flex min-w-0 flex-col gap-6">
           <section className="animate-fade-up">
-            <p className="mb-3 text-[0.625rem] font-semibold tracking-[0.2em] text-gold-700 uppercase">Payout account</p>
-            <div className="surface-navy relative isolate aspect-[1.586] overflow-hidden p-6">
-              <FacadePattern className="inset-y-0 right-0 -z-10 h-full w-full text-gold/[0.14]" />
+            <p className="mb-3 text-[0.625rem] font-semibold tracking-[0.2em] text-kota-700 uppercase">Payout account</p>
+            <div className="surface-basalt relative isolate aspect-[1.586] overflow-hidden p-6">
+              <FacadePattern className="inset-y-0 right-0 -z-10 h-full w-full text-kota/[0.14]" />
               <div className="flex h-full flex-col">
                 <div className="flex items-start justify-between">
-                  <Landmark className="size-5 text-gold" strokeWidth={1.5} />
-                  <span className="text-[0.5625rem] font-semibold tracking-[0.22em] text-gold uppercase">Registered</span>
+                  <Landmark className="size-5 text-kota" strokeWidth={1.5} />
+                  <span className="text-[0.5625rem] font-semibold tracking-[0.22em] text-kota uppercase">Registered</span>
                 </div>
                 <p className="mt-auto text-[1.125rem] tracking-[0.18em] tabular">{maskAccount(org.bankAccountNumber)}</p>
                 <div className="mt-4 flex items-end justify-between gap-4 text-[0.6875rem]">
@@ -161,16 +161,16 @@ export default async function OrganisationProfilePage() {
           </section>
 
           <div className="rounded-xl border border-border bg-card p-5 text-xs leading-relaxed text-muted-foreground">
-            <p className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-navy">
-              <ShieldCheck className="size-4 text-heritage" />
+            <p className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-basalt">
+              <ShieldCheck className="size-4 text-leaf" />
               Data protection
             </p>
             Account numbers are masked throughout BrickFlow. Full bank details are only used to route simulated payouts and are never shown to builders.
           </div>
 
-          <div role="note" className="rounded-xl border border-dashed border-gold/45 p-5 text-xs leading-relaxed text-muted-foreground">
-            <p className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-navy">
-              <Info className="size-4 text-gold-700" />
+          <div role="note" className="rounded-xl border border-dashed border-kota/45 p-5 text-xs leading-relaxed text-muted-foreground">
+            <p className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-basalt">
+              <Info className="size-4 text-kota-700" />
               Maintained by the administrator
             </p>
             These details are maintained by the BrickFlow platform administrator after KYC verification. To change legal details, bank account, empanelments or team

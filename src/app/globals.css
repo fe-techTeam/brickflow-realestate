@@ -17,64 +17,76 @@
   --font-accent: var(--font-cormorant), Georgia, serif;
   --font-figure: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
-  /* Midnight navy — institutional primary */
-  --color-navy-50: #f1f4f8;
-  --color-navy-100: #e1e7ef;
-  --color-navy-200: #c3cfdd;
-  --color-navy-300: #97abc2;
-  --color-navy-400: #627d9c;
-  --color-navy-500: #3e5a7a;
-  --color-navy-600: #284563;
-  --color-navy-700: #1d3a57;
-  --color-navy-800: #18324d;
-  --color-navy: #142b43;
-  --color-navy-900: #0d1e30;
-  --color-navy-950: #081422;
+  /* Palette: Mumbai basalt (structure), Kota stone (quiet detail), gulmohar (the one accent),
+     leaf (approved and paid). Neutrals lean towards basalt rather than pure grey. */
 
-  /* Heritage green — approvals, financing success */
-  --color-heritage-50: #eff6f2;
-  --color-heritage-100: #dcebe2;
-  --color-heritage-200: #b6d4c3;
-  --color-heritage-300: #7fae95;
-  --color-heritage-500: #2b7259;
-  --color-heritage-600: #1f6650;
-  --color-heritage: #174d3c;
-  --color-heritage-700: #174d3c;
-  --color-heritage-800: #113a2d;
-  --color-heritage-900: #0b281f;
+  /* Basalt — primary ink, navigation and primary actions */
+  --color-basalt-50: #f2f4f3;
+  --color-basalt-100: #e2e7e5;
+  --color-basalt-200: #c5ceca;
+  --color-basalt-300: #9aa8a3;
+  --color-basalt-400: #6b7b76;
+  --color-basalt-500: #4c5c57;
+  --color-basalt-600: #3a4945;
+  --color-basalt-700: #2f3d3a;
+  --color-basalt-800: #283431;
+  --color-basalt: #222d2b;
+  --color-basalt-900: #1a2321;
+  --color-basalt-950: #111816;
 
-  /* Champagne gold — selective accent */
-  --color-gold-50: #fbf8f1;
-  --color-gold-100: #f3ead9;
-  --color-gold-200: #e8d8b7;
-  --color-gold-300: #d9bf8f;
-  --color-gold-400: #cdb07a;
-  --color-gold: #c4a46a;
-  --color-gold-500: #c4a46a;
-  --color-gold-600: #a98a52;
-  --color-gold-700: #8a6f3f;
-  --color-gold-800: #6a5430;
+  /* Leaf — approvals, payments, positive outcomes */
+  --color-leaf-50: #eef5ef;
+  --color-leaf-100: #dcebdf;
+  --color-leaf-200: #b9d6bf;
+  --color-leaf-300: #8cbb97;
+  --color-leaf-500: #3f8752;
+  --color-leaf-600: #2f7144;
+  --color-leaf: #275e3a;
+  --color-leaf-700: #275e3a;
+  --color-leaf-800: #1c4529;
+  --color-leaf-900: #12301c;
 
-  /* Warm ivory canvas */
-  --color-ivory-50: #fdfcf9;
-  --color-ivory-100: #f9f7f1;
-  --color-ivory: #f5f2ea;
-  --color-ivory-200: #ece7db;
-  --color-ivory-300: #e0d9c8;
-  --color-ivory-400: #cbc2ad;
+  /* Kota stone — eyebrows, rules, linework and other quiet detail */
+  --color-kota-50: #f7f5f1;
+  --color-kota-100: #eeeae3;
+  --color-kota-200: #ddd6ca;
+  --color-kota-300: #c4b9a7;
+  --color-kota-400: #b5a892;
+  --color-kota: #a89a84;
+  --color-kota-500: #a89a84;
+  --color-kota-600: #8c7d66;
+  --color-kota-700: #73654f;
+  --color-kota-800: #5c5040;
 
-  /* Soft sage and slate */
-  --color-sage-50: #f1f6f3;
-  --color-sage: #dce8e1;
-  --color-sage-300: #bcd3c6;
-  --color-slate-ink: #303d4d;
-  --color-slate-ink-soft: #4a5868;
+  /* Gulmohar — the single accent: early-payment action, active navigation, focus */
+  --color-gulmohar-50: #fdf1ee;
+  --color-gulmohar-100: #fadcd4;
+  --color-gulmohar-200: #f4b6a6;
+  --color-gulmohar-300: #ea8a72;
+  --color-gulmohar-400: #dd6447;
+  --color-gulmohar-500: #cf4a2d;
+  --color-gulmohar: #b83d24;
+  --color-gulmohar-600: #b83d24;
+  --color-gulmohar-700: #96311d;
+  --color-gulmohar-800: #752717;
+
+  /* Paper — app canvas */
+  --color-paper-50: #fbfbfa;
+  --color-paper-100: #f6f7f5;
+  --color-paper: #f1f2ef;
+  --color-paper-200: #e6e8e4;
+  --color-paper-300: #d6d9d4;
+  --color-paper-400: #b9beb8;
+
+  /* Body ink */
+  --color-ink: #2a3331;
+  --color-ink-soft: #4b5552;
 
   /* Semantic */
-  --color-danger: #9b3a2e;
-  --color-danger-soft: #f8e9e5;
-  --color-warning: #9a6a1c;
-  --color-warning-soft: #fbf2e1;
+  --color-danger: #a1263f;
+  --color-danger-soft: #f9e6ea;
+  --color-warning: #8f6417;
+  --color-warning-soft: #fbf1df;
   --color-info: #2a5d8a;
   --color-info-soft: #e9f0f7;
   --color-hairline: var(--hairline);
@@ -120,14 +132,14 @@
   --radius-4xl: 26px;
 
   /* Layered, warm-tinted shadows */
-  --shadow-hairline: 0 0 0 1px rgb(20 43 67 / 0.06);
-  --shadow-xs: 0 1px 2px rgb(20 43 67 / 0.05);
-  --shadow-card: 0 1px 1px rgb(20 43 67 / 0.03), 0 2px 6px -2px rgb(20 43 67 / 0.05), 0 14px 32px -20px rgb(20 43 67 / 0.16);
-  --shadow-raised: 0 1px 2px rgb(20 43 67 / 0.05), 0 8px 18px -8px rgb(20 43 67 / 0.12), 0 28px 56px -28px rgb(20 43 67 / 0.28);
-  --shadow-overlay: 0 2px 6px rgb(8 20 34 / 0.06), 0 22px 48px -16px rgb(8 20 34 / 0.3), 0 60px 120px -40px rgb(8 20 34 / 0.35);
-  --shadow-gold: 0 0 0 1px rgb(196 164 106 / 0.5), 0 10px 28px -14px rgb(169 138 82 / 0.55);
+  --shadow-hairline: 0 0 0 1px rgb(34 45 43 / 0.06);
+  --shadow-xs: 0 1px 2px rgb(34 45 43 / 0.05);
+  --shadow-card: 0 1px 1px rgb(34 45 43 / 0.03), 0 2px 6px -2px rgb(34 45 43 / 0.05), 0 14px 32px -20px rgb(34 45 43 / 0.16);
+  --shadow-raised: 0 1px 2px rgb(34 45 43 / 0.05), 0 8px 18px -8px rgb(34 45 43 / 0.12), 0 28px 56px -28px rgb(34 45 43 / 0.28);
+  --shadow-overlay: 0 2px 6px rgb(17 24 22 / 0.06), 0 22px 48px -16px rgb(17 24 22 / 0.3), 0 60px 120px -40px rgb(17 24 22 / 0.35);
+  --shadow-accent: 0 0 0 1px rgb(184 61 36 / 0.35), 0 10px 28px -14px rgb(150 49 29 / 0.45);
   --shadow-inset-highlight: inset 0 1px 0 rgb(255 255 255 / 0.14);
-  --shadow-button: 0 1px 0 rgb(255 255 255 / 0.12) inset, 0 1px 2px rgb(8 20 34 / 0.18), 0 4px 10px -4px rgb(8 20 34 / 0.28);
+  --shadow-button: 0 1px 0 rgb(255 255 255 / 0.12) inset, 0 1px 2px rgb(17 24 22 / 0.18), 0 4px 10px -4px rgb(17 24 22 / 0.28);
 
   /* Motion */
   --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -135,39 +147,39 @@
 }
 
 :root {
-  --background: #f5f2ea;
-  --foreground: #1c2938;
+  --background: #f1f2ef;
+  --foreground: #1f2826;
   --card: #ffffff;
-  --card-foreground: #1c2938;
+  --card-foreground: #1f2826;
   --popover: #ffffff;
-  --popover-foreground: #1c2938;
-  --primary: #142b43;
+  --popover-foreground: #1f2826;
+  --primary: #222d2b;
   --primary-foreground: #ffffff;
-  --secondary: #ece7db;
-  --secondary-foreground: #142b43;
-  --muted: #f0ece3;
-  --muted-foreground: #5c6876;
-  --accent: #f3efe6;
-  --accent-foreground: #142b43;
-  --destructive: #9b3a2e;
-  --border: #e4ded1;
-  --hairline: #ebe6da;
-  --input: #d8d0bf;
-  --ring: #c4a46a;
-  --chart-1: #142b43;
-  --chart-2: #174d3c;
-  --chart-3: #c4a46a;
-  --chart-4: #6f8fa8;
-  --chart-5: #8fb3a1;
+  --secondary: #e6e8e4;
+  --secondary-foreground: #222d2b;
+  --muted: #eceeeb;
+  --muted-foreground: #5b6662;
+  --accent: #eef0ed;
+  --accent-foreground: #222d2b;
+  --destructive: #a1263f;
+  --border: #dfe2de;
+  --hairline: #e4e7e3;
+  --input: #cfd4cf;
+  --ring: #b83d24;
+  --chart-1: #222d2b;
+  --chart-2: #275e3a;
+  --chart-3: #b83d24;
+  --chart-4: #5f7f93;
+  --chart-5: #a89a84;
   --radius: 0.625rem;
-  --sidebar: #142b43;
-  --sidebar-foreground: #d3dbe5;
-  --sidebar-primary: #c4a46a;
-  --sidebar-primary-foreground: #142b43;
-  --sidebar-accent: #1d3a57;
+  --sidebar: #1a2321;
+  --sidebar-foreground: #c9d1ce;
+  --sidebar-primary: #dd6447;
+  --sidebar-primary-foreground: #222d2b;
+  --sidebar-accent: #283431;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #24425f;
-  --sidebar-ring: #c4a46a;
+  --sidebar-border: #2f3d3a;
+  --sidebar-ring: #dd6447;
 }
 
 @layer base {
@@ -178,7 +190,7 @@
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
-    scrollbar-color: var(--color-ivory-400) transparent;
+    scrollbar-color: var(--color-paper-400) transparent;
     scrollbar-width: thin;
   }
   body {
@@ -188,13 +200,13 @@
   h1,
   h2,
   h3 {
-    @apply font-display text-navy;
+    @apply font-display text-basalt;
     letter-spacing: -0.012em;
     font-feature-settings: "lnum", "kern";
   }
   ::selection {
-    background-color: rgb(196 164 106 / 0.32);
-    color: var(--color-navy-900);
+    background-color: rgb(221 100 71 / 0.22);
+    color: var(--color-basalt-900);
   }
   :focus-visible {
     outline-offset: 2px;
@@ -207,13 +219,13 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background-color: var(--color-ivory-300);
+    background-color: var(--color-paper-300);
     border: 3px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-ivory-400);
+    background-color: var(--color-paper-400);
   }
   code,
   kbd {
@@ -243,7 +255,7 @@
   font-size: clamp(1.875rem, 1.35rem + 1.5vw, 2.625rem);
   line-height: 1.08;
   letter-spacing: -0.022em;
-  color: var(--color-navy);
+  color: var(--color-basalt);
   font-feature-settings: "lnum", "kern", "liga", "dlig";
   text-wrap: balance;
 }
@@ -264,7 +276,7 @@
   font-size: 1.1875rem;
   line-height: 1.25;
   letter-spacing: -0.01em;
-  color: var(--color-navy);
+  color: var(--color-basalt);
 }
 
 @utility eyebrow {
@@ -277,7 +289,7 @@
   font-weight: 500;
   font-size: 1.0625rem;
   letter-spacing: 0.005em;
-  color: var(--color-gold-600);
+  color: var(--color-kota-600);
 }
 
 @utility text-balance {
@@ -290,17 +302,17 @@
   border-color: var(--hairline);
 }
 
-/* A fine champagne rule that fades out; set height/width with utilities. */
-@utility gold-rule {
+/* A fine stone rule that fades out; set height/width with utilities. */
+@utility kota-rule {
   height: 1px;
   border: 0;
-  background-image: linear-gradient(90deg, var(--color-gold) 0%, rgb(196 164 106 / 0.55) 40%, rgb(196 164 106 / 0) 100%);
+  background-image: linear-gradient(90deg, var(--color-kota) 0%, rgb(168 154 132 / 0.55) 40%, rgb(168 154 132 / 0) 100%);
 }
 
-@utility gold-rule-center {
+@utility kota-rule-center {
   height: 1px;
   border: 0;
-  background-image: linear-gradient(90deg, rgb(196 164 106 / 0) 0%, var(--color-gold) 50%, rgb(196 164 106 / 0) 100%);
+  background-image: linear-gradient(90deg, rgb(168 154 132 / 0) 0%, var(--color-kota) 50%, rgb(168 154 132 / 0) 100%);
 }
 
 @utility hairline-rule {
@@ -320,17 +332,17 @@
 }
 
 @utility surface-quiet {
-  @apply rounded-xl border border-hairline bg-ivory-100;
+  @apply rounded-xl border border-hairline bg-paper-100;
 }
 
-/* Deep navy panel with soft depth, for hero metrics and brand moments. */
-@utility surface-navy {
-  @apply rounded-xl border border-navy-900 text-white shadow-raised;
-  background-color: var(--color-navy);
+/* Deep basalt panel with soft depth, for hero metrics and brand moments. */
+@utility surface-basalt {
+  @apply rounded-xl border border-basalt-900 text-white shadow-raised;
+  background-color: var(--color-basalt);
   background-image:
-    radial-gradient(120% 90% at 100% 0%, rgb(196 164 106 / 0.14) 0%, rgb(196 164 106 / 0) 55%),
-    radial-gradient(90% 120% at 0% 100%, rgb(8 20 34 / 0.55) 0%, rgb(8 20 34 / 0) 60%),
-    linear-gradient(160deg, #18324d 0%, #142b43 45%, #0f2337 100%);
+    radial-gradient(120% 90% at 100% 0%, rgb(168 154 132 / 0.14) 0%, rgb(168 154 132 / 0) 55%),
+    radial-gradient(90% 120% at 0% 100%, rgb(17 24 22 / 0.55) 0%, rgb(17 24 22 / 0) 60%),
+    linear-gradient(160deg, #283431 0%, #222d2b 45%, #111816 100%);
 }
 
 /* Motion --------------------------------------------------------------- */

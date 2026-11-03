@@ -2,8 +2,8 @@ import type { OrganisationType } from "@/generated/prisma/enums";
 import type { StatusMeta } from "@/lib/status";
 
 export const ORG_TYPE_META: Record<OrganisationType, StatusMeta> = {
-  PLATFORM: { label: "Platform", tone: "navy" },
-  FINANCIER: { label: "Financier", tone: "gold" },
+  PLATFORM: { label: "Platform", tone: "basalt" },
+  FINANCIER: { label: "Financier", tone: "kota" },
   BUILDER: { label: "Builder", tone: "info" },
   CHANNEL_PARTNER: { label: "Channel partner", tone: "success" },
 };

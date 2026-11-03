@@ -21,10 +21,10 @@ export default async function ReportsPage() {
         title="Reports"
         context={[
           <span key="d">
-            <strong className="tabular font-semibold text-navy">{formatINRCompact(report.disbursedValue)}</strong> disbursed
+            <strong className="tabular font-semibold text-basalt">{formatINRCompact(report.disbursedValue)}</strong> disbursed
           </span>,
           <span key="o">
-            <strong className="tabular font-semibold text-navy">{formatINRCompact(report.outstandingValue)}</strong> outstanding
+            <strong className="tabular font-semibold text-basalt">{formatINRCompact(report.outstandingValue)}</strong> outstanding
           </span>,
           <span key="n" className="text-muted-foreground">
             Amounts in Indian rupees · payouts simulated
@@ -44,21 +44,21 @@ export default async function ReportsPage() {
         items={[
           {
             label: "Total disbursed",
-            value: <Money paise={report.disbursedValue} compact size="lg" className="text-heritage" />,
+            value: <Money paise={report.disbursedValue} compact size="lg" className="text-leaf" />,
             hint: `${report.disbursedCount} simulated payout${report.disbursedCount === 1 ? "" : "s"}`,
-            accent: "heritage",
+            accent: "leaf",
           },
           {
             label: "Discount earned",
             value: <Money paise={report.discountEarned} compact size="lg" />,
             hint: report.weightedRateBps !== null ? `Weighted average ${formatBps(report.weightedRateBps)}` : "No disbursements yet",
-            accent: "gold",
+            accent: "kota",
           },
           {
             label: "Outstanding settlements",
             value: <Money paise={report.outstandingValue} compact size="lg" />,
             hint: `${report.outstandingCount} open with builders`,
-            accent: "navy",
+            accent: "basalt",
           },
           { label: "Settled", value: <Money paise={report.settledValue} compact size="lg" />, hint: `${report.settledCount} repaid by builders` },
         ]}
@@ -70,7 +70,7 @@ export default async function ReportsPage() {
           title="Disbursed volume by month"
           description={
             <>
-              Net paid to channel partners · <span className="tabular font-medium text-navy">{formatINR(monthlyTotal)}</span>
+              Net paid to channel partners · <span className="tabular font-medium text-basalt">{formatINR(monthlyTotal)}</span>
             </>
           }
           actions={<SimulatedTag />}

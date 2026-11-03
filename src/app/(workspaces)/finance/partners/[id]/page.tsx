@@ -43,14 +43,14 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
       <KeyFigures
         items={[
           { label: "Financing requests", value: <Count value={metrics.requestCount} />, hint: "Raised with Veefin" },
-          { label: "Pending approval", value: <Count value={metrics.pendingCount} />, hint: metrics.pendingCount ? "Awaiting a credit decision" : "None waiting", accent: "gold" },
+          { label: "Pending approval", value: <Count value={metrics.pendingCount} />, hint: metrics.pendingCount ? "Awaiting a credit decision" : "None waiting", accent: "kota" },
           {
             label: "Net disbursed",
-            value: <Money paise={metrics.disbursedValue} compact size="lg" className="text-heritage" />,
+            value: <Money paise={metrics.disbursedValue} compact size="lg" className="text-leaf" />,
             hint: `${metrics.disbursedCount} simulated payout${metrics.disbursedCount === 1 ? "" : "s"}`,
-            accent: "heritage",
+            accent: "leaf",
           },
-          { label: "Discount earned", value: <Money paise={metrics.discountValue} compact size="lg" />, hint: "On disbursed requests", accent: "navy" },
+          { label: "Discount earned", value: <Money paise={metrics.discountValue} compact size="lg" />, hint: "On disbursed requests", accent: "basalt" },
         ]}
       />
 
@@ -113,13 +113,13 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
                 <LTr key={r.id}>
                   <LTd>
                     <div className="flex items-center gap-3">
-                      <Monogram name={r.builder.name} tone="heritage" size="sm" />
-                      <Link href={`/finance/builders/${r.builder.id}`} className="font-medium text-navy underline-offset-4 hover:underline">
+                      <Monogram name={r.builder.name} tone="leaf" size="sm" />
+                      <Link href={`/finance/builders/${r.builder.id}`} className="font-medium text-basalt underline-offset-4 hover:underline">
                         {r.builder.name}
                       </Link>
                     </div>
                   </LTd>
-                  <LTd className="tabular tracking-wide text-navy">{r.empanelmentCode}</LTd>
+                  <LTd className="tabular tracking-wide text-basalt">{r.empanelmentCode}</LTd>
                   <LTd align="right">{r.creditPeriodDays} days</LTd>
                   <LTd className="text-xs">{formatDate(r.empanelledAt)}</LTd>
                   <LTd>

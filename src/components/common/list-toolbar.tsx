@@ -49,7 +49,7 @@ export function ListToolbar({ searchPlaceholder = "Search…", filters = [] }: {
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <div className="group/search relative min-w-0 flex-1 sm:max-w-sm">
         <Search
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within/search:text-gold-600"
+          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within/search:text-kota-600"
           strokeWidth={1.75}
         />
         <Input
@@ -64,7 +64,7 @@ export function ListToolbar({ searchPlaceholder = "Search…", filters = [] }: {
             type="button"
             onClick={() => setQuery("")}
             aria-label="Clear search"
-            className="absolute top-1/2 right-1.5 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-ivory-200/70 hover:text-navy focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="absolute top-1/2 right-1.5 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-paper-200/70 hover:text-basalt focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <X className="size-3.5" />
           </button>
@@ -73,7 +73,7 @@ export function ListToolbar({ searchPlaceholder = "Search…", filters = [] }: {
       {filters.map((filter) => (
         <Select key={filter.param} value={params.get(filter.param) ?? ALL} onValueChange={(v) => update({ [filter.param]: v === ALL ? null : v })}>
           <SelectTrigger
-            className="h-9 w-full bg-card data-[active=true]:border-gold/60 data-[active=true]:shadow-[0_0_0_3px_rgb(196_164_106/0.12)] sm:w-52"
+            className="h-9 w-full bg-card data-[active=true]:border-kota/60 data-[active=true]:shadow-[0_0_0_3px_rgb(168_154_132/0.12)] sm:w-52"
             data-active={Boolean(params.get(filter.param))}
             aria-label={filter.label}
           >
@@ -102,7 +102,7 @@ export function ListToolbar({ searchPlaceholder = "Search…", filters = [] }: {
           <X className="size-3.5" />
           Clear
           {activeCount > 1 && (
-            <span className="figure ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-navy px-1 text-[0.625rem] font-semibold text-gold-300">
+            <span className="figure ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-basalt px-1 text-[0.625rem] font-semibold text-kota-300">
               {activeCount}
             </span>
           )}
