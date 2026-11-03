@@ -266,7 +266,7 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
 
           <Panel eyebrow="As submitted" title="Invoice particulars" description="Details captured from the channel partner's submission">
             <div className="grid gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] 2xl:gap-10">
-              <dl className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-2">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 lg:grid-cols-3 2xl:grid-cols-2">
                 <Fact label="Channel partner">
                   {invoice.cp.name}
                   {invoice.cp.legalName !== invoice.cp.name && <span className="block text-[0.75rem] text-muted-foreground">{invoice.cp.legalName}</span>}

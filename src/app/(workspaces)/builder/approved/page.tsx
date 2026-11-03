@@ -125,12 +125,11 @@ export default async function ApprovedInvoicesPage({ searchParams }: { searchPar
             <Empty icon={SearchX} title="No invoices match your filters" description="Try a different search term or clear the filters." />
           )
         ) : (
-          <Ledger minWidth={1040} caption="Accepted invoices">
+          <Ledger minWidth={960} caption="Accepted invoices">
             <thead>
               <tr>
                 <SortTh label="Invoice" sortKey="number" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Partner" sortKey="cp" sort={sort} searchParams={sp} pathname={PATH} />
-                <SortTh label="Project" sortKey="project" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Invoiced" sortKey="amount" sort={sort} searchParams={sp} pathname={PATH} align="right" />
                 <SortTh label="Approved" sortKey="approved" sort={sort} searchParams={sp} pathname={PATH} align="right" />
                 <SortTh label="Decided" sortKey="decided" sort={sort} searchParams={sp} pathname={PATH} />
@@ -147,8 +146,10 @@ export default async function ApprovedInvoicesPage({ searchParams }: { searchPar
                       <RowLink href={`/builder/invoices/${invoice.id}`}>{invoice.invoiceNumber}</RowLink>
                       <Ref>{invoice.reference}</Ref>
                     </Td>
-                    <Td className="font-medium whitespace-nowrap text-navy">{invoice.cp.name}</Td>
-                    <Td className="whitespace-nowrap">{invoice.project.name}</Td>
+                    <Td>
+                      <p className="font-medium text-navy">{invoice.cp.name}</p>
+                      <p className="mt-1 text-[0.75rem] text-muted-foreground">{invoice.project.name}</p>
+                    </Td>
                     <Td align="right">
                       <Money paise={invoice.amountPaise} className="text-slate-ink" />
                     </Td>

@@ -19,7 +19,7 @@ export function Ledger({ children, minWidth = 900, caption }: { children: ReactN
   );
 }
 
-const cellPad = "px-4 first:pl-5 last:pr-5 sm:first:pl-7 sm:last:pr-7";
+const cellPad = "px-3 first:pl-5 last:pr-5 xl:px-3.5 sm:first:pl-7 sm:last:pr-7";
 
 export function Th({ children, align = "left", className }: { children?: ReactNode; align?: Align; className?: string }) {
   return (

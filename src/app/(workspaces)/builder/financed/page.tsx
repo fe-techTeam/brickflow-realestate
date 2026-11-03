@@ -13,7 +13,7 @@ import { requireWorkspace } from "@/server/auth/session";
 import { effectiveSettlementStatus, listFinancingRequests } from "@/server/services/financing";
 import { Empty, Figure, Masthead, Metric, MetricStrip, Panel } from "../_components/kit";
 import { Money } from "../_components/money";
-import { Ledger, Ref, RowLink, SortTh, TableToolbar, Td, Th, Tr } from "../_components/table";
+import { Ledger, Ref, RowLink, SortTh, TableToolbar, Td, Tr } from "../_components/table";
 import { enumParam, param, type SearchParams } from "../_lib/params";
 
 export const metadata: Metadata = { title: "Financed invoices" };
@@ -114,7 +114,7 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
             <Empty icon={SearchX} title="No requests match your filters" description="Try a different search term or clear the filters." />
           )
         ) : (
-          <Ledger minWidth={1040} caption="Financing requests">
+          <Ledger minWidth={960} caption="Financing requests">
             <thead>
               <tr>
                 <SortTh label="Original invoice" sortKey="invoice" sort={sort} searchParams={sp} pathname={PATH} />
@@ -122,8 +122,7 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
                 <SortTh label="Approved" sortKey="approved" sort={sort} searchParams={sp} pathname={PATH} align="right" />
                 <SortTh label="Discount" sortKey="discount" sort={sort} searchParams={sp} pathname={PATH} align="right" />
                 <SortTh label="Net to CP" sortKey="net" sort={sort} searchParams={sp} pathname={PATH} align="right" />
-                <SortTh label="Financing" sortKey="status" sort={sort} searchParams={sp} pathname={PATH} />
-                <Th>Disbursement</Th>
+                <SortTh label="Financing · disbursement" sortKey="status" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Settlement" sortKey="due" sort={sort} searchParams={sp} pathname={PATH} />
               </tr>
             </thead>
@@ -139,7 +138,7 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
                       </p>
                       <Ref>{r.reference}</Ref>
                     </Td>
-                    <Td className="font-medium whitespace-nowrap text-navy">{r.cp.name}</Td>
+                    <Td className="font-medium text-navy">{r.cp.name}</Td>
                     <Td align="right">
                       <Money paise={r.approvedAmountPaise} className="text-navy" />
                     </Td>
@@ -152,15 +151,13 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
                     </Td>
                     <Td>
                       <StatusBadge kind="financing" status={r.status} />
-                    </Td>
-                    <Td>
                       {r.disbursement ? (
-                        <div className="space-y-1.5">
-                          <p className="font-mono text-[0.75rem] whitespace-nowrap text-slate-ink">{r.disbursement.reference}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-[0.6875rem] whitespace-nowrap text-slate-ink">{r.disbursement.reference}</span>
                           <DemoBadge />
                         </div>
                       ) : (
-                        <span className="text-[0.75rem] text-muted-foreground">{r.status === "REJECTED" ? "Not applicable" : "Not yet disbursed"}</span>
+                        <p className="mt-1.5 text-[0.75rem] text-muted-foreground">{r.status === "REJECTED" ? "Not applicable" : "Not yet disbursed"}</p>
                       )}
                     </Td>
                     <Td className="whitespace-nowrap">

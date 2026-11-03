@@ -211,10 +211,13 @@ export default async function BuilderOverviewPage() {
                         <p className="mt-1 truncate text-[0.75rem] text-muted-foreground">
                           {invoice.cp.name} · {invoice.project.name}
                         </p>
-                        <AgeingMeter days={age} className="mt-2.5 sm:hidden" />
+                        <div className="mt-3 flex items-center justify-between gap-3 sm:hidden">
+                          <AgeingMeter days={age} />
+                          <Money paise={invoice.amountPaise} size="md" className="font-medium text-navy" />
+                        </div>
                       </div>
                       <AgeingMeter days={age} className="hidden w-28 shrink-0 sm:inline-flex" />
-                      <Money paise={invoice.amountPaise} size="md" className="shrink-0 self-start font-medium text-navy sm:self-center" />
+                      <Money paise={invoice.amountPaise} size="md" className="hidden shrink-0 font-medium text-navy sm:inline-flex" />
                       <ChevronRight className="hidden size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-navy sm:block" />
                     </Link>
                   </li>

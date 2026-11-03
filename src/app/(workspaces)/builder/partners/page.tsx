@@ -87,7 +87,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
             description={partners.length === 0 ? "Empanelments are configured by the platform administrator." : "Try a different search term or clear the filters."}
           />
         ) : (
-          <Ledger minWidth={1060} caption="Empanelled channel partners">
+          <Ledger minWidth={980} caption="Empanelled channel partners">
             <thead>
               <tr>
                 <SortTh label="Partner" sortKey="name" sort={sort} searchParams={sp} pathname={PATH} />
@@ -109,7 +109,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                       <span className="min-w-0">
                         <Link
                           href={`/builder/approvals?view=all&q=${encodeURIComponent(p.cp.name)}`}
-                          className="font-medium whitespace-nowrap text-navy decoration-gold/60 underline-offset-[5px] hover:underline"
+                          className="font-medium text-navy decoration-gold/60 underline-offset-[5px] hover:underline"
                           title={`View invoices from ${p.cp.name}`}
                         >
                           {p.cp.name}

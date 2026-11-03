@@ -172,7 +172,7 @@ export default async function SettlementsPage({ searchParams }: { searchParams: 
                     <RowLink href={`/builder/invoices/${s.request.invoice.id}`}>{s.request.invoice.invoiceNumber}</RowLink>
                     <p className="mt-1 text-[0.75rem] text-muted-foreground">{s.request.invoice.project.name}</p>
                   </Td>
-                  <Td className="font-medium whitespace-nowrap text-navy">{s.request.cp.name}</Td>
+                  <Td className="font-medium text-navy">{s.request.cp.name}</Td>
                   <Td align="right">
                     <Money paise={s.amountPaise} className="font-semibold text-navy" />
                   </Td>

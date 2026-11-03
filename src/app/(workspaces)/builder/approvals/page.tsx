@@ -148,12 +148,11 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
             <Empty icon={Inbox} title="No invoices yet" description="Invoices submitted by your empanelled channel partners will appear here." />
           )
         ) : (
-          <Ledger minWidth={1000} caption="Invoices">
+          <Ledger minWidth={940} caption="Invoices">
             <thead>
               <tr>
                 <SortTh label="Partner" sortKey="cp" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Invoice" sortKey="number" sort={sort} searchParams={sp} pathname={PATH} />
-                <SortTh label="Project" sortKey="project" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Amount" sortKey="amount" sort={sort} searchParams={sp} pathname={PATH} align="right" />
                 <SortTh label="Invoice date" sortKey="invoiceDate" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Waiting" sortKey="submitted" sort={sort} searchParams={sp} pathname={PATH} />
@@ -171,14 +170,16 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
                     <Td>
                       <span className="flex items-center gap-3">
                         <Monogram name={invoice.cp.name} className="size-8 text-[0.8125rem]" />
-                        <span className="font-medium whitespace-nowrap text-navy">{invoice.cp.name}</span>
+                        <span className="min-w-0">
+                          <span className="block font-medium text-navy">{invoice.cp.name}</span>
+                          <span className="mt-1 block text-[0.75rem] text-muted-foreground">{invoice.project.name}</span>
+                        </span>
                       </span>
                     </Td>
                     <Td>
                       <RowLink href={`/builder/invoices/${invoice.id}`}>{invoice.invoiceNumber}</RowLink>
                       <Ref>{invoice.reference}</Ref>
                     </Td>
-                    <Td className="whitespace-nowrap">{invoice.project.name}</Td>
                     <Td align="right">
                       <Money paise={invoice.amountPaise} className="font-medium text-navy" />
                     </Td>

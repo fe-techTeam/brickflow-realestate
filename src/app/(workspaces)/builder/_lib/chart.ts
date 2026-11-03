@@ -1,20 +1,19 @@
+import { CHART_COLORS as THEME } from "@/components/common/chart-theme";
 import { formatINRCompact } from "@/lib/money";
 
-/**
- * Categorical chart palette, validated for colour-vision deficiency separation and 3:1 contrast on white
- * in this fixed order. Hues stay tied to their meaning across charts (green = approved / financed / settled).
- */
+/** Builder chart hues, drawn from the shared theme and tied to meaning (heritage = approved / settled). */
 export const CHART_COLORS = {
-  green: "#1f8a64",
-  blue: "#2563a0",
-  gold: "#b8893a",
-  rose: "#a3485a",
+  navy: THEME.primary,
+  navySoft: THEME.primarySoft,
+  heritage: THEME.positive,
+  gold: THEME.goldDeep,
+  rose: THEME.negative,
 } as const;
 
 export const CHART_INK = {
-  axis: "#5f6b78",
-  grid: "#ece7db",
-  cursor: "rgba(20, 43, 67, 0.05)",
+  axis: THEME.ink,
+  grid: THEME.grid,
+  cursor: THEME.cursor,
 } as const;
 
 /** Whole rupees (chart scale) to the compact INR label used across the app. */

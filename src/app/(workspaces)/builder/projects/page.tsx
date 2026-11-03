@@ -96,12 +96,11 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             description={projects.length === 0 ? "Projects are configured by the platform administrator." : "Try a different search term or clear the filters."}
           />
         ) : (
-          <Ledger minWidth={1060} caption="Projects">
+          <Ledger minWidth={960} caption="Projects">
             <thead>
               <tr>
                 <SortTh label="Project" sortKey="name" sort={sort} searchParams={sp} pathname={PATH} />
-                <SortTh label="City / location" sortKey="city" sort={sort} searchParams={sp} pathname={PATH} />
-                <Th>RERA registration</Th>
+                <SortTh label="Location · RERA" sortKey="city" sort={sort} searchParams={sp} pathname={PATH} />
                 <Th>Status</Th>
                 <SortTh label="Invoices" sortKey="invoices" sort={sort} searchParams={sp} pathname={PATH} align="right" />
                 <SortTh label="Invoiced" sortKey="value" sort={sort} searchParams={sp} pathname={PATH} align="right" />
@@ -132,8 +131,8 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                   <Td>
                     <p className="text-navy">{p.city}</p>
                     {p.location && <p className="mt-1 text-[0.75rem] text-muted-foreground">{p.location}</p>}
+                    <p className="mt-1 font-mono text-[0.6875rem] tracking-tight text-muted-foreground">RERA {p.reraNumber ?? "—"}</p>
                   </Td>
-                  <Td className="font-mono text-[0.75rem]">{p.reraNumber ?? "—"}</Td>
                   <Td>
                     <StatusBadge kind="record" status={p.status} />
                   </Td>
