@@ -40,7 +40,8 @@ export function storage(): StorageDriver {
   if (driver) return driver;
   const kind = process.env.STORAGE_DRIVER ?? "local";
   if (kind !== "local") throw new Error(`Unsupported STORAGE_DRIVER: ${kind}`);
-  driver = new LocalStorageDriver(path.resolve(process.cwd(), process.env.STORAGE_DIR ?? "./storage"));
+  // The ignore hint keeps output tracing from bundling the whole project into the standalone server.
+  driver = new LocalStorageDriver(path.resolve(/* turbopackIgnore: true */ process.cwd(), process.env.STORAGE_DIR ?? "./storage"));
   return driver;
 }
 
