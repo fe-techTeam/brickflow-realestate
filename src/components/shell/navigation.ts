@@ -129,3 +129,6 @@ export const NAVIGATION: Record<WorkspaceKey, NavSection[]> = {
   ],
 };
 
+
+/** Cookie that remembers the collapsed desktop sidebar. */
+export const SIDEBAR_COOKIE = "bf-sidebar";
