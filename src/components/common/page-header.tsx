@@ -36,9 +36,9 @@ export function PageHeader({
       {back && (
         <Link
           href={back.href}
-          className="group/back mb-5 inline-flex items-center gap-1.5 text-[0.75rem] font-medium text-muted-foreground transition-colors hover:text-basalt"
+          className="group/back mb-5 inline-flex items-center gap-1.5 text-[0.75rem] font-medium text-muted-foreground transition-colors hover:text-fg"
         >
-          <span className="flex size-5 items-center justify-center rounded-full border border-border bg-card transition-colors group-hover/back:border-kota/60">
+          <span className="flex size-5 items-center justify-center rounded-full border border-border bg-card transition-colors group-hover/back:border-line-strong/60">
             <ChevronLeft className="size-3" />
           </span>
           {back.label}
@@ -49,8 +49,8 @@ export function PageHeader({
           {(eyebrow || kicker) && (
             <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
               {eyebrow && (
-                <p className="eyebrow flex items-center gap-3 text-kota-700">
-                  <span aria-hidden="true" className="h-px w-7 bg-kota" />
+                <p className="eyebrow flex items-center gap-3 text-fg-muted">
+                  <span aria-hidden="true" className="h-px w-7 bg-haze" />
                   {eyebrow}
                 </p>
               )}
@@ -60,7 +60,7 @@ export function PageHeader({
           <h1 className="display-title">{title}</h1>
           {description && <p className="mt-3 max-w-2xl text-[0.9375rem] leading-relaxed text-pretty text-muted-foreground">{description}</p>}
           {metaItems.length > 0 && (
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-soft">
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-fg-muted">
               {metaItems.map((item, i) => (
                 <span key={i} className="flex items-center gap-4">
                   {i > 0 && <span aria-hidden="true" className="h-3 w-px bg-border" />}
@@ -74,7 +74,7 @@ export function PageHeader({
       </div>
       {divider && (
         <div aria-hidden="true" className="relative mt-7 h-px bg-hairline">
-          <span className="absolute top-0 left-0 h-px w-20 bg-kota" />
+          <span className="absolute top-0 left-0 h-px w-20 bg-haze" />
         </div>
       )}
     </header>

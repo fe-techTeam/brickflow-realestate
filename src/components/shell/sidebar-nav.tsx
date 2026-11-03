@@ -25,7 +25,7 @@ export function SidebarNav({ workspace, onNavigate, collapsed = false }: { works
           {section.label && (
             <div className={cn("mb-1.5 flex h-3 items-center gap-2.5 px-3 transition-opacity duration-300", collapsed && "justify-center px-0")}>
               {collapsed ? (
-                <span aria-hidden="true" className="h-px w-4 bg-kota/35" />
+                <span aria-hidden="true" className="h-px w-4 bg-haze/35" />
               ) : (
                 <>
                   <p className="text-[0.625rem] font-semibold tracking-[0.22em] whitespace-nowrap text-white/38 uppercase">{section.label}</p>
@@ -45,22 +45,22 @@ export function SidebarNav({ workspace, onNavigate, collapsed = false }: { works
                 aria-current={active ? "page" : undefined}
                 aria-label={collapsed ? item.title : undefined}
                 className={cn(
-                  "group/nav relative flex h-10 items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium tracking-[0.005em] transition-[background-color,color,box-shadow] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-kota/60",
+                  "group/nav relative flex h-10 items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium tracking-[0.005em] transition-[background-color,color,box-shadow] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-line-strong/60",
                   collapsed && "justify-center px-0",
                   active
                     ? "bg-gradient-to-r from-white/[0.10] to-white/[0.025] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]"
-                    : "text-white/65 hover:bg-white/[0.045] hover:text-white",
+                    : "text-white/65 hover:bg-card/[0.045] hover:text-white",
                 )}
               >
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "absolute top-2.5 bottom-2.5 left-0 w-[2px] rounded-full bg-gulmohar-400 transition-all duration-300",
+                    "absolute top-2.5 bottom-2.5 left-0 w-[2px] rounded-full bg-signal-400 transition-all duration-300",
                     active ? "opacity-100" : "scale-y-0 opacity-0",
                   )}
                 />
                 <Icon
-                  className={cn("size-[1.05rem] shrink-0 transition-colors duration-200", active ? "text-gulmohar-300" : "text-white/40 group-hover/nav:text-white/75")}
+                  className={cn("size-[1.05rem] shrink-0 transition-colors duration-200", active ? "text-signal-300" : "text-white/40 group-hover/nav:text-white/75")}
                   strokeWidth={1.6}
                 />
                 {!collapsed && <span className="truncate">{item.title}</span>}

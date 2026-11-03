@@ -39,7 +39,7 @@ export function Th({ children, align = "left", className }: { children?: ReactNo
     <th
       scope="col"
       className={cn(
-        "border-b border-border bg-paper-100 px-4 py-3 text-[0.65rem] font-semibold tracking-[0.11em] whitespace-nowrap text-ink-soft/85 uppercase first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6",
+        "border-b border-border bg-glass-100 px-4 py-3 text-[0.65rem] font-semibold tracking-[0.11em] whitespace-nowrap text-fg-muted/85 uppercase first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6",
         "group-data-dense/table:py-2.5",
         align === "left" && "text-left",
         align === "right" && "text-right",
@@ -56,7 +56,7 @@ export function Td({ children, align = "left", className }: { children?: ReactNo
   return (
     <td
       className={cn(
-        "border-b hairline px-4 py-3.5 align-middle text-ink transition-[background-color,box-shadow] duration-200 first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6",
+        "border-b hairline px-4 py-3.5 align-middle text-fg-soft transition-[background-color,box-shadow] duration-200 first:pl-5 last:pr-5 sm:first:pl-6 sm:last:pr-6",
         "group-data-dense/table:py-2.5",
         align === "right" && "figure text-right",
         align === "center" && "text-center",
@@ -72,7 +72,7 @@ export function Tr({ children, className }: { children: ReactNode; className?: s
   return (
     <tr
       className={cn(
-        "group/row last:[&>td]:border-b-0 group-data-zebra/table:even:[&>td]:bg-paper-100/60 hover:[&>td]:bg-kota-50 hover:[&>td:first-child]:shadow-[inset_2px_0_0_var(--color-kota)]",
+        "group/row last:[&>td]:border-b-0 group-data-zebra/table:even:[&>td]:bg-glass-100/60 hover:[&>td]:bg-glass-50 hover:[&>td:first-child]:shadow-[inset_2px_0_0_var(--color-signal-500)]",
         className,
       )}
     >
@@ -140,11 +140,11 @@ export function SortTh({
       <Link
         href={`${pathname}?${params.toString()}`}
         scroll={false}
-        className={cn("inline-flex items-center gap-1.5 transition-colors hover:text-basalt", active && "text-basalt")}
+        className={cn("inline-flex items-center gap-1.5 transition-colors hover:text-fg", active && "text-fg")}
         aria-label={`Sort by ${label}`}
       >
         {label}
-        <Icon className={cn("size-3", active ? "text-kota-600" : "opacity-50")} />
+        <Icon className={cn("size-3", active ? "text-fg-muted" : "opacity-50")} />
       </Link>
     </Th>
   );

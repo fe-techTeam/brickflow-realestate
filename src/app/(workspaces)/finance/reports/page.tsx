@@ -21,10 +21,10 @@ export default async function ReportsPage() {
         title="Reports"
         context={[
           <span key="d">
-            <strong className="tabular font-semibold text-basalt">{formatINRCompact(report.disbursedValue)}</strong> disbursed
+            <strong className="tabular font-semibold text-fg">{formatINRCompact(report.disbursedValue)}</strong> disbursed
           </span>,
           <span key="o">
-            <strong className="tabular font-semibold text-basalt">{formatINRCompact(report.outstandingValue)}</strong> outstanding
+            <strong className="tabular font-semibold text-fg">{formatINRCompact(report.outstandingValue)}</strong> outstanding
           </span>,
           <span key="n" className="text-muted-foreground">
             Amounts in Indian rupees · payouts simulated
@@ -70,7 +70,7 @@ export default async function ReportsPage() {
           title="Disbursed volume by month"
           description={
             <>
-              Net paid to channel partners · <span className="tabular font-medium text-basalt">{formatINR(monthlyTotal)}</span>
+              Net paid to channel partners · <span className="tabular font-medium text-fg">{formatINR(monthlyTotal)}</span>
             </>
           }
           actions={<SimulatedTag />}

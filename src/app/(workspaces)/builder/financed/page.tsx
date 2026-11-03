@@ -138,12 +138,12 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
                       </p>
                       <Ref>{r.reference}</Ref>
                     </Td>
-                    <Td className="font-medium text-basalt">{r.cp.name}</Td>
+                    <Td className="font-medium text-fg">{r.cp.name}</Td>
                     <Td align="right">
-                      <Money paise={r.approvedAmountPaise} className="text-basalt" />
+                      <Money paise={r.approvedAmountPaise} className="text-fg" />
                     </Td>
                     <Td align="right">
-                      <Money paise={r.discountAmountPaise} sign="minus" className="text-[#8a1f37]" />
+                      <Money paise={r.discountAmountPaise} sign="minus" className="text-[#ff8c80]" />
                       <p className="mt-1 text-[0.6875rem] text-muted-foreground">at {formatBps(r.discountRateBps)}</p>
                     </Td>
                     <Td align="right">
@@ -153,7 +153,7 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
                       <StatusBadge kind="financing" status={r.status} />
                       {r.disbursement ? (
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-[0.6875rem] whitespace-nowrap text-ink">{r.disbursement.reference}</span>
+                          <span className="font-mono text-[0.6875rem] whitespace-nowrap text-fg-soft">{r.disbursement.reference}</span>
                           <DemoBadge />
                         </div>
                       ) : (
@@ -166,7 +166,7 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
                       ) : (
                         <span className="text-[0.75rem] text-muted-foreground">{r.status === "REJECTED" ? "No settlement" : "After disbursement"}</span>
                       )}
-                      <p className="mt-1.5 text-[0.75rem] text-ink">Due {formatDate(r.settlement?.dueDate ?? r.invoice.dueDate)}</p>
+                      <p className="mt-1.5 text-[0.75rem] text-fg-soft">Due {formatDate(r.settlement?.dueDate ?? r.invoice.dueDate)}</p>
                     </Td>
                   </Tr>
                 );

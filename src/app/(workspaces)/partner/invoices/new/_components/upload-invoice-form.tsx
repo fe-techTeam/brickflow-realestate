@@ -261,14 +261,14 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
       <div className="flex min-w-0 flex-col gap-6">
         <FormSection step="1" title="Invoice document" description="Upload the signed tax invoice PDF. We read it in your browser to pre-fill the form.">
           {file ? (
-            <div className={cn("flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:p-5", errors.file ? "border-destructive/50 bg-danger-soft/50" : "border-border bg-paper-100")}>
-              <span className="relative flex h-14 w-11 shrink-0 flex-col items-center justify-end rounded-[4px] border border-paper-300 bg-card pb-1.5 shadow-[0_2px_0_var(--hairline)]">
-                <span aria-hidden="true" className="absolute top-0 right-0 size-3 rounded-bl-[3px] border-b border-l border-paper-300 bg-paper-100" />
-                <FileText className="mb-0.5 size-4 text-basalt/60" strokeWidth={1.5} />
+            <div className={cn("flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:p-5", errors.file ? "border-destructive/50 bg-danger-soft/50" : "border-border bg-glass-100")}>
+              <span className="relative flex h-14 w-11 shrink-0 flex-col items-center justify-end rounded-[4px] border border-line bg-card pb-1.5 shadow-[0_2px_0_var(--hairline)]">
+                <span aria-hidden="true" className="absolute top-0 right-0 size-3 rounded-bl-[3px] border-b border-l border-line bg-glass-100" />
+                <FileText className="mb-0.5 size-4 text-fg/60" strokeWidth={1.5} />
                 <span className="text-[0.5rem] font-bold tracking-wider text-danger">PDF</span>
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-basalt">{file.name}</p>
+                <p className="truncate text-sm font-medium text-fg">{file.name}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">PDF · {formatBytes(file.size)}</p>
                 <ExtractionStatusLine extraction={extraction} />
               </div>
@@ -301,30 +301,30 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
               onDrop={onDrop}
               className={cn(
                 "group relative block cursor-pointer rounded-xl border p-1.5 transition-colors",
-                dragging ? "border-kota bg-kota-50" : errors.file ? "border-destructive/40 bg-danger-soft/40" : "border-border bg-paper-50 hover:border-kota/60",
+                dragging ? "border-line-strong bg-glass-50" : errors.file ? "border-destructive/40 bg-danger-soft/40" : "border-border bg-glass-50 hover:border-line-strong/60",
               )}
             >
               <span
                 className={cn(
                   "flex flex-col items-center justify-center rounded-lg border border-dashed px-6 py-12 text-center transition-colors sm:py-14",
-                  dragging ? "border-kota" : "border-paper-400 group-hover:border-kota/70",
+                  dragging ? "border-line-strong" : "border-line group-hover:border-line-strong/70",
                 )}
               >
                 <span className="relative mb-5 flex size-20 items-center justify-center">
-                  <ArchMotif className="absolute inset-0 size-20 text-kota/60" />
-                  <span className="relative mt-5 flex size-9 items-center justify-center rounded-full bg-basalt text-kota shadow-button">
+                  <ArchMotif className="absolute inset-0 size-20 text-fg-muted/60" />
+                  <span className="relative mt-5 flex size-9 items-center justify-center rounded-full bg-night text-fg-muted shadow-button">
                     <UploadCloud className="size-4" strokeWidth={1.75} />
                   </span>
                 </span>
-                <span className="font-display text-[1.375rem] leading-tight font-medium text-basalt">{dragging ? "Release to upload" : "Drop your invoice PDF here"}</span>
+                <span className="font-display text-[1.375rem] leading-tight font-normal text-fg">{dragging ? "Release to upload" : "Drop your invoice PDF here"}</span>
                 <span className="mt-1.5 text-sm text-muted-foreground">
-                  or <span className="font-medium text-basalt underline decoration-kota/60 underline-offset-4">browse your files</span>
+                  or <span className="font-medium text-fg underline decoration-fg-muted/60 underline-offset-4">browse your files</span>
                 </span>
                 <span className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[0.6875rem] tracking-[0.12em] text-muted-foreground uppercase">
                   <span>PDF only</span>
-                  <span aria-hidden="true" className="size-1 rotate-45 bg-kota" />
+                  <span aria-hidden="true" className="size-1 rotate-45 bg-haze" />
                   <span>Up to 10 MB</span>
-                  <span aria-hidden="true" className="size-1 rotate-45 bg-kota" />
+                  <span aria-hidden="true" className="size-1 rotate-45 bg-haze" />
                   <span>Scans supported</span>
                 </span>
               </span>
@@ -502,9 +502,9 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
               ["Payout", "Veefin approves and pays the net amount to your bank account (simulated)."],
             ].map(([title, body], i) => (
               <li key={title} className="flex gap-3.5">
-                <span className="font-display text-lg leading-none font-medium text-kota-600 tabular">{`0${i + 1}`}</span>
+                <span className="font-display text-lg leading-none font-normal text-fg-muted tabular">{`0${i + 1}`}</span>
                 <span>
-                  <span className="block font-medium text-basalt">{title}</span>
+                  <span className="block font-medium text-fg">{title}</span>
                   <span className="text-xs leading-relaxed text-muted-foreground">{body}</span>
                 </span>
               </li>
@@ -520,9 +520,9 @@ function FormSection({ step, title, description, children }: { step: string; tit
   return (
     <section className="surface animate-fade-up overflow-hidden">
       <header className="flex items-start gap-4 px-5 pt-6 pb-5 sm:px-7">
-        <span className="font-display text-[1.75rem] leading-none font-medium text-kota-600 tabular">{step.padStart(2, "0")}</span>
+        <span className="font-display text-[1.75rem] leading-none font-normal text-fg-muted tabular">{step.padStart(2, "0")}</span>
         <div className="border-l border-hairline pl-4">
-          <h2 className="font-display text-[1.25rem] leading-tight font-medium">{title}</h2>
+          <h2 className="font-display text-[1.25rem] leading-tight font-normal">{title}</h2>
           <p className="mt-1 text-[0.8125rem] text-muted-foreground">{description}</p>
         </div>
       </header>
@@ -558,13 +558,13 @@ function Field({
           {required && <span className="text-destructive"> *</span>}
         </Label>
         {extracted && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-kota/40 bg-kota-50 px-2 py-0.5 text-[0.625rem] font-semibold tracking-[0.04em] text-kota-700">
+          <span className="inline-flex items-center gap-1 rounded-full border border-line-strong/40 bg-glass-50 px-2 py-0.5 text-[0.625rem] font-semibold tracking-[0.04em] text-fg-muted">
             <ScanText className="size-3" />
             Extracted — please verify
           </span>
         )}
       </div>
-      <div className={cn("rounded-md transition-shadow", extracted && "shadow-[0_0_0_1px_var(--color-kota),0_0_0_4px_rgb(168_154_132/0.16)] [&_button]:bg-kota-50/60 [&_input]:bg-kota-50/60")}>{children}</div>
+      <div className={cn("rounded-md transition-shadow", extracted && "shadow-[0_0_0_1px_var(--color-signal-500),0_0_0_4px_rgb(168_154_132/0.16)] [&_button]:bg-glass-50/60 [&_input]:bg-glass-50/60")}>{children}</div>
       {error ? (
         <p role="alert" className="text-xs text-destructive">
           {error}
@@ -600,9 +600,9 @@ function ExtractionPanel({ extraction, builder, partnerGstin }: { extraction: Ex
     <div className="surface overflow-hidden">
       <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-4">
         <div>
-          <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-kota-700 uppercase">In-browser reading</p>
-          <p className="mt-1 flex items-center gap-2 font-display text-[1.25rem] font-medium text-basalt">
-            <ScanText className="size-4 text-kota-600" />
+          <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-fg-muted uppercase">In-browser reading</p>
+          <p className="mt-1 flex items-center gap-2 font-display text-[1.25rem] font-normal text-fg">
+            <ScanText className="size-4 text-fg-muted" />
             Smart extraction
           </p>
         </div>
@@ -615,25 +615,25 @@ function ExtractionPanel({ extraction, builder, partnerGstin }: { extraction: Ex
       <div className="border-t border-hairline px-5 py-5 text-sm" aria-live="polite">
         {extraction.status === "idle" && (
           <p className="flex items-start gap-2.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
-            <CircleDashed className="mt-0.5 size-4 shrink-0 text-kota-600" />
+            <CircleDashed className="mt-0.5 size-4 shrink-0 text-fg-muted" />
             Choose a PDF and we&apos;ll read the invoice number, dates, parties, GSTINs and amounts for you to verify.
           </p>
         )}
         {extraction.status === "running" && (
           <div className="grid gap-3">
             <div className="flex items-end justify-between gap-3">
-              <p className="flex items-center gap-2 text-[0.8125rem] font-medium text-basalt">
-                <Loader2 className="size-4 animate-spin text-kota-600" />
+              <p className="flex items-center gap-2 text-[0.8125rem] font-medium text-fg">
+                <Loader2 className="size-4 animate-spin text-fg-muted" />
                 {extraction.message}
               </p>
-              <span className="figure text-[1.5rem] leading-none font-light text-basalt">
+              <span className="figure text-[1.5rem] leading-none font-light text-fg">
                 {Math.round(extraction.progress * 100)}
                 <span className="text-[0.6em] opacity-50">%</span>
               </span>
             </div>
             <Progress
               value={Math.round(extraction.progress * 100)}
-              className="h-1 bg-paper-200 [&>[data-slot=progress-indicator]]:bg-linear-to-r [&>[data-slot=progress-indicator]]:from-kota-300 [&>[data-slot=progress-indicator]]:to-kota-600"
+              className="h-1 bg-glass-200 [&>[data-slot=progress-indicator]]:bg-linear-to-r [&>[data-slot=progress-indicator]]:from-haze [&>[data-slot=progress-indicator]]:to-haze"
               aria-label="Extraction progress"
             />
             <p className="text-xs text-muted-foreground">You can keep filling in the form while this runs.</p>
@@ -647,7 +647,7 @@ function ExtractionPanel({ extraction, builder, partnerGstin }: { extraction: Ex
         )}
         {extraction.status === "done" && <ExtractionSummary extraction={extraction} builder={builder} partnerGstin={partnerGstin} />}
       </div>
-      <p className="flex items-start gap-2 border-t border-hairline bg-paper-100 px-5 py-3 text-[0.6875rem] leading-relaxed text-muted-foreground">
+      <p className="flex items-start gap-2 border-t border-hairline bg-glass-100 px-5 py-3 text-[0.6875rem] leading-relaxed text-muted-foreground">
         <Lock className="mt-0.5 size-3 shrink-0" />
         Processed locally in your browser. The document is not sent to any external service for extraction.
       </p>
@@ -658,7 +658,7 @@ function ExtractionPanel({ extraction, builder, partnerGstin }: { extraction: Ex
 function ExtractionStatusLine({ extraction }: { extraction: Extraction }) {
   if (extraction.status === "running") {
     return (
-      <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-kota-700">
+      <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-fg-muted">
         <Loader2 className="size-3.5 animate-spin" />
         Reading · {Math.round(extraction.progress * 100)}%
       </p>
@@ -716,11 +716,11 @@ function ExtractionSummary({
           : "No form fields could be pre-filled. Please enter the details manually."}
       </p>
       {shown.length > 0 && (
-        <dl className="grid gap-2.5 rounded-lg border border-hairline bg-paper-100 p-4 text-xs">
+        <dl className="grid gap-2.5 rounded-lg border border-hairline bg-glass-100 p-4 text-xs">
           {shown.map(([label, value, numeric]) => (
             <div key={label} className="flex items-baseline justify-between gap-3">
               <dt className="shrink-0 text-muted-foreground">{label}</dt>
-              <dd className={cn("min-w-0 text-right font-medium break-words text-basalt", numeric && "figure")}>{value}</dd>
+              <dd className={cn("min-w-0 text-right font-medium break-words text-fg", numeric && "figure")}>{value}</dd>
             </div>
           ))}
         </dl>
@@ -784,28 +784,28 @@ function SubmissionSummary({
   const total = amountPaise !== null && amountPaise > 0n ? amountPaise : null;
   return (
     <div className="surface overflow-hidden">
-      <div aria-hidden="true" className="h-[3px] bg-linear-to-r from-basalt via-basalt-700 to-kota" />
+      <div aria-hidden="true" className="h-[3px] bg-linear-to-r from-night via-night to-haze" />
       <div className="px-5 py-5">
         <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">Submission summary</p>
         <p className="mt-3 text-xs text-muted-foreground">Invoice total</p>
-        {total !== null ? <Money paise={total} size="xl" className="mt-1 block font-medium text-basalt" /> : <p className="figure mt-1 text-[1.875rem] leading-none text-paper-400">₹ —</p>}
+        {total !== null ? <Money paise={total} size="xl" className="mt-1 block font-medium text-fg" /> : <p className="figure mt-1 text-[1.875rem] leading-none text-fg">₹ —</p>}
         <dl className="mt-5 grid gap-2.5 border-t border-hairline pt-4 text-[0.8125rem]">
           <div className="flex justify-between gap-3">
             <dt className="text-muted-foreground">Invoice no.</dt>
-            <dd className="truncate text-right font-medium text-basalt">{invoiceNumber.trim() || "—"}</dd>
+            <dd className="truncate text-right font-medium text-fg">{invoiceNumber.trim() || "—"}</dd>
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-muted-foreground">Builder</dt>
-            <dd className="truncate text-right font-medium text-basalt">{builder?.name ?? "—"}</dd>
+            <dd className="truncate text-right font-medium text-fg">{builder?.name ?? "—"}</dd>
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-muted-foreground">Project</dt>
-            <dd className="truncate text-right font-medium text-basalt">{project?.name ?? "—"}</dd>
+            <dd className="truncate text-right font-medium text-fg">{project?.name ?? "—"}</dd>
           </div>
           {total !== null && gstPaise !== null && gstPaise < total && (
             <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground">Taxable value</dt>
-              <dd className="text-right font-medium text-basalt">
+              <dd className="text-right font-medium text-fg">
                 <Money paise={total - gstPaise} />
               </dd>
             </div>

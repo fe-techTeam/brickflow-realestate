@@ -113,13 +113,13 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                 <Tr key={p.id}>
                   <Td>
                     <span className="flex items-center gap-3.5">
-                      <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-basalt text-kota">
+                      <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-night text-fg-muted">
                         <Building2 className="size-4" strokeWidth={1.5} />
                       </span>
                       <span className="min-w-0">
                         <Link
                           href={`/builder/approvals?view=all&project=${p.id}`}
-                          className="font-display text-[1.0625rem] font-semibold whitespace-nowrap text-basalt decoration-kota/60 underline-offset-[5px] hover:underline"
+                          className="font-display text-[1.0625rem] font-normal whitespace-nowrap text-fg decoration-fg-muted/60 underline-offset-[5px] hover:underline"
                           title={`View invoices for ${p.name}`}
                         >
                           {p.name}
@@ -129,7 +129,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                     </span>
                   </Td>
                   <Td>
-                    <p className="text-basalt">{p.city}</p>
+                    <p className="text-fg">{p.city}</p>
                     {p.location && <p className="mt-1 text-[0.75rem] text-muted-foreground">{p.location}</p>}
                     <p className="mt-1 font-mono text-[0.6875rem] tracking-tight text-muted-foreground">RERA {p.reraNumber ?? "—"}</p>
                   </Td>
@@ -137,8 +137,8 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                     <StatusBadge kind="record" status={p.status} />
                   </Td>
                   <Td align="right">
-                    <span className="font-medium text-basalt">{p.totals.invoiceCount}</span>
-                    {p.totals.openCount > 0 && <p className="mt-1 text-[0.6875rem] text-[#8a5a12]">{p.totals.openCount} open</p>}
+                    <span className="font-medium text-fg">{p.totals.invoiceCount}</span>
+                    {p.totals.openCount > 0 && <p className="mt-1 text-[0.6875rem] text-[#ffb36b]">{p.totals.openCount} open</p>}
                   </Td>
                   <Td align="right">
                     <Money paise={p.totals.invoiceValue} />
@@ -147,7 +147,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                     <Money paise={p.totals.approvedValue} className="font-medium text-leaf" />
                   </Td>
                   <Td align="right">
-                    <Money paise={p.totals.financedValue} className="text-basalt" />
+                    <Money paise={p.totals.financedValue} className="text-fg" />
                     <span className="mt-1.5 flex justify-end">
                       <ShareBar part={p.totals.financedValue} whole={p.totals.approvedValue} />
                     </span>

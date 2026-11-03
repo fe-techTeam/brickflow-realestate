@@ -40,16 +40,16 @@ export function Money({
 /** A discount rate in Inter tabular figures; the percent sign is set lighter in Kota stone. */
 export function Rate({ bps, size = "md", className }: { bps: number; size?: FigureSize; className?: string }) {
   return (
-    <span className={cn("figure whitespace-nowrap text-basalt", SIZE[size], className)}>
+    <span className={cn("figure whitespace-nowrap text-fg", SIZE[size], className)}>
       {formatBps(bps, { suffix: false })}
-      <span className={cn("ml-[0.06em] font-light text-kota-600", size !== "sm" && "text-[0.6em]")}>%</span>
+      <span className={cn("ml-[0.06em] font-light text-fg-muted", size !== "sm" && "text-[0.6em]")}>%</span>
     </span>
   );
 }
 
 /** Plain count in Inter tabular figures. */
 export function Count({ value, size = "md", className }: { value: number | string; size?: FigureSize; className?: string }) {
-  return <span className={cn("figure text-basalt", SIZE[size], className)}>{value}</span>;
+  return <span className={cn("figure text-fg", SIZE[size], className)}>{value}</span>;
 }
 
 /** Short stone rule used under key figures and headings. */

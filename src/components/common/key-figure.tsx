@@ -5,9 +5,9 @@ import { FigureValue } from "./money";
 type KeyFigureTone = "basalt" | "leaf" | "kota" | "danger" | "light";
 
 const VALUE_TONE: Record<KeyFigureTone, string> = {
-  basalt: "text-basalt",
+  basalt: "text-fg",
   leaf: "text-leaf",
-  kota: "text-kota-600",
+  kota: "text-fg-muted",
   danger: "text-danger",
   light: "text-white",
 };

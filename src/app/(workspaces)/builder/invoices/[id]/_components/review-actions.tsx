@@ -47,7 +47,7 @@ export function ReviewActions({
         <ActionDialog
           trigger="Request clarification"
           triggerVariant="outline"
-          triggerIcon={<MessageSquareText className="size-4 text-[#8a5a12]" />}
+          triggerIcon={<MessageSquareText className="size-4 text-[#ffb36b]" />}
           title="Request clarification"
           description={
             <>
@@ -90,9 +90,9 @@ export function ReviewActions({
         />
       </div>
       {status === "SUBMITTED" && (
-        <div className="mt-2 flex items-center justify-between gap-3 border-t border-dashed border-[#dfe2de] pt-4">
+        <div className="mt-2 flex items-center justify-between gap-3 border-t border-dashed border-[rgba(255,255,255,0.1)] pt-4">
           <p className="text-[0.75rem] leading-snug text-muted-foreground">Let {cpName} know you have started reviewing.</p>
-          <Button variant="ghost" size="sm" className="shrink-0 text-basalt" onClick={markUnderReview} disabled={pending}>
+          <Button variant="ghost" size="sm" className="shrink-0 text-fg" onClick={markUnderReview} disabled={pending}>
             {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />}
             Mark under review
           </Button>

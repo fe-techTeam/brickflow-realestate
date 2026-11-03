@@ -68,13 +68,13 @@ export default async function FinancingOffersPage() {
           ) : (
             <ul className="grid gap-5 md:grid-cols-2">
               {open.map((offer) => (
-                <li key={offer.id} className="relative flex flex-col overflow-hidden rounded-xl border border-kota/40 bg-[linear-gradient(180deg,#fcf8ef_0%,#ffffff_55%)]">
-                  <div aria-hidden="true" className="h-[3px] bg-linear-to-r from-kota/30 via-kota to-kota/30" />
+                <li key={offer.id} className="relative flex flex-col overflow-hidden rounded-xl border border-line-strong/40 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,#ffffff_55%)]">
+                  <div aria-hidden="true" className="h-[3px] bg-linear-to-r from-haze/30 via-haze to-haze/30" />
                   <div className="flex flex-1 flex-col p-5 sm:p-6">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-kota-700 uppercase">{offer.reference}</p>
-                        <Link href={`/partner/invoices/${offer.invoiceId}`} className="mt-1.5 block font-display text-[1.375rem] leading-tight font-medium text-basalt hover:underline">
+                        <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-fg-muted uppercase">{offer.reference}</p>
+                        <Link href={`/partner/invoices/${offer.invoiceId}`} className="mt-1.5 block font-display text-[1.375rem] leading-tight font-normal text-fg hover:underline">
                           {offer.invoice.invoiceNumber}
                         </Link>
                         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -86,13 +86,13 @@ export default async function FinancingOffersPage() {
 
                     <div className="mt-6">
                       <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Net receivable</p>
-                      <Money paise={offer.netPayablePaise} size="xl" className="mt-2 block font-medium text-basalt" />
+                      <Money paise={offer.netPayablePaise} size="xl" className="mt-2 block font-medium text-fg" />
                     </div>
 
                     <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-hairline pt-4 text-[0.8125rem]">
                       <div>
                         <dt className="text-xs text-muted-foreground">Builder-approved</dt>
-                        <dd className="mt-0.5 font-medium text-basalt">
+                        <dd className="mt-0.5 font-medium text-fg">
                           <Money paise={offer.approvedAmountPaise} />
                         </dd>
                       </div>
@@ -106,7 +106,7 @@ export default async function FinancingOffersPage() {
 
                     <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-6">
                       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <CalendarClock className="size-3.5 text-kota-700" />
+                        <CalendarClock className="size-3.5 text-fg-muted" />
                         Valid until {formatDateTime(offer.validUntil)}
                       </p>
                       <OfferLauncher invoice={offerInvoice(offer.invoice)} offer={toOfferDto(offer)} label="Review & accept" variant="success" />
@@ -155,12 +155,12 @@ export default async function FinancingOffersPage() {
                       <RefCell href={`/partner/invoices/${invoice.id}`} primary={invoice.invoiceNumber} secondary={invoice.reference} code />
                     </Td>
                     <Td>
-                      <p className="text-[0.8125rem] text-basalt">{invoice.builder.name}</p>
+                      <p className="text-[0.8125rem] text-fg">{invoice.builder.name}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{invoice.project.name}</p>
                     </Td>
                     <Td className="text-[0.8125rem] whitespace-nowrap">{invoice.dueDate ? formatDate(invoice.dueDate) : "Credit period"}</Td>
                     <Td align="right">
-                      <Money paise={invoice.approvedAmountPaise ?? 0n} className="text-basalt" />
+                      <Money paise={invoice.approvedAmountPaise ?? 0n} className="text-fg" />
                     </Td>
                     <Td align="right" className="text-[0.8125rem]">
                       {programme ? formatBps(programme.discountRateBps) : "—"}
@@ -213,7 +213,7 @@ export default async function FinancingOffersPage() {
                         {formatBps(offer.discountRateBps)}
                       </Td>
                       <Td align="right">
-                        <Money paise={offer.netPayablePaise} className="font-medium text-basalt" />
+                        <Money paise={offer.netPayablePaise} className="font-medium text-fg" />
                       </Td>
                       <Td>
                         <StatusMark kind="offer" status={status} />

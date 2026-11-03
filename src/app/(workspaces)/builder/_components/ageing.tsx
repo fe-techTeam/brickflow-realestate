@@ -13,9 +13,9 @@ export function ageTone(days: number): AgeTone {
 
 const TONE = {
   fresh: { text: "text-leaf", fill: "bg-leaf", track: "bg-leaf-100" },
-  steady: { text: "text-ink", fill: "bg-basalt/60", track: "bg-[#ebe7dd]" },
-  ageing: { text: "text-[#8a5a12]", fill: "bg-[#c48a2c]", track: "bg-[#f6ead2]" },
-  late: { text: "text-[#8a1f37]", fill: "bg-[#b8324f]", track: "bg-[#f6e1dd]" },
+  steady: { text: "text-fg-soft", fill: "bg-night/60", track: "bg-[rgba(255,255,255,0.08)]" },
+  ageing: { text: "text-[#ffb36b]", fill: "bg-[#ffb36b]", track: "bg-[rgba(255,194,71,0.14)]" },
+  late: { text: "text-[#ff8c80]", fill: "bg-[#ff7b6e]", track: "bg-[rgba(255,194,71,0.16)]" },
 } as const;
 
 export function ageLabel(days: number): string {
@@ -53,11 +53,11 @@ export interface Bucket {
 
 const BUCKET_FILL: Record<Bucket["tone"], string> = {
   leaf: "bg-leaf",
-  basalt: "bg-basalt",
-  slate: "bg-[#8b9692]",
-  amber: "bg-[#c48a2c]",
-  rose: "bg-[#b8324f]",
-  kota: "bg-kota",
+  basalt: "bg-night",
+  slate: "bg-[#9fb0c3]",
+  amber: "bg-[#ffb36b]",
+  rose: "bg-[#ff7b6e]",
+  kota: "bg-haze",
 };
 
 /** Proportional bar of value by bucket with a labelled key underneath (ageing, maturity). */
@@ -65,7 +65,7 @@ export function BucketBar({ buckets, format }: { buckets: Bucket[]; format: (pai
   const total = buckets.reduce((sum, b) => sum + b.value, 0n);
   return (
     <div>
-      <div className="flex h-3 w-full gap-[3px] overflow-hidden rounded-full bg-[#eceeeb]" aria-hidden="true">
+      <div className="flex h-3 w-full gap-[3px] overflow-hidden rounded-full bg-[rgba(255,255,255,0.07)]" aria-hidden="true">
         {total > 0n &&
           buckets
             .filter((b) => b.value > 0n)
@@ -78,7 +78,7 @@ export function BucketBar({ buckets, format }: { buckets: Bucket[]; format: (pai
               <span aria-hidden="true" className={cn("size-2 rounded-[2px]", BUCKET_FILL[b.tone])} />
               {b.label}
             </dt>
-            <dd className="mt-1.5 text-basalt">
+            <dd className="mt-1.5 text-fg">
               {format(b.value)}
               <span className="tabular ml-1.5 text-[0.75rem] text-muted-foreground">· {b.count}</span>
             </dd>

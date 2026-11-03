@@ -44,7 +44,7 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
         items={[
           {
             label: "Agreed discount",
-            value: <Count value={formatBps(programme.discountRateBps)} className="text-kota-600" />,
+            value: <Count value={formatBps(programme.discountRateBps)} className="text-fg-muted" />,
             hint: `${programme.code} · ${programme.status.toLowerCase()}`,
             accent: "kota",
           },
@@ -140,7 +140,7 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
                 {org.projects.map((p) => (
                   <LTr key={p.id}>
                     <LTd>
-                      <span className="font-medium text-basalt">{p.name}</span>
+                      <span className="font-medium text-fg">{p.name}</span>
                       <p className="tabular text-[0.6875rem] text-muted-foreground">{p.code}</p>
                     </LTd>
                     <LTd>{p.city}</LTd>
@@ -172,14 +172,14 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
                 {watchlist.map((w) => (
                   <LTr key={w.request.id}>
                     <LTd>
-                      <Link href={`/finance/requests/${w.request.id}`} className="tabular font-medium whitespace-nowrap text-basalt underline-offset-4 hover:underline">
+                      <Link href={`/finance/requests/${w.request.id}`} className="tabular font-medium whitespace-nowrap text-fg underline-offset-4 hover:underline">
                         {w.request.reference}
                       </Link>
                       <p className="text-xs text-muted-foreground">{w.request.cp.name}</p>
                     </LTd>
                     <LTd className="text-xs whitespace-nowrap">{formatDate(w.dueDate)}</LTd>
                     <LTd align="right">
-                      <Money paise={w.amountPaise} className="text-basalt" />
+                      <Money paise={w.amountPaise} className="text-fg" />
                     </LTd>
                     <LTd>
                       <StatusBadge kind="settlement" status={w.status} />

@@ -12,23 +12,23 @@ import {
 } from "@/lib/status";
 
 const TONE_CLASSES: Record<StatusTone, string> = {
-  neutral: "bg-paper-100 text-ink-soft ring-paper-300",
-  info: "bg-info-soft text-info ring-[#cddcea]",
-  basalt: "bg-basalt-50 text-basalt ring-basalt-200",
-  warning: "bg-warning-soft text-warning ring-[#e3ddd2]",
+  neutral: "bg-glass-100 text-fg-muted ring-line",
+  info: "bg-info-soft text-info ring-[rgba(143,196,255,0.3)]",
+  basalt: "bg-glass-50 text-fg ring-line",
+  warning: "bg-warning-soft text-warning ring-[rgba(255,255,255,0.08)]",
   success: "bg-leaf-50 text-leaf ring-leaf-200",
-  danger: "bg-danger-soft text-danger ring-[#efc6cf]",
-  kota: "bg-kota-50 text-kota-700 ring-kota-300/70",
+  danger: "bg-danger-soft text-danger ring-[rgba(255,123,110,0.3)]",
+  kota: "bg-glass-50 text-fg-muted ring-line/70",
 };
 
 const DOT_CLASSES: Record<StatusTone, string> = {
-  neutral: "bg-ink/35",
+  neutral: "bg-night/35",
   info: "bg-info",
-  basalt: "bg-basalt",
-  warning: "bg-[#c48a2c]",
+  basalt: "bg-night",
+  warning: "bg-[#ffb36b]",
   success: "bg-leaf-500",
   danger: "bg-danger",
-  kota: "bg-kota",
+  kota: "bg-haze",
 };
 
 const REGISTRY = {

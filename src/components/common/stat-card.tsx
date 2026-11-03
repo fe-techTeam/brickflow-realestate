@@ -9,17 +9,17 @@ import { Trend, type TrendProps } from "./trend";
 type StatTone = "basalt" | "leaf" | "kota" | "slate";
 
 const ICON_TONE: Record<StatTone, string> = {
-  basalt: "bg-basalt-50 text-basalt ring-basalt-100",
+  basalt: "bg-glass-50 text-fg ring-line",
   leaf: "bg-leaf-50 text-leaf ring-leaf-100",
-  kota: "bg-kota-50 text-kota-700 ring-kota-200",
-  slate: "bg-paper-100 text-ink-soft ring-paper-300",
+  kota: "bg-glass-50 text-fg-muted ring-line",
+  slate: "bg-glass-100 text-fg-muted ring-line",
 };
 
 const MARK_TONE: Record<StatTone, string> = {
-  basalt: "bg-basalt",
+  basalt: "bg-night",
   leaf: "bg-leaf",
-  kota: "bg-kota",
-  slate: "bg-paper-400",
+  kota: "bg-haze",
+  slate: "bg-glass-400",
 };
 
 /**
@@ -57,15 +57,15 @@ export function StatCard({
       className={cn(
         "group/stat relative flex h-full flex-col overflow-hidden p-5 transition-[box-shadow,transform,border-color] duration-300 ease-out-soft sm:p-6",
         dark ? "surface-basalt" : "surface",
-        href && !dark && "group-hover/statlink:-translate-y-0.5 group-hover/statlink:border-kota/45 group-hover/statlink:shadow-raised",
+        href && !dark && "group-hover/statlink:-translate-y-0.5 group-hover/statlink:border-line-strong/45 group-hover/statlink:shadow-raised",
         href && dark && "group-hover/statlink:-translate-y-0.5 group-hover/statlink:shadow-overlay",
         className,
       )}
     >
       {dark && (
         <>
-          <span aria-hidden="true" className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-kota/0 via-kota/70 to-kota/0" />
-          <svg aria-hidden="true" className="pointer-events-none absolute -right-6 -bottom-8 h-32 w-40 text-kota/[0.13]" viewBox="0 0 160 128" fill="none">
+          <span aria-hidden="true" className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-haze/0 via-haze/70 to-haze/0" />
+          <svg aria-hidden="true" className="pointer-events-none absolute -right-6 -bottom-8 h-32 w-40 text-fg-muted/[0.13]" viewBox="0 0 160 128" fill="none">
             <path d="M8 128V64h28v64M44 128V30h32v98M84 128V48h26v80M118 128V12h30v116" stroke="currentColor" strokeWidth="1" />
             <path d="M44 46h32M44 62h32M44 78h32M44 94h32M118 28h30M118 44h30M118 60h30M118 76h30M118 92h30" stroke="currentColor" strokeWidth="0.75" />
           </svg>
@@ -73,14 +73,14 @@ export function StatCard({
       )}
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <span aria-hidden="true" className={cn("mb-3 block h-[2px] w-6 rounded-full", dark ? "bg-kota" : MARK_TONE[tone])} />
+          <span aria-hidden="true" className={cn("mb-3 block h-[2px] w-6 rounded-full", dark ? "bg-haze" : MARK_TONE[tone])} />
           <p className={cn("eyebrow leading-snug", dark && "text-white/60")}>{label}</p>
         </div>
         {Icon && (
           <span
             className={cn(
               "flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset transition-colors",
-              dark ? "bg-white/[0.06] text-kota ring-kota/30" : ICON_TONE[tone],
+              dark ? "bg-card/[0.06] text-fg-muted ring-line-strong/30" : ICON_TONE[tone],
             )}
           >
             <Icon className="size-[1.05rem]" strokeWidth={1.6} />
@@ -91,7 +91,7 @@ export function StatCard({
         <p
           className={cn(
             "figure text-[1.75rem] leading-none font-semibold tracking-[-0.025em]",
-            emphasis === "kota" ? "text-kota-300" : dark ? "text-white" : "text-basalt",
+            emphasis === "kota" ? "text-fg-muted" : dark ? "text-white" : "text-fg",
           )}
         >
           <FigureValue value={value} display />
@@ -109,7 +109,7 @@ export function StatCard({
           aria-hidden="true"
           className={cn(
             "absolute right-5 bottom-5 size-4 -translate-x-1 translate-y-1 opacity-0 transition-all duration-300 group-hover/statlink:translate-x-0 group-hover/statlink:translate-y-0 group-hover/statlink:opacity-100 sm:right-6 sm:bottom-6",
-            dark ? "text-kota" : "text-kota-600",
+            dark ? "text-fg-muted" : "text-fg-muted",
           )}
         />
       )}

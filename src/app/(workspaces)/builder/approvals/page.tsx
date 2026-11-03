@@ -93,10 +93,10 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
         }
       />
 
-      <section className={`${CARD} mb-6 grid animate-fade-up gap-px overflow-hidden bg-[#e4e7e3] sm:mb-8 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]`}>
+      <section className={`${CARD} mb-6 grid animate-fade-up gap-px overflow-hidden bg-[rgba(255,255,255,0.08)] sm:mb-8 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]`}>
         <div className="bg-card px-5 py-6 sm:px-7">
-          <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-kota-600 uppercase">Awaiting your decision</p>
-          <Money paise={sumPaise(awaiting.map((i) => i.amountPaise))} compact size="xl" className="mt-4 font-normal text-basalt" />
+          <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-fg-muted uppercase">Awaiting your decision</p>
+          <Money paise={sumPaise(awaiting.map((i) => i.amountPaise))} compact size="xl" className="mt-4 font-normal text-fg" />
           <p className="mt-2 text-[0.75rem] leading-relaxed text-muted-foreground">
             {awaiting.length} {awaiting.length === 1 ? "invoice" : "invoices"} in review
             {withPartner.length > 0 && ` · ${withPartner.length} with the partner for clarification`}
@@ -149,20 +149,20 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
           )
         ) : (
           <>
-            <ul className="divide-y divide-[#eceeeb] sm:hidden">
+            <ul className="divide-y divide-[rgba(255,255,255,0.07)] sm:hidden">
               {rows.map((invoice) => {
                 const waiting = AWAITING.includes(invoice.status);
                 return (
                   <li key={invoice.id}>
                     <Link
                       href={`/builder/invoices/${invoice.id}`}
-                      className="flex gap-3.5 px-5 py-4 transition-colors hover:bg-[#fafbf9] focus-visible:bg-[#fafbf9] focus-visible:outline-none"
+                      className="flex gap-3.5 px-5 py-4 transition-colors hover:bg-[rgba(255,255,255,0.04)] focus-visible:bg-[rgba(255,255,255,0.04)] focus-visible:outline-none"
                     >
                       <Monogram name={invoice.cp.name} className="size-8 text-[0.8125rem]" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-3">
-                          <span className="truncate font-medium text-basalt">{invoice.invoiceNumber}</span>
-                          <Money paise={invoice.amountPaise} className="shrink-0 font-medium text-basalt" />
+                          <span className="truncate font-medium text-fg">{invoice.invoiceNumber}</span>
+                          <Money paise={invoice.amountPaise} className="shrink-0 font-medium text-fg" />
                         </div>
                         <p className="mt-1 truncate text-[0.75rem] text-muted-foreground">
                           {invoice.cp.name} · {invoice.project.name}
@@ -205,7 +205,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
                         <span className="flex items-center gap-3">
                           <Monogram name={invoice.cp.name} className="size-8 text-[0.8125rem]" />
                           <span className="min-w-0">
-                            <span className="block font-medium text-basalt">{invoice.cp.name}</span>
+                            <span className="block font-medium text-fg">{invoice.cp.name}</span>
                             <span className="mt-1 block text-[0.75rem] text-muted-foreground">{invoice.project.name}</span>
                           </span>
                         </span>
@@ -215,7 +215,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
                         <Ref>{invoice.reference}</Ref>
                       </Td>
                       <Td align="right">
-                        <Money paise={invoice.amountPaise} className="font-medium text-basalt" />
+                        <Money paise={invoice.amountPaise} className="font-medium text-fg" />
                       </Td>
                       <Td className="whitespace-nowrap">{formatDate(invoice.invoiceDate)}</Td>
                       <Td className="whitespace-nowrap">
@@ -229,7 +229,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
                         <StatusBadge kind="invoice" status={invoice.status} />
                       </Td>
                       <Td align="right">
-                        <Button variant={waiting ? "default" : "ghost"} size="sm" asChild className={waiting ? undefined : "text-basalt"}>
+                        <Button variant={waiting ? "default" : "ghost"} size="sm" asChild className={waiting ? undefined : "text-fg"}>
                           <Link href={`/builder/invoices/${invoice.id}`} aria-label={`${waiting ? "Review" : "View"} invoice ${invoice.invoiceNumber}`}>
                             {waiting ? "Review" : "View"}
                             <ArrowRight className="size-3.5" />

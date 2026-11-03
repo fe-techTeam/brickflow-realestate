@@ -12,83 +12,69 @@
   /* Typography */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-heading: var(--font-playfair), var(--font-cormorant), Georgia, serif;
-  --font-display: var(--font-playfair), var(--font-cormorant), Georgia, serif;
-  --font-accent: var(--font-cormorant), Georgia, serif;
+  --font-heading: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-accent: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-figure: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
-  /* Palette: Mumbai basalt (structure), Kota stone (quiet detail), gulmohar (the one accent),
-     leaf (approved and paid). Neutrals lean towards basalt rather than pure grey. */
+  /* Palette: dark glass over a slate-blue dusk gradient. Text is light; surfaces are translucent
+     layers of the background; one warm signal yellow marks the action that matters. */
 
-  /* Basalt — primary ink, navigation and primary actions */
-  --color-basalt-50: #f2f4f3;
-  --color-basalt-100: #e2e7e5;
-  --color-basalt-200: #c5ceca;
-  --color-basalt-300: #9aa8a3;
-  --color-basalt-400: #6b7b76;
-  --color-basalt-500: #4c5c57;
-  --color-basalt-600: #3a4945;
-  --color-basalt-700: #2f3d3a;
-  --color-basalt-800: #283431;
-  --color-basalt: #222d2b;
-  --color-basalt-900: #1a2321;
-  --color-basalt-950: #111816;
+  /* Foreground text */
+  --color-fg: #f5f8fb;
+  --color-fg-soft: #dbe3eb;
+  --color-fg-muted: #aebbc9;
 
-  /* Leaf — approvals, payments, positive outcomes */
-  --color-leaf-50: #eef5ef;
-  --color-leaf-100: #dcebdf;
-  --color-leaf-200: #b9d6bf;
-  --color-leaf-300: #8cbb97;
-  --color-leaf-500: #3f8752;
-  --color-leaf-600: #2f7144;
-  --color-leaf: #275e3a;
-  --color-leaf-700: #275e3a;
-  --color-leaf-800: #1c4529;
-  --color-leaf-900: #12301c;
+  /* Night — opaque-ish dark fills: navigation, primary buttons, hero panels */
+  --color-night: rgb(14 22 34 / 0.32);
+  --color-night-deep: rgb(12 19 30 / 0.4);
+  --color-night-solid: #263345;
 
-  /* Kota stone — eyebrows, rules, linework and other quiet detail */
-  --color-kota-50: #f7f5f1;
-  --color-kota-100: #eeeae3;
-  --color-kota-200: #ddd6ca;
-  --color-kota-300: #c4b9a7;
-  --color-kota-400: #b5a892;
-  --color-kota: #a89a84;
-  --color-kota-500: #a89a84;
-  --color-kota-600: #8c7d66;
-  --color-kota-700: #73654f;
-  --color-kota-800: #5c5040;
+  /* Glass — translucent light layers for quiet fills, hovers and table headers */
+  --color-glass-50: rgb(255 255 255 / 0.035);
+  --color-glass-100: rgb(255 255 255 / 0.06);
+  --color-glass: rgb(255 255 255 / 0.08);
+  --color-glass-200: rgb(255 255 255 / 0.1);
+  --color-glass-300: rgb(255 255 255 / 0.15);
+  --color-glass-400: rgb(255 255 255 / 0.22);
 
-  /* Gulmohar — the single accent: early-payment action, active navigation, focus */
-  --color-gulmohar-50: #fdf1ee;
-  --color-gulmohar-100: #fadcd4;
-  --color-gulmohar-200: #f4b6a6;
-  --color-gulmohar-300: #ea8a72;
-  --color-gulmohar-400: #dd6447;
-  --color-gulmohar-500: #cf4a2d;
-  --color-gulmohar: #b83d24;
-  --color-gulmohar-600: #b83d24;
-  --color-gulmohar-700: #96311d;
-  --color-gulmohar-800: #752717;
+  /* Lines and quiet detail */
+  --color-line: rgb(255 255 255 / 0.09);
+  --color-line-strong: rgb(255 255 255 / 0.18);
+  --color-haze: rgb(214 224 235 / 0.55);
 
-  /* Paper — app canvas */
-  --color-paper-50: #fbfbfa;
-  --color-paper-100: #f6f7f5;
-  --color-paper: #f1f2ef;
-  --color-paper-200: #e6e8e4;
-  --color-paper-300: #d6d9d4;
-  --color-paper-400: #b9beb8;
+  /* Signal — the one accent */
+  --color-signal-50: rgb(255 194 71 / 0.1);
+  --color-signal-100: rgb(255 194 71 / 0.18);
+  --color-signal-200: #ffe3a6;
+  --color-signal-300: #ffd57c;
+  --color-signal-400: #ffca55;
+  --color-signal-500: #ffc247;
+  --color-signal: #f4b632;
+  --color-signal-600: #f4b632;
+  --color-signal-700: #ffcf66;
+  --color-signal-800: #ffdc8f;
 
-  /* Body ink */
-  --color-ink: #2a3331;
-  --color-ink-soft: #4b5552;
+  /* Leaf — approved, paid, positive (light shades for text on dark, dark tints for chips) */
+  --color-leaf-50: rgb(58 191 148 / 0.12);
+  --color-leaf-100: rgb(58 191 148 / 0.18);
+  --color-leaf-200: rgb(58 191 148 / 0.32);
+  --color-leaf-300: #2f9e7a;
+  --color-leaf-500: #3abf94;
+  --color-leaf-600: #45c99d;
+  --color-leaf: #3abf94;
+  --color-leaf-700: #5fd3ab;
+  --color-leaf-800: #7fdcbb;
+  --color-leaf-900: #a6e8d0;
 
   /* Semantic */
-  --color-danger: #a1263f;
-  --color-danger-soft: #f9e6ea;
-  --color-warning: #8f6417;
-  --color-warning-soft: #fbf1df;
-  --color-info: #2a5d8a;
-  --color-info-soft: #e9f0f7;
+  --color-danger: #ff7b6e;
+  --color-danger-soft: rgb(244 87 69 / 0.16);
+  --color-warning: #ff9f5a;
+  --color-warning-soft: rgb(255 159 90 / 0.16);
+  --color-info: #8fc4ff;
+  --color-info-soft: rgb(143 196 255 / 0.15);
+  --color-violet: #a98bff;
   --color-hairline: var(--hairline);
 
   --color-sidebar-ring: var(--sidebar-ring);
@@ -132,12 +118,12 @@
   --radius-4xl: 26px;
 
   /* Layered, warm-tinted shadows */
-  --shadow-hairline: 0 0 0 1px rgb(34 45 43 / 0.06);
-  --shadow-xs: 0 1px 2px rgb(34 45 43 / 0.05);
-  --shadow-card: 0 1px 1px rgb(34 45 43 / 0.03), 0 2px 6px -2px rgb(34 45 43 / 0.05), 0 14px 32px -20px rgb(34 45 43 / 0.16);
-  --shadow-raised: 0 1px 2px rgb(34 45 43 / 0.05), 0 8px 18px -8px rgb(34 45 43 / 0.12), 0 28px 56px -28px rgb(34 45 43 / 0.28);
+  --shadow-hairline: 0 0 0 1px rgb(255 255 255 / 0.06);
+  --shadow-xs: 0 1px 2px rgb(8 14 24 / 0.18);
+  --shadow-card: 0 1px 2px rgb(8 14 24 / 0.12), 0 12px 32px -18px rgb(8 14 24 / 0.45);
+  --shadow-raised: 0 2px 6px rgb(8 14 24 / 0.18), 0 24px 48px -24px rgb(8 14 24 / 0.55);
   --shadow-overlay: 0 2px 6px rgb(17 24 22 / 0.06), 0 22px 48px -16px rgb(17 24 22 / 0.3), 0 60px 120px -40px rgb(17 24 22 / 0.35);
-  --shadow-accent: 0 0 0 1px rgb(184 61 36 / 0.35), 0 10px 28px -14px rgb(150 49 29 / 0.45);
+  --shadow-accent: 0 0 0 1px rgb(255 194 71 / 0.4), 0 10px 26px -14px rgb(255 194 71 / 0.45);
   --shadow-inset-highlight: inset 0 1px 0 rgb(255 255 255 / 0.14);
   --shadow-button: 0 1px 0 rgb(255 255 255 / 0.12) inset, 0 1px 2px rgb(17 24 22 / 0.18), 0 4px 10px -4px rgb(17 24 22 / 0.28);
 
@@ -147,39 +133,40 @@
 }
 
 :root {
-  --background: #f1f2ef;
-  --foreground: #1f2826;
-  --card: #ffffff;
-  --card-foreground: #1f2826;
-  --popover: #ffffff;
-  --popover-foreground: #1f2826;
-  --primary: #222d2b;
-  --primary-foreground: #ffffff;
-  --secondary: #e6e8e4;
-  --secondary-foreground: #222d2b;
-  --muted: #eceeeb;
-  --muted-foreground: #5b6662;
-  --accent: #eef0ed;
-  --accent-foreground: #222d2b;
-  --destructive: #a1263f;
-  --border: #dfe2de;
-  --hairline: #e4e7e3;
-  --input: #cfd4cf;
-  --ring: #b83d24;
-  --chart-1: #222d2b;
-  --chart-2: #275e3a;
-  --chart-3: #b83d24;
-  --chart-4: #5f7f93;
-  --chart-5: #a89a84;
-  --radius: 0.625rem;
-  --sidebar: #1a2321;
-  --sidebar-foreground: #c9d1ce;
-  --sidebar-primary: #dd6447;
-  --sidebar-primary-foreground: #222d2b;
-  --sidebar-accent: #283431;
+  color-scheme: dark;
+  --background: #3b4a5f;
+  --foreground: #f5f8fb;
+  --card: rgb(18 28 42 / 0.22);
+  --card-foreground: #f5f8fb;
+  --popover: #2b394c;
+  --popover-foreground: #f5f8fb;
+  --primary: #ffc247;
+  --primary-foreground: #1e2733;
+  --secondary: rgb(255 255 255 / 0.1);
+  --secondary-foreground: #f5f8fb;
+  --muted: rgb(255 255 255 / 0.06);
+  --muted-foreground: #aebbc9;
+  --accent: rgb(255 255 255 / 0.08);
+  --accent-foreground: #f5f8fb;
+  --destructive: #ff7b6e;
+  --border: rgb(255 255 255 / 0.1);
+  --hairline: rgb(255 255 255 / 0.07);
+  --input: rgb(255 255 255 / 0.16);
+  --ring: #ffc247;
+  --chart-1: #e8eef5;
+  --chart-2: #3abf94;
+  --chart-3: #ffc247;
+  --chart-4: #a98bff;
+  --chart-5: #f4876e;
+  --radius: 0.5rem;
+  --sidebar: transparent;
+  --sidebar-foreground: #dbe3eb;
+  --sidebar-primary: #ffc247;
+  --sidebar-primary-foreground: #1e2733;
+  --sidebar-accent: rgb(255 255 255 / 0.08);
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #2f3d3a;
-  --sidebar-ring: #dd6447;
+  --sidebar-border: rgb(255 255 255 / 0.08);
+  --sidebar-ring: #ffc247;
 }
 
 @layer base {
@@ -190,23 +177,32 @@
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
-    scrollbar-color: var(--color-paper-400) transparent;
+    scrollbar-color: var(--color-glass-400) transparent;
     scrollbar-width: thin;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
+    min-height: 100vh;
+    background-color: var(--background);
+    background-image:
+      radial-gradient(120% 70% at 8% -12%, rgb(18 28 44 / 0.55) 0%, rgb(18 28 44 / 0) 62%),
+      radial-gradient(90% 60% at 100% 108%, rgb(222 232 243 / 0.22) 0%, rgb(222 232 243 / 0) 60%),
+      radial-gradient(70% 40% at 62% 46%, rgb(255 255 255 / 0.06) 0%, rgb(255 255 255 / 0) 70%),
+      linear-gradient(158deg, #34435a 0%, #43546c 34%, #5f7189 68%, #8798ad 100%);
+    background-attachment: fixed;
     font-feature-settings: "cv11", "ss01", "ss03";
   }
   h1,
   h2,
   h3 {
-    @apply font-display text-basalt;
-    letter-spacing: -0.012em;
+    @apply font-display text-fg;
+    font-weight: 400;
+    letter-spacing: -0.01em;
     font-feature-settings: "lnum", "kern";
   }
   ::selection {
-    background-color: rgb(221 100 71 / 0.22);
-    color: var(--color-basalt-900);
+    background-color: rgb(255 194 71 / 0.32);
+    color: #ffffff;
   }
   :focus-visible {
     outline-offset: 2px;
@@ -219,13 +215,13 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background-color: var(--color-paper-300);
+    background-color: var(--color-glass-300);
     border: 3px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-paper-400);
+    background-color: var(--color-glass-400);
   }
   code,
   kbd {
@@ -251,18 +247,18 @@
 
 @utility display-title {
   font-family: var(--font-display);
-  font-weight: 500;
-  font-size: clamp(1.875rem, 1.35rem + 1.5vw, 2.625rem);
-  line-height: 1.08;
-  letter-spacing: -0.022em;
-  color: var(--color-basalt);
+  font-weight: 300;
+  font-size: clamp(1.75rem, 1.3rem + 1.3vw, 2.375rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--color-fg);
   font-feature-settings: "lnum", "kern", "liga", "dlig";
   text-wrap: balance;
 }
 
 @utility display-hero {
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 300;
   font-size: clamp(2.5rem, 1.6rem + 3vw, 4.25rem);
   line-height: 1.02;
   letter-spacing: -0.03em;
@@ -272,11 +268,11 @@
 
 @utility heading-section {
   font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 1.1875rem;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  color: var(--color-basalt);
+  font-weight: 400;
+  font-size: 1.125rem;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+  color: var(--color-fg);
 }
 
 @utility eyebrow {
@@ -285,11 +281,10 @@
 
 @utility kicker {
   font-family: var(--font-accent);
-  font-style: italic;
-  font-weight: 500;
+  font-weight: 300;
   font-size: 1.0625rem;
-  letter-spacing: 0.005em;
-  color: var(--color-kota-600);
+  letter-spacing: 0;
+  color: var(--color-fg-muted);
 }
 
 @utility text-balance {
@@ -306,13 +301,13 @@
 @utility kota-rule {
   height: 1px;
   border: 0;
-  background-image: linear-gradient(90deg, var(--color-kota) 0%, rgb(168 154 132 / 0.55) 40%, rgb(168 154 132 / 0) 100%);
+  background-image: linear-gradient(90deg, rgb(214 224 235 / 0.5) 0%, rgb(214 224 235 / 0.2) 40%, rgb(214 224 235 / 0) 100%);
 }
 
 @utility kota-rule-center {
   height: 1px;
   border: 0;
-  background-image: linear-gradient(90deg, rgb(168 154 132 / 0) 0%, var(--color-kota) 50%, rgb(168 154 132 / 0) 100%);
+  background-image: linear-gradient(90deg, rgb(214 224 235 / 0) 0%, rgb(214 224 235 / 0.45) 50%, rgb(214 224 235 / 0) 100%);
 }
 
 @utility hairline-rule {
@@ -324,25 +319,24 @@
 /* Surfaces ------------------------------------------------------------- */
 
 @utility surface {
-  @apply rounded-xl border border-border/90 bg-card shadow-card;
+  @apply rounded-lg border border-line bg-card shadow-card;
+  backdrop-filter: blur(14px) saturate(115%);
 }
 
 @utility surface-raised {
-  @apply rounded-xl border border-border/80 bg-card shadow-raised;
+  @apply rounded-lg border border-line bg-card shadow-raised;
+  backdrop-filter: blur(16px) saturate(115%);
 }
 
 @utility surface-quiet {
-  @apply rounded-xl border border-hairline bg-paper-100;
+  @apply rounded-lg border border-hairline bg-glass-100;
 }
 
-/* Deep basalt panel with soft depth, for hero metrics and brand moments. */
+/* Deeper glass panel for hero metrics and brand moments. */
 @utility surface-basalt {
-  @apply rounded-xl border border-basalt-900 text-white shadow-raised;
-  background-color: var(--color-basalt);
-  background-image:
-    radial-gradient(120% 90% at 100% 0%, rgb(168 154 132 / 0.14) 0%, rgb(168 154 132 / 0) 55%),
-    radial-gradient(90% 120% at 0% 100%, rgb(17 24 22 / 0.55) 0%, rgb(17 24 22 / 0) 60%),
-    linear-gradient(160deg, #283431 0%, #222d2b 45%, #111816 100%);
+  @apply rounded-lg border border-line text-white shadow-raised;
+  background-color: var(--color-night-deep);
+  backdrop-filter: blur(18px) saturate(120%);
 }
 
 /* Motion --------------------------------------------------------------- */
@@ -393,4 +387,19 @@
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Popups sit on solid glass so page content never bleeds through their text. */
+[data-slot="dialog-content"],
+[data-slot="sheet-content"],
+[data-slot="alert-dialog-content"],
+[data-slot="popover-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="select-content"] {
+  background-color: var(--popover);
+}
+[data-slot="dialog-overlay"],
+[data-slot="sheet-overlay"],
+[data-slot="alert-dialog-overlay"] {
+  background-color: rgb(10 16 26 / 0.62);
 }

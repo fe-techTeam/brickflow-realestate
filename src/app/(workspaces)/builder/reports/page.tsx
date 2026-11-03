@@ -130,7 +130,7 @@ export default async function ReportsPage() {
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-leaf-100 text-leaf">
               <FileSpreadsheet className="size-5" strokeWidth={1.6} />
             </span>
-            <p className="max-w-2xl text-sm leading-relaxed text-ink">
+            <p className="max-w-2xl text-sm leading-relaxed text-fg-soft">
               CSV with one row per invoice: partner, project, dates, status, invoice / GST / approved amounts in rupees, and the early-payment and settlement position. Opens
               directly in Excel. Disbursement references are simulated.
             </p>

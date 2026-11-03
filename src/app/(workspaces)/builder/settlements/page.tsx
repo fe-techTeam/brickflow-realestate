@@ -44,10 +44,10 @@ function DaysCell({ settlement, now }: { settlement: BuilderSettlement; now: Dat
     );
   }
   const days = calendarDaysUntil(settlement.dueDate, now);
-  if (days === 0) return <span className="font-medium text-[#8a5a12]">Due today</span>;
-  if (days < 0) return <span className="font-medium text-[#8a1f37]">{-days} {days === -1 ? "day" : "days"} overdue</span>;
+  if (days === 0) return <span className="font-medium text-[#ffb36b]">Due today</span>;
+  if (days < 0) return <span className="font-medium text-[#ff8c80]">{-days} {days === -1 ? "day" : "days"} overdue</span>;
   return (
-    <span className={cn("tabular", days <= 7 ? "font-medium text-[#8a5a12]" : "text-ink")}>
+    <span className={cn("tabular", days <= 7 ? "font-medium text-[#ffb36b]" : "text-fg-soft")}>
       {days} {days === 1 ? "day" : "days"} to due
     </span>
   );
@@ -91,9 +91,9 @@ export default async function SettlementsPage({ searchParams }: { searchParams: 
         lede="What you owe Veefin for invoices it paid early to your channel partners. Each settlement is the full approved invoice amount, due on the invoice's original due date."
       />
 
-      <section className={cn(CARD, "mb-6 grid animate-fade-up gap-px overflow-hidden bg-[#e4e7e3] lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]")}>
-        <div className="bg-basalt px-5 py-6 text-white sm:px-7">
-          <p className="flex items-center gap-2 text-[0.625rem] font-semibold tracking-[0.18em] text-kota uppercase">
+      <section className={cn(CARD, "mb-6 grid animate-fade-up gap-px overflow-hidden bg-[rgba(255,255,255,0.08)] lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]")}>
+        <div className="bg-night px-5 py-6 text-white sm:px-7">
+          <p className="flex items-center gap-2 text-[0.625rem] font-semibold tracking-[0.18em] text-fg-muted uppercase">
             <Landmark className="size-3.5" />
             Owed to Veefin
           </p>
@@ -162,19 +162,19 @@ export default async function SettlementsPage({ searchParams }: { searchParams: 
               {rows.map((s) => (
                 <Tr key={s.id}>
                   <Td className="whitespace-nowrap">
-                    <span className="font-medium text-basalt">{formatDate(s.dueDate)}</span>
+                    <span className="font-medium text-fg">{formatDate(s.dueDate)}</span>
                   </Td>
                   <Td>
-                    <p className="font-mono text-[0.75rem] text-basalt">{s.request.reference}</p>
+                    <p className="font-mono text-[0.75rem] text-fg">{s.request.reference}</p>
                     <p className="mt-1 text-[0.75rem] text-muted-foreground">Payable to {s.request.financier.name}</p>
                   </Td>
                   <Td>
                     <RowLink href={`/builder/invoices/${s.request.invoice.id}`}>{s.request.invoice.invoiceNumber}</RowLink>
                     <p className="mt-1 text-[0.75rem] text-muted-foreground">{s.request.invoice.project.name}</p>
                   </Td>
-                  <Td className="font-medium text-basalt">{s.request.cp.name}</Td>
+                  <Td className="font-medium text-fg">{s.request.cp.name}</Td>
                   <Td align="right">
-                    <Money paise={s.amountPaise} className="font-semibold text-basalt" />
+                    <Money paise={s.amountPaise} className="font-semibold text-fg" />
                   </Td>
                   <Td className="whitespace-nowrap">
                     <DaysCell settlement={s} now={now} />

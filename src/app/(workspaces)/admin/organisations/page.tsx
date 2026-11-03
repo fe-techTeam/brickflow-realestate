@@ -114,7 +114,7 @@ export default async function OrganisationsPage({ searchParams }: { searchParams
                     <div className="flex items-center gap-3.5">
                       <Monogram name={org.name} size="sm" tone={org.type === "PLATFORM" ? "basalt" : org.status === "INACTIVE" ? "muted" : "paper"} />
                       <div className="min-w-0">
-                        <Link href={`/admin/organisations/${org.id}`} className="font-medium text-basalt hover:underline">
+                        <Link href={`/admin/organisations/${org.id}`} className="font-medium text-fg hover:underline">
                           {org.name}
                         </Link>
                         <p className="text-xs text-muted-foreground">{org.legalName}</p>
@@ -126,7 +126,7 @@ export default async function OrganisationsPage({ searchParams }: { searchParams
                   </LTd>
                   <LTd className="font-mono text-xs tracking-tight">{org.gstin ?? "—"}</LTd>
                   <LTd>{org.city ?? "—"}</LTd>
-                  <LTd align="right" className="font-medium text-basalt">
+                  <LTd align="right" className="font-medium text-fg">
                     {org._count.members}
                   </LTd>
                   <LTd>
@@ -139,7 +139,7 @@ export default async function OrganisationsPage({ searchParams }: { searchParams
                       </Button>
                       {org.type === "PLATFORM" ? (
                         <span className="inline-flex h-8 items-center gap-1.5 px-3 text-xs text-muted-foreground">
-                          <ShieldCheck className="size-3.5 text-kota-600" strokeWidth={1.6} aria-hidden="true" />
+                          <ShieldCheck className="size-3.5 text-fg-muted" strokeWidth={1.6} aria-hidden="true" />
                           Protected
                         </span>
                       ) : (

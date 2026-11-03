@@ -117,16 +117,16 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       <div className="flex items-center gap-3">
                         <Monogram name={m.user.name} size="sm" tone={self ? "basalt" : m.user.status === "ACTIVE" ? "paper" : "muted"} className="rounded-full" />
                         <div className="min-w-0">
-                          <p className="font-medium text-basalt">
+                          <p className="font-medium text-fg">
                             {m.user.name}
-                            {self && <span className="ml-2 text-xs font-normal text-kota-600">(you)</span>}
+                            {self && <span className="ml-2 text-xs font-normal text-fg-muted">(you)</span>}
                           </p>
                           <p className="text-xs text-muted-foreground">{m.user.email}</p>
                         </div>
                       </div>
                     </LTd>
                     <LTd>
-                      <Link href={`/admin/organisations/${m.organisation.id}`} className="text-basalt hover:underline">
+                      <Link href={`/admin/organisations/${m.organisation.id}`} className="text-fg hover:underline">
                         {m.organisation.name}
                       </Link>
                       <div className="mt-1 flex flex-wrap gap-1.5">

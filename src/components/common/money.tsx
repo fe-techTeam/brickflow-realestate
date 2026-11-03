@@ -9,10 +9,10 @@ type MoneyTone = "inherit" | "basalt" | "positive" | "negative" | "kota" | "mute
 
 const TONE: Record<MoneyTone, string> = {
   inherit: "",
-  basalt: "text-basalt",
+  basalt: "text-fg",
   positive: "text-leaf",
   negative: "text-danger",
-  kota: "text-kota-600",
+  kota: "text-fg-muted",
   muted: "text-muted-foreground",
 };
 

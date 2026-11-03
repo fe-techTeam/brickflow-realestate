@@ -109,7 +109,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                       <span className="min-w-0">
                         <Link
                           href={`/builder/approvals?view=all&q=${encodeURIComponent(p.cp.name)}`}
-                          className="font-medium text-basalt decoration-kota/60 underline-offset-[5px] hover:underline"
+                          className="font-medium text-fg decoration-fg-muted/60 underline-offset-[5px] hover:underline"
                           title={`View invoices from ${p.cp.name}`}
                         >
                           {p.cp.name}
@@ -122,7 +122,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     </span>
                   </Td>
                   <Td>
-                    <p className="font-mono text-[0.75rem] text-ink">{p.empanelmentCode}</p>
+                    <p className="font-mono text-[0.75rem] text-fg-soft">{p.empanelmentCode}</p>
                     <p className="mt-1 text-[0.75rem] text-muted-foreground">Since {formatDate(p.empanelledAt)}</p>
                   </Td>
                   <Td align="right">
@@ -132,8 +132,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     <StatusBadge kind="record" status={p.status} />
                   </Td>
                   <Td align="right">
-                    <span className="font-medium text-basalt">{p.totals.invoiceCount}</span>
-                    {p.totals.openCount > 0 && <p className="mt-1 text-[0.6875rem] text-[#8a5a12]">{p.totals.openCount} open</p>}
+                    <span className="font-medium text-fg">{p.totals.invoiceCount}</span>
+                    {p.totals.openCount > 0 && <p className="mt-1 text-[0.6875rem] text-[#ffb36b]">{p.totals.openCount} open</p>}
                   </Td>
                   <Td align="right">
                     <Money paise={p.totals.invoiceValue} />
@@ -142,7 +142,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     <Money paise={p.totals.approvedValue} className="font-medium text-leaf" />
                   </Td>
                   <Td align="right">
-                    <Money paise={p.totals.financedValue} className="text-basalt" />
+                    <Money paise={p.totals.financedValue} className="text-fg" />
                     <span className="mt-1.5 flex justify-end">
                       <ShareBar part={p.totals.financedValue} whole={p.totals.approvedValue} />
                     </span>

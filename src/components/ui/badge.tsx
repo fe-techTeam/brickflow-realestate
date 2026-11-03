@@ -8,16 +8,16 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-basalt text-white [a]:hover:bg-basalt-700",
-        kota: "border-kota-300/70 bg-kota-50 text-kota-700",
+        default: "bg-night text-white [a]:hover:bg-night",
+        kota: "border-line/70 bg-glass-50 text-fg-muted",
         success: "border-leaf-200 bg-leaf-50 text-leaf",
-        basalt: "border-basalt-200 bg-basalt-50 text-basalt",
+        basalt: "border-line bg-glass-50 text-fg",
         secondary:
-          "border-paper-300 bg-paper-100 text-ink [a]:hover:bg-paper-200",
+          "border-line bg-glass-100 text-fg-soft [a]:hover:bg-glass-200",
         destructive:
           "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
         outline:
-          "border-border bg-card text-ink [a]:hover:bg-paper-100 [a]:hover:text-muted-foreground",
+          "border-border bg-card text-fg-soft [a]:hover:bg-glass-100 [a]:hover:text-muted-foreground",
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",

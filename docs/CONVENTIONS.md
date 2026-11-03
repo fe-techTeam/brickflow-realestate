@@ -41,29 +41,29 @@ Workspace roots: `/partner` (channel partner), `/builder`, `/finance` (Veefin), 
 
 ## Visual language
 
-The palette is drawn from Mumbai's built environment rather than a generic finance template:
+The interface is a dark glass theme: light text over a slate-blue dusk gradient, with translucent layered surfaces.
 
 | Role | Token | Value | Use |
 | --- | --- | --- | --- |
-| Basalt | `basalt-*` (`bg-basalt`, `text-basalt`) | `#222D2B` | Structure: navigation, headings, primary buttons, dark hero panels. The green-black stone of the city's heritage buildings. |
-| Kota stone | `kota-*` | `#A89A84` | Quiet detail: eyebrows, rules, linework, secondary figures on dark panels. |
-| Gulmohar | `gulmohar-*` | `#B83D24` | The single accent: the early-payment action, active navigation, focus rings, the logo waterline. At most one or two accent moments per screen. |
-| Leaf | `leaf-*` | `#275E3A` | Approved, paid, settled and other positive outcomes. |
-| Paper | `paper-*` | `#F1F2EF` | App canvas; neutrals lean slightly towards basalt instead of pure grey. |
-| Ink | `ink`, `ink-soft` | `#2A3331` | Body text. |
-| Status | `danger`, `warning`, `info` | `#A1263F`, `#8F6417`, `#2A5D8A` | Rejected (crimson, kept clearly apart from the accent), pending, informational. |
+| Text | `fg`, `fg-soft`, `fg-muted` | `#F5F8FB`, `#DBE3EB`, `#AEBBC9` | Headings and figures, body, secondary text. |
+| Night | `night`, `night-deep`, `night-solid` | translucent slate; `#263345` | Hero panels, primary buttons, banners; `night-solid` where opacity is required. |
+| Glass | `glass-50` … `glass-400` | white at 3.5–22% | Quiet fills, hovers, table headers, chips. |
+| Lines | `line`, `line-strong`, `haze` | white at 9% / 18%; mist | Borders, rules, quiet detail. |
+| Signal | `signal-*` | `#FFC247` | The single accent: early-payment action, active navigation, focus, the logo. |
+| Leaf | `leaf-*` | `#3ABF94` | Approved, paid, settled. Low shades are dark tints for chips; high shades are text. |
+| Status | `danger`, `warning`, `info`, `violet` | `#FF7B6E`, `#FF9F5A`, `#8FC4FF`, `#A98BFF` | Rejected, pending, informational, chart series. |
 
-Rules: do not introduce new hues for decoration; do not use gradients for colour (only for subtle depth on dark panels); charts use the ordered `CHART_SERIES` in `common/chart-theme.ts`. Invoice PDFs belong to the channel partner, so they use a neutral letterhead rather than platform colours.
-Utilities: `surface`, `surface-basalt`, `eyebrow`, `figure`, `tabular`, `kota-rule`, `animate-fade-up`.
-Headings use the display serif (`font-display`); body text uses Inter. Keep shadows subtle, radii modest, motion restrained.
+Rules: cards use `surface` (translucent with backdrop blur); popups (dialogs, sheets, menus, selects) are always opaque (`--popover`) so page content never bleeds through text. Charts use `CHART_SERIES` from `common/chart-theme.ts` (signal, leaf, coral, violet, mist). Headings use Inter at light weights; figures use `figure`. Invoice PDFs keep a neutral letterhead because they are the channel partner's documents.
+Utilities: `surface`, `surface-basalt` (deeper glass panel), `surface-quiet`, `eyebrow`, `figure`, `tabular`, `kota-rule`, `animate-fade-up`.
+Headings and body use Inter (`font-display` maps to Inter). Keep shadows soft, radii modest (8px), motion restrained.
 
 ## Design system building blocks
 
 Tokens, utilities and components added for the premium visual system. All existing props still work; everything below is additive.
 
-**Type and utilities.** Page titles use `display-title` (Playfair Display), brand moments `display-hero`, section headings `heading-section`; italic accents use `font-accent` / `kicker` (Cormorant Garamond). Every amount, count and rate uses `figure`, which sets Inter with tabular, lining numerals. Lines: `hairline` (border colour), `kota-rule`, `kota-rule-center`, `hairline-rule`. Surfaces: `surface`, `surface-raised`, `surface-quiet`, `surface-basalt`. Gulmohar is an accent only, never a fill for large areas.
+**Type and utilities.** Page titles use `display-title` (Inter Light), brand moments `display-hero`, section headings `heading-section`; secondary title words use `kicker` (Inter Light, muted). Every amount, count and rate uses `figure`, which sets Inter with tabular, lining numerals. Lines: `hairline` (border colour), `kota-rule`, `kota-rule-center`, `hairline-rule`. Surfaces: `surface`, `surface-raised`, `surface-quiet`, `surface-basalt`. Signal is an accent only, never a fill for large areas.
 
-**Buttons.** `variant`: `default` (basalt primary), `accent` (gulmohar; one special action per screen, e.g. *Get discounted amount*), `success` (approvals, financing), `outline`, `secondary`, `ghost`, `destructive`, `link`.
+**Buttons.** `variant`: `default` (glass primary), `accent` (signal yellow; one special action per screen, e.g. *Get discounted amount*), `success` (approvals, financing), `outline`, `secondary`, `ghost`, `destructive`, `link`.
 
 | Component | Import | Notes |
 | --- | --- | --- |

@@ -35,7 +35,7 @@ export function HeroMetric({
     <section
       className={cn(
         "relative isolate animate-fade-up overflow-hidden rounded-xl p-6 sm:p-8",
-        dark ? "surface-basalt" : "surface bg-gradient-to-br from-card via-card to-kota-50",
+        dark ? "surface-basalt" : "surface bg-gradient-to-br from-card via-card to-glass-50",
         className,
       )}
     >
@@ -47,18 +47,18 @@ export function HeroMetric({
               <span
                 className={cn(
                   "flex size-9 items-center justify-center rounded-lg ring-1 ring-inset",
-                  dark ? "bg-white/[0.06] text-kota ring-kota/30" : "bg-kota-50 text-kota-700 ring-kota-200",
+                  dark ? "bg-card/[0.06] text-fg-muted ring-line-strong/30" : "bg-glass-50 text-fg-muted ring-line",
                 )}
               >
                 <Icon className="size-[1.05rem]" strokeWidth={1.6} />
               </span>
             )}
-            <p className={cn("eyebrow", dark ? "text-kota-300/90" : "text-kota-700")}>{label}</p>
+            <p className={cn("eyebrow", dark ? "text-fg-muted/90" : "text-fg-muted")}>{label}</p>
           </div>
           <p
             className={cn(
               "figure mt-5 text-[2.5rem] leading-none font-semibold tracking-[-0.035em] sm:text-[3.25rem]",
-              dark ? "text-white" : "text-basalt",
+              dark ? "text-white" : "text-fg",
             )}
           >
             <FigureValue value={value} display />
@@ -85,7 +85,7 @@ function HeroBackdrop({ dark }: { dark: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className={cn("pointer-events-none absolute right-0 bottom-0 -z-10 h-full w-[55%] max-w-[520px]", dark ? "text-kota/[0.12]" : "text-basalt/[0.06]")}
+      className={cn("pointer-events-none absolute right-0 bottom-0 -z-10 h-full w-[55%] max-w-[520px]", dark ? "text-fg-muted/[0.12]" : "text-fg/[0.06]")}
       viewBox="0 0 520 260"
       preserveAspectRatio="xMaxYMax meet"
       fill="none"

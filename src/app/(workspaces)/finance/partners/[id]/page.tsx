@@ -114,12 +114,12 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
                   <LTd>
                     <div className="flex items-center gap-3">
                       <Monogram name={r.builder.name} tone="leaf" size="sm" />
-                      <Link href={`/finance/builders/${r.builder.id}`} className="font-medium text-basalt underline-offset-4 hover:underline">
+                      <Link href={`/finance/builders/${r.builder.id}`} className="font-medium text-fg underline-offset-4 hover:underline">
                         {r.builder.name}
                       </Link>
                     </div>
                   </LTd>
-                  <LTd className="tabular tracking-wide text-basalt">{r.empanelmentCode}</LTd>
+                  <LTd className="tabular tracking-wide text-fg">{r.empanelmentCode}</LTd>
                   <LTd align="right">{r.creditPeriodDays} days</LTd>
                   <LTd className="text-xs">{formatDate(r.empanelledAt)}</LTd>
                   <LTd>

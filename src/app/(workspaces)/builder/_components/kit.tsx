@@ -5,13 +5,13 @@ import { initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const CARD =
-  "rounded-xl border border-[#dfe2de] bg-card shadow-[0_1px_0_rgba(34, 45, 43,0.03),0_22px_44px_-32px_rgba(34, 45, 43,0.28)]";
+  "rounded-xl border border-[rgba(255,255,255,0.1)] bg-card shadow-[0_1px_0_rgba(8, 14, 24,0.03),0_22px_44px_-32px_rgba(8, 14, 24,0.28)]";
 
 /** Stone rule + small caps label used above titles throughout the workspace. */
 export function Eyebrow({ children, className, rule = true }: { children: ReactNode; className?: string; rule?: boolean }) {
   return (
-    <p className={cn("flex items-center gap-2.5 text-[0.6875rem] font-semibold tracking-[0.18em] text-kota-600 uppercase", className)}>
-      {rule && <span aria-hidden="true" className="h-px w-6 bg-kota/70" />}
+    <p className={cn("flex items-center gap-2.5 text-[0.6875rem] font-semibold tracking-[0.18em] text-fg-muted uppercase", className)}>
+      {rule && <span aria-hidden="true" className="h-px w-6 bg-haze/70" />}
       {children}
     </p>
   );
@@ -34,11 +34,11 @@ export function Masthead({
   className?: string;
 }) {
   return (
-    <header className={cn("mb-8 animate-fade-up border-b border-[#dfe2de] pb-7 sm:mb-10 sm:pb-8", className)}>
+    <header className={cn("mb-8 animate-fade-up border-b border-[rgba(255,255,255,0.1)] pb-7 sm:mb-10 sm:pb-8", className)}>
       {back && (
         <Link
           href={back.href}
-          className="mb-5 inline-flex items-center gap-1 text-[0.75rem] font-medium tracking-wide text-muted-foreground transition-colors hover:text-basalt"
+          className="mb-5 inline-flex items-center gap-1 text-[0.75rem] font-medium tracking-wide text-muted-foreground transition-colors hover:text-fg"
         >
           <ChevronLeft className="size-3.5" />
           {back.label}
@@ -47,8 +47,8 @@ export function Masthead({
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           {eyebrow && <Eyebrow className="mb-3">{eyebrow}</Eyebrow>}
-          <h1 className="text-[2.25rem] leading-[1.05] font-semibold tracking-[-0.01em] text-basalt sm:text-[2.875rem]">{title}</h1>
-          {lede && <div className="mt-3 max-w-2xl text-[0.9375rem] leading-relaxed text-ink/75">{lede}</div>}
+          <h1 className="text-[2.25rem] leading-[1.05] font-semibold tracking-[-0.01em] text-fg sm:text-[2.875rem]">{title}</h1>
+          {lede && <div className="mt-3 max-w-2xl text-[0.9375rem] leading-relaxed text-fg-soft/75">{lede}</div>}
         </div>
         {actions && <div className="flex shrink-0 flex-wrap items-center gap-2.5">{actions}</div>}
       </div>
@@ -87,12 +87,12 @@ export function Panel({
         <header
           className={cn(
             "flex flex-col gap-3 px-5 pt-5 sm:flex-row sm:items-end sm:justify-between sm:px-7 sm:pt-6",
-            divided ? "border-b border-[#eceeeb] pb-4 sm:pb-5" : "pb-1",
+            divided ? "border-b border-[rgba(255,255,255,0.07)] pb-4 sm:pb-5" : "pb-1",
           )}
         >
           <div className="min-w-0">
-            {eyebrow && <p className="mb-1.5 text-[0.625rem] font-semibold tracking-[0.18em] text-kota-600 uppercase">{eyebrow}</p>}
-            {title && <h2 className="text-[1.375rem] leading-tight font-semibold text-basalt sm:text-[1.5rem]">{title}</h2>}
+            {eyebrow && <p className="mb-1.5 text-[0.625rem] font-semibold tracking-[0.18em] text-fg-muted uppercase">{eyebrow}</p>}
+            {title && <h2 className="text-[1.375rem] leading-tight font-semibold text-fg sm:text-[1.5rem]">{title}</h2>}
             {description && <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground">{description}</p>}
           </div>
           {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -106,17 +106,17 @@ export function Panel({
 export type Accent = "basalt" | "leaf" | "kota" | "slate" | "amber" | "rose";
 
 const ACCENT_BAR: Record<Accent, string> = {
-  basalt: "bg-basalt",
+  basalt: "bg-night",
   leaf: "bg-leaf",
-  kota: "bg-kota",
-  slate: "bg-[#8b9692]",
-  amber: "bg-[#c48a2c]",
-  rose: "bg-[#b8324f]",
+  kota: "bg-haze",
+  slate: "bg-[#9fb0c3]",
+  amber: "bg-[#ffb36b]",
+  rose: "bg-[#ff7b6e]",
 };
 
 /** A row of figures sharing one card, separated by hairlines (the private-banking "statement strip"). */
 export function MetricStrip({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn(CARD, "grid animate-fade-up gap-px overflow-hidden bg-[#e4e7e3]", className)}>{children}</div>;
+  return <div className={cn(CARD, "grid animate-fade-up gap-px overflow-hidden bg-[rgba(255,255,255,0.08)]", className)}>{children}</div>;
 }
 
 export function Metric({
@@ -141,15 +141,15 @@ export function Metric({
           <span aria-hidden="true" className={cn("h-3 w-[3px] rounded-full", ACCENT_BAR[accent])} />
           {label}
         </p>
-        {href && <ArrowUpRight aria-hidden="true" className="size-3.5 text-muted-foreground/60 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-basalt" />}
+        {href && <ArrowUpRight aria-hidden="true" className="size-3.5 text-muted-foreground/60 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-fg" />}
       </div>
-      <div className="mt-5 text-basalt">{value}</div>
+      <div className="mt-5 text-fg">{value}</div>
       {caption && <p className="mt-2 text-[0.75rem] leading-relaxed text-muted-foreground">{caption}</p>}
     </>
   );
   const cell = "group flex min-w-0 flex-col bg-card px-5 py-5 sm:px-6 sm:py-6";
   return href ? (
-    <Link href={href} className={cn(cell, "transition-colors hover:bg-[#fafbf9] focus-visible:bg-[#fafbf9] focus-visible:outline-none", className)}>
+    <Link href={href} className={cn(cell, "transition-colors hover:bg-[rgba(255,255,255,0.04)] focus-visible:bg-[rgba(255,255,255,0.04)] focus-visible:outline-none", className)}>
       {body}
     </Link>
   ) : (
@@ -173,9 +173,9 @@ export function Monogram({ name, className, tone = "paper" }: { name: string; cl
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex size-9 shrink-0 items-center justify-center rounded-full font-display text-[0.95rem] font-semibold tracking-wide ring-1",
-        tone === "paper" && "bg-paper text-basalt ring-kota/35",
-        tone === "basalt" && "bg-basalt text-kota ring-basalt",
+        "inline-flex size-9 shrink-0 items-center justify-center rounded-full font-display text-[0.95rem] font-normal tracking-wide ring-1",
+        tone === "paper" && "bg-glass text-fg ring-line-strong/35",
+        tone === "basalt" && "bg-night text-fg-muted ring-line-strong",
         tone === "sage" && "bg-leaf-100 text-leaf ring-leaf/20",
         className,
       )}
@@ -187,10 +187,10 @@ export function Monogram({ name, className, tone = "paper" }: { name: string; cl
 
 const CALLOUT_TONE = {
   leaf: "border-leaf/15 bg-leaf-100/45 text-leaf [&_.callout-icon]:bg-leaf [&_.callout-icon]:text-white",
-  kota: "border-kota/30 bg-kota-100/55 text-[#6e5627] [&_.callout-icon]:bg-kota [&_.callout-icon]:text-basalt",
-  basalt: "border-basalt/10 bg-[#eef1f4] text-basalt [&_.callout-icon]:bg-basalt [&_.callout-icon]:text-kota",
-  amber: "border-[#e3ddd2] bg-[#fbf3e3] text-[#73490c] [&_.callout-icon]:bg-[#c48a2c] [&_.callout-icon]:text-white",
-  rose: "border-[#efc6cf] bg-[#fbefec] text-[#7d2c23] [&_.callout-icon]:bg-[#b8324f] [&_.callout-icon]:text-white",
+  kota: "border-line-strong/30 bg-glass-100/55 text-[#e9c98a] [&_.callout-icon]:bg-haze [&_.callout-icon]:text-fg",
+  basalt: "border-line-strong/10 bg-[rgba(255,255,255,0.06)] text-fg [&_.callout-icon]:bg-night [&_.callout-icon]:text-fg-muted",
+  amber: "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] text-[#ffb36b] [&_.callout-icon]:bg-[#ffb36b] [&_.callout-icon]:text-white",
+  rose: "border-[rgba(255,123,110,0.3)] bg-[rgba(255,194,71,0.12)] text-[#ff8c80] [&_.callout-icon]:bg-[#ff7b6e] [&_.callout-icon]:text-white",
 } as const;
 
 export function Callout({
@@ -235,12 +235,12 @@ export function Empty({
 }) {
   return (
     <div className={cn("flex flex-col items-center justify-center px-6 py-14 text-center sm:py-16", className)}>
-      <span className="mb-5 flex size-16 items-center justify-center rounded-full border border-kota/25 p-1.5">
-        <span className="flex size-full items-center justify-center rounded-full bg-paper text-kota-600 ring-1 ring-kota/30">
+      <span className="mb-5 flex size-16 items-center justify-center rounded-full border border-line-strong/25 p-1.5">
+        <span className="flex size-full items-center justify-center rounded-full bg-glass text-fg-muted ring-1 ring-line-strong/30">
           <Icon className="size-5" strokeWidth={1.5} />
         </span>
       </span>
-      <p className="font-display text-[1.375rem] leading-tight font-semibold text-basalt">{title}</p>
+      <p className="font-display text-[1.375rem] leading-tight font-normal text-fg">{title}</p>
       {description && <p className="mt-2 max-w-md text-[0.8125rem] leading-relaxed text-muted-foreground">{description}</p>}
       {action && <div className="mt-6">{action}</div>}
     </div>
@@ -265,21 +265,21 @@ export function LedgerLine({
     <div
       className={cn(
         "flex items-baseline justify-between gap-6 py-3.5",
-        tone === "total" && "mt-1 border-t-2 border-double border-basalt/20 pt-5",
+        tone === "total" && "mt-1 border-t-2 border-double border-line-strong/20 pt-5",
         className,
       )}
     >
       <div className="min-w-0">
-        <p className={cn("text-[0.875rem]", tone === "total" ? "font-semibold text-basalt" : "text-ink")}>{label}</p>
+        <p className={cn("text-[0.875rem]", tone === "total" ? "font-semibold text-fg" : "text-fg-soft")}>{label}</p>
         {hint && <p className="mt-0.5 text-[0.75rem] text-muted-foreground">{hint}</p>}
       </div>
       <div
         className={cn(
           "shrink-0 text-right",
-          tone === "deduct" && "text-[#8a1f37]",
+          tone === "deduct" && "text-[#ff8c80]",
           tone === "total" && "text-leaf",
-          tone === "default" && "font-medium text-basalt",
-          tone === "muted" && "text-ink",
+          tone === "default" && "font-medium text-fg",
+          tone === "muted" && "text-fg-soft",
         )}
       >
         {value}
@@ -293,7 +293,7 @@ export function Fact({ label, children, className }: { label: string; children: 
   return (
     <div className={cn("min-w-0", className)}>
       <dt className="text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">{label}</dt>
-      <dd className="mt-1.5 text-[0.875rem] break-words text-basalt">{children}</dd>
+      <dd className="mt-1.5 text-[0.875rem] break-words text-fg">{children}</dd>
     </div>
   );
 }
@@ -303,8 +303,8 @@ export function ShareBar({ part, whole, className }: { part: bigint; whole: bigi
   const share = whole > 0n ? Number((part * 1000n) / whole) / 10 : 0;
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      <span aria-hidden="true" className="h-1.5 w-14 overflow-hidden rounded-full bg-[#efeadf]">
-        <span className="block h-full rounded-full bg-kota" style={{ width: `${Math.min(100, share)}%` }} />
+      <span aria-hidden="true" className="h-1.5 w-14 overflow-hidden rounded-full bg-[rgba(255,255,255,0.07)]">
+        <span className="block h-full rounded-full bg-haze" style={{ width: `${Math.min(100, share)}%` }} />
       </span>
       <span className="tabular text-[0.6875rem] text-muted-foreground">{share.toFixed(0)}%</span>
     </span>

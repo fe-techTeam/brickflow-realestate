@@ -28,7 +28,7 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
           actions={
             <>
               <Button size="lg" onClick={() => retry()}>
-                <RotateCw className="text-kota-300" />
+                <RotateCw className="text-fg-muted" />
                 Try again
               </Button>
               <Button asChild size="lg" variant="outline">

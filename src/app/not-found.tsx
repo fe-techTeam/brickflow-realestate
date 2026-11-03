@@ -18,7 +18,7 @@ export default function NotFound() {
         <Button asChild size="lg" className="group/cta">
           <Link href="/">
             Return to your workspace
-            <ArrowRight className="text-kota-300 transition-transform duration-200 group-hover/cta:translate-x-0.5" />
+            <ArrowRight className="text-fg-muted transition-transform duration-200 group-hover/cta:translate-x-0.5" />
           </Link>
         </Button>
       }

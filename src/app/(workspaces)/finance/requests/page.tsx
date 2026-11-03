@@ -26,9 +26,9 @@ const SHORT_LABEL: Record<(typeof FINANCIER_REQUEST_STATUSES)[number], string> =
 };
 
 const DOT: Record<(typeof FINANCIER_REQUEST_STATUSES)[number], string> = {
-  PENDING_APPROVAL: "bg-[#c48a2c]",
+  PENDING_APPROVAL: "bg-[#ffb36b]",
   APPROVED: "bg-leaf",
-  DISBURSEMENT_INITIATED: "bg-basalt",
+  DISBURSEMENT_INITIATED: "bg-night",
   DISBURSED: "bg-leaf",
   REJECTED: "bg-danger",
 };
@@ -62,7 +62,7 @@ export default async function FinancingRequestsPage({ searchParams }: { searchPa
   const filtered = Boolean(filters.search || filters.builderId || filters.status);
 
   const tabs = [
-    { value: null, label: "All requests", count: all.length, valuePaise: sumPaise(all.map((r) => r.netPayablePaise)), dot: "bg-kota" },
+    { value: null, label: "All requests", count: all.length, valuePaise: sumPaise(all.map((r) => r.netPayablePaise)), dot: "bg-haze" },
     ...FINANCIER_REQUEST_STATUSES.map((s) => ({
       value: s,
       label: SHORT_LABEL[s],
@@ -79,10 +79,10 @@ export default async function FinancingRequestsPage({ searchParams }: { searchPa
         title="Financing requests"
         context={[
           <span key="p">
-            <strong className="font-semibold text-basalt">{pending.length}</strong> awaiting approval
+            <strong className="font-semibold text-fg">{pending.length}</strong> awaiting approval
           </span>,
           <span key="v">
-            <strong className="tabular font-semibold text-basalt">{formatINRCompact(pendingValue)}</strong> net payable pending
+            <strong className="tabular font-semibold text-fg">{formatINRCompact(pendingValue)}</strong> net payable pending
           </span>,
           <span key="a" className="text-muted-foreground">
             {all.length} request{all.length === 1 ? "" : "s"} on the book
@@ -91,7 +91,7 @@ export default async function FinancingRequestsPage({ searchParams }: { searchPa
       />
 
       <nav aria-label="Filter by status" className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <ul className="grid min-w-[760px] animate-fade-up grid-cols-6 overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-32px_rgba(34, 45, 43,0.3)]">
+        <ul className="grid min-w-[760px] animate-fade-up grid-cols-6 overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-32px_rgba(8, 14, 24,0.3)]">
           {tabs.map((tab, i) => {
             const active = (filters.status ?? null) === tab.value;
             return (
@@ -102,16 +102,16 @@ export default async function FinancingRequestsPage({ searchParams }: { searchPa
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "relative flex h-full flex-col px-4 py-4 transition-colors",
-                    active ? "bg-basalt text-white" : "hover:bg-paper/50",
-                    !active && tab.value === "PENDING_APPROVAL" && tab.count > 0 && "bg-[#fbf6ea]",
+                    active ? "bg-night text-white" : "hover:bg-glass/50",
+                    !active && tab.value === "PENDING_APPROVAL" && tab.count > 0 && "bg-[rgba(255,255,255,0.05)]",
                   )}
                 >
-                  {active && <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-kota" />}
-                  <span className={cn("flex items-center gap-1.5 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap uppercase", active ? "text-kota" : "text-muted-foreground")}>
+                  {active && <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-haze" />}
+                  <span className={cn("flex items-center gap-1.5 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap uppercase", active ? "text-fg-muted" : "text-muted-foreground")}>
                     <span aria-hidden="true" className={cn("size-1.5 rounded-full", tab.dot)} />
                     {tab.label}
                   </span>
-                  <span className={cn("tabular mt-2.5 font-sans text-[1.5rem] leading-none font-light", active ? "text-white" : "text-basalt")}>{tab.count}</span>
+                  <span className={cn("tabular mt-2.5 font-sans text-[1.5rem] leading-none font-light", active ? "text-white" : "text-fg")}>{tab.count}</span>
                   <span className={cn("tabular mt-1.5 text-[0.6875rem]", active ? "text-white/60" : "text-muted-foreground")}>{formatINRCompact(tab.valuePaise)} net</span>
                 </Link>
               </li>

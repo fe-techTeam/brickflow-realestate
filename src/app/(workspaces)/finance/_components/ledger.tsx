@@ -39,7 +39,7 @@ export function Money({
 }) {
   const large = size === "lg" || size === "xl" || size === "hero";
   const symbol = (
-    <span aria-hidden="true" className={cn("mr-[0.06em] font-normal", large ? "align-[0.32em] text-[0.48em] text-kota-600" : "opacity-70", symbolClassName)}>
+    <span aria-hidden="true" className={cn("mr-[0.06em] font-normal", large ? "align-[0.32em] text-[0.48em] text-fg-muted" : "opacity-70", symbolClassName)}>
       ₹
     </span>
   );
@@ -53,7 +53,7 @@ export function Money({
         {sign ?? (neg ? "−" : "")}
         {symbol}
         {body}
-        {unit && <span className={cn("ml-[0.2em] font-medium", large ? cn("text-[0.5em] tracking-[0.06em] text-kota-600", symbolClassName) : "opacity-70")}>{unit}</span>}
+        {unit && <span className={cn("ml-[0.2em] font-medium", large ? cn("text-[0.5em] tracking-[0.06em] text-fg-muted", symbolClassName) : "opacity-70")}>{unit}</span>}
       </span>
     );
   }
@@ -94,11 +94,11 @@ export function Masthead({
 }) {
   const items = (context ?? []).filter(Boolean);
   return (
-    <header className={cn("mb-8 animate-fade-up border-b border-basalt/10 pb-7 sm:mb-10", className)}>
+    <header className={cn("mb-8 animate-fade-up border-b border-line-strong/10 pb-7 sm:mb-10", className)}>
       {back && (
         <Link
           href={back.href}
-          className="mb-5 inline-flex items-center gap-1 text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase transition-colors hover:text-basalt"
+          className="mb-5 inline-flex items-center gap-1 text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase transition-colors hover:text-fg"
         >
           <ChevronLeft className="size-3.5" />
           {back.label}
@@ -106,16 +106,16 @@ export function Masthead({
       )}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
-          <p className="flex items-center gap-3 text-[0.6875rem] font-semibold tracking-[0.2em] text-kota-600 uppercase">
-            <span aria-hidden="true" className="h-px w-8 bg-kota" />
+          <p className="flex items-center gap-3 text-[0.6875rem] font-semibold tracking-[0.2em] text-fg-muted uppercase">
+            <span aria-hidden="true" className="h-px w-8 bg-haze" />
             {eyebrow}
           </p>
           <h1 className="mt-3 text-[2.25rem] leading-[1.04] font-medium tracking-[-0.01em] sm:text-[2.875rem]">{title}</h1>
           {items.length > 0 && (
-            <p className="mt-3 flex flex-col items-start gap-x-2.5 gap-y-1.5 text-sm text-ink sm:flex-row sm:flex-wrap sm:items-center">
+            <p className="mt-3 flex flex-col items-start gap-x-2.5 gap-y-1.5 text-sm text-fg-soft sm:flex-row sm:flex-wrap sm:items-center">
               {items.map((item, i) => (
                 <span key={i} className="inline-flex items-center gap-2.5">
-                  {i > 0 && <span aria-hidden="true" className="hidden size-1 rounded-full bg-kota/70 sm:inline-block" />}
+                  {i > 0 && <span aria-hidden="true" className="hidden size-1 rounded-full bg-haze/70 sm:inline-block" />}
                   {item}
                 </span>
               ))}
@@ -158,7 +158,7 @@ export function Panel({
     <Tag
       id={id}
       className={cn(
-        "animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_0_rgba(34, 45, 43,0.03),0_18px_40px_-28px_rgba(34, 45, 43,0.28)]",
+        "animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_0_rgba(8, 14, 24,0.03),0_18px_40px_-28px_rgba(8, 14, 24,0.28)]",
         id && "scroll-mt-24",
         className,
       )}
@@ -166,8 +166,8 @@ export function Panel({
       {(title || actions || eyebrow) && (
         <header className="flex flex-col gap-3 px-5 pt-5 pb-4 sm:flex-row sm:items-end sm:justify-between sm:px-7 sm:pt-6">
           <div className="min-w-0">
-            {eyebrow && <p className="mb-1.5 text-[0.625rem] font-semibold tracking-[0.2em] text-kota-600 uppercase">{eyebrow}</p>}
-            {title && <h2 className="font-display text-[1.5rem] leading-tight font-medium">{title}</h2>}
+            {eyebrow && <p className="mb-1.5 text-[0.625rem] font-semibold tracking-[0.2em] text-fg-muted uppercase">{eyebrow}</p>}
+            {title && <h2 className="font-display text-[1.5rem] leading-tight font-normal">{title}</h2>}
             {description && <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground">{description}</p>}
           </div>
           {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -202,9 +202,9 @@ export interface KeyFigure {
 }
 
 const ACCENT: Record<NonNullable<KeyFigure["accent"]>, string> = {
-  basalt: "bg-basalt",
+  basalt: "bg-night",
   leaf: "bg-leaf",
-  kota: "bg-kota",
+  kota: "bg-haze",
   danger: "bg-danger",
 };
 
@@ -213,7 +213,7 @@ export function KeyFigures({ items, className }: { items: KeyFigure[]; className
   return (
     <div
       className={cn(
-        "grid animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-30px_rgba(34, 45, 43,0.3)]",
+        "grid animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-30px_rgba(8, 14, 24,0.3)]",
         "divide-y divide-border/70 sm:divide-y-0",
         cols,
         className,
@@ -225,9 +225,9 @@ export function KeyFigures({ items, className }: { items: KeyFigure[]; className
             <p className="flex items-center gap-2 text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
               {item.accent && <span aria-hidden="true" className={cn("size-1.5 rounded-full", ACCENT[item.accent])} />}
               {item.label}
-              {item.href && <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5 text-muted-foreground/60 transition-colors group-hover:text-basalt" />}
+              {item.href && <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5 text-muted-foreground/60 transition-colors group-hover:text-fg" />}
             </p>
-            <div className="mt-3 text-basalt">{item.value}</div>
+            <div className="mt-3 text-fg">{item.value}</div>
             {item.hint && <div className="mt-2 text-xs leading-relaxed text-muted-foreground">{item.hint}</div>}
           </>
         );
@@ -238,7 +238,7 @@ export function KeyFigures({ items, className }: { items: KeyFigure[]; className
           items.length === 5 && "sm:max-xl:[&:nth-child(4)]:border-l-0 sm:max-xl:[&:nth-child(n+4)]:border-t",
         );
         return item.href ? (
-          <Link key={item.label} href={item.href} className={cn(cell, "transition-colors hover:bg-paper/50 focus-visible:bg-paper/60 focus-visible:outline-none")}>
+          <Link key={item.label} href={item.href} className={cn(cell, "transition-colors hover:bg-glass/50 focus-visible:bg-glass/60 focus-visible:outline-none")}>
             {body}
           </Link>
         ) : (
@@ -254,7 +254,7 @@ export function KeyFigures({ items, className }: { items: KeyFigure[]; className
 /** Large count value in Inter for key figure strips. */
 export function Count({ value, unit, className }: { value: number | string; unit?: string; className?: string }) {
   return (
-    <span className={cn("figure text-[1.625rem] leading-none font-normal tracking-[-0.015em] text-basalt", className)}>
+    <span className={cn("figure text-[1.625rem] leading-none font-normal tracking-[-0.015em] text-fg", className)}>
       {value}
       {unit && <span className="ml-1.5 text-xs font-medium tracking-normal text-muted-foreground">{unit}</span>}
     </span>
@@ -281,10 +281,10 @@ export function StatementRow({
   return (
     <div className="py-3.5">
       <div className="flex items-baseline gap-3">
-        {index && <span className="tabular w-5 shrink-0 text-[0.6875rem] font-medium text-kota-600">{index}</span>}
-        <span className={cn("text-sm", tone === "muted" ? "text-muted-foreground" : "text-ink")}>{label}</span>
-        <span aria-hidden="true" className="min-w-6 flex-1 -translate-y-1 border-b border-dotted border-basalt/20" />
-        <span className={cn("text-right text-basalt", tone === "deduct" && "text-danger")}>{value}</span>
+        {index && <span className="tabular w-5 shrink-0 text-[0.6875rem] font-medium text-fg-muted">{index}</span>}
+        <span className={cn("text-sm", tone === "muted" ? "text-muted-foreground" : "text-fg-soft")}>{label}</span>
+        <span aria-hidden="true" className="min-w-6 flex-1 -translate-y-1 border-b border-dotted border-line-strong/20" />
+        <span className={cn("text-right text-fg", tone === "deduct" && "text-danger")}>{value}</span>
       </div>
       {hint && <p className={cn("mt-1 text-xs leading-relaxed text-muted-foreground", index && "pl-8")}>{hint}</p>}
     </div>
@@ -298,7 +298,7 @@ export function FactList({ items, className }: { items: { label: string; value: 
       {items.map((item) => (
         <div key={item.label} className="flex flex-col gap-0.5 py-2.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
           <dt className="shrink-0 text-xs text-muted-foreground">{item.label}</dt>
-          <dd className="min-w-0 text-sm break-words text-basalt sm:text-right">{item.value ?? "—"}</dd>
+          <dd className="min-w-0 text-sm break-words text-fg sm:text-right">{item.value ?? "—"}</dd>
         </div>
       ))}
     </dl>
@@ -321,14 +321,14 @@ export function Monogram({ name, tone = "basalt", size = "md" }: { name: string;
     <span
       aria-hidden="true"
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full font-display font-semibold ring-1",
+        "flex shrink-0 items-center justify-center rounded-full font-display font-normal ring-1",
         size === "sm" && "size-8 text-sm",
         size === "md" && "size-11 text-[1.0625rem]",
         size === "lg" && "size-14 text-xl",
-        tone === "basalt" && "bg-basalt text-kota ring-basalt",
+        tone === "basalt" && "bg-night text-fg-muted ring-line-strong",
         tone === "leaf" && "bg-leaf text-white ring-leaf",
-        tone === "kota" && "bg-kota-100 text-kota-600 ring-kota/40",
-        tone === "paper" && "bg-paper text-basalt ring-kota/30",
+        tone === "kota" && "bg-glass-100 text-fg-muted ring-line-strong/40",
+        tone === "paper" && "bg-glass text-fg ring-line-strong/30",
       )}
     >
       {letters}
@@ -339,7 +339,7 @@ export function Monogram({ name, tone = "basalt", size = "md" }: { name: string;
 /** Circular stamp marking demo-only payouts. */
 export function Seal({ id = "bf-seal", label = "Simulated", ring = "Demo rail · No funds moved · BrickFlow ·", className }: { id?: string; label?: string; ring?: string; className?: string }) {
   return (
-    <span className={cn("inline-flex size-24 shrink-0 -rotate-12 text-kota-600", className)} role="img" aria-label={`${label}: no real funds move`}>
+    <span className={cn("inline-flex size-24 shrink-0 -rotate-12 text-fg-muted", className)} role="img" aria-label={`${label}: no real funds move`}>
       <svg viewBox="0 0 120 120" className="size-full" aria-hidden="true">
         <defs>
           <path id={id} d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
@@ -368,11 +368,11 @@ export function SimulatedTag({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-kota/50 bg-kota-100/70 px-2.5 py-0.5 text-[0.625rem] font-semibold tracking-[0.16em] text-kota-600 uppercase",
+        "inline-flex items-center gap-1.5 rounded-full border border-line-strong/50 bg-glass-100/70 px-2.5 py-0.5 text-[0.625rem] font-semibold tracking-[0.16em] text-fg-muted uppercase",
         className,
       )}
     >
-      <span aria-hidden="true" className="size-1 rounded-full bg-kota-600" />
+      <span aria-hidden="true" className="size-1 rounded-full bg-haze" />
       Simulated
     </span>
   );
@@ -396,13 +396,13 @@ export function EmptyNote({
   return (
     <div className={cn("flex flex-col items-center justify-center text-center", compact ? "px-4 py-8" : "px-6 py-16", className)}>
       <span aria-hidden="true" className={cn("relative flex items-center justify-center", compact ? "mb-3 size-14" : "mb-5 size-20")}>
-        <span className="absolute inset-0 rounded-full border border-kota/25" />
-        <span className={cn("absolute rounded-full border border-dashed border-kota/35", compact ? "inset-1.5" : "inset-2.5")} />
-        <span className={cn("relative flex items-center justify-center rounded-full bg-paper text-kota-600 ring-1 ring-kota/30", compact ? "size-8" : "size-11")}>
+        <span className="absolute inset-0 rounded-full border border-line-strong/25" />
+        <span className={cn("absolute rounded-full border border-dashed border-line-strong/35", compact ? "inset-1.5" : "inset-2.5")} />
+        <span className={cn("relative flex items-center justify-center rounded-full bg-glass text-fg-muted ring-1 ring-line-strong/30", compact ? "size-8" : "size-11")}>
           <Icon className={compact ? "size-3.5" : "size-[1.125rem]"} strokeWidth={1.5} />
         </span>
       </span>
-      <p className={cn("font-display font-medium text-basalt", compact ? "text-lg" : "text-[1.375rem]")}>{title}</p>
+      <p className={cn("font-display font-normal text-fg", compact ? "text-lg" : "text-[1.375rem]")}>{title}</p>
       {description && <p className="mt-1.5 max-w-sm text-[0.8125rem] leading-relaxed text-muted-foreground">{description}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
@@ -423,12 +423,12 @@ export interface CaseEvent {
 }
 
 const NODE: Record<NonNullable<CaseEvent["tone"]>, string> = {
-  default: "border-basalt/60 bg-card",
+  default: "border-line-strong/60 bg-card",
   success: "border-leaf bg-leaf",
   danger: "border-danger bg-danger",
-  warning: "border-[#c48a2c] bg-card",
-  kota: "border-kota bg-kota",
-  pending: "border-dashed border-basalt/40 bg-card",
+  warning: "border-[#ffb36b] bg-card",
+  kota: "border-line-strong bg-haze",
+  pending: "border-dashed border-line-strong/40 bg-card",
 };
 
 export function CaseTimeline({ events, className }: { events: CaseEvent[]; className?: string }) {
@@ -438,15 +438,15 @@ export function CaseTimeline({ events, className }: { events: CaseEvent[]; class
         const last = i === events.length - 1;
         return (
           <li key={e.id} className="relative flex gap-4 pb-6 last:pb-0">
-            {!last && <span aria-hidden="true" className="absolute top-4 bottom-0 left-[6.5px] w-px bg-gradient-to-b from-kota/60 via-border to-border" />}
+            {!last && <span aria-hidden="true" className="absolute top-4 bottom-0 left-[6.5px] w-px bg-gradient-to-b from-haze/60 via-border to-border" />}
             <span aria-hidden="true" className={cn("relative mt-1 size-3.5 shrink-0 rounded-full border-2 ring-4 ring-card", NODE[e.tone ?? "default"])} />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                <p className={cn("text-sm font-medium", e.tone === "pending" ? "text-muted-foreground" : "text-basalt")}>{e.title}</p>
+                <p className={cn("text-sm font-medium", e.tone === "pending" ? "text-muted-foreground" : "text-fg")}>{e.title}</p>
                 {e.at && <p className="tabular text-[0.6875rem] text-muted-foreground">{e.at}</p>}
               </div>
               {e.actor && <p className="mt-0.5 text-xs text-muted-foreground">{e.actor}</p>}
-              {e.body && <div className="mt-2 border-l border-kota/50 pl-3 text-[0.8125rem] leading-relaxed text-ink italic">{e.body}</div>}
+              {e.body && <div className="mt-2 border-l border-line-strong/50 pl-3 text-[0.8125rem] leading-relaxed text-fg-soft italic">{e.body}</div>}
             </div>
           </li>
         );
@@ -460,9 +460,9 @@ export function LaneHeading({ index, title, count, total, action }: { index: str
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="flex items-baseline gap-3">
-        <span className="tabular font-display text-lg font-medium text-kota-600">{index}</span>
-        <h3 className="font-display text-xl leading-tight font-medium">{title}</h3>
-        <span className="tabular rounded-full bg-basalt/[0.06] px-2 py-0.5 text-[0.6875rem] font-semibold text-basalt">{count}</span>
+        <span className="tabular font-display text-lg font-normal text-fg-muted">{index}</span>
+        <h3 className="font-display text-xl leading-tight font-normal">{title}</h3>
+        <span className="tabular rounded-full bg-night/[0.06] px-2 py-0.5 text-[0.6875rem] font-semibold text-fg">{count}</span>
       </div>
       <div className="flex items-center gap-4">
         {total && <span className="text-xs text-muted-foreground">{total}</span>}

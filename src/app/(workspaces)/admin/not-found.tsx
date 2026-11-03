@@ -5,7 +5,7 @@ import { Empty } from "./_components/editorial";
 
 export default function AdminNotFound() {
   return (
-    <div className="mx-auto mt-10 max-w-xl rounded-xl border border-border/90 bg-card shadow-[0_24px_48px_-36px_rgba(34, 45, 43,0.45)]">
+    <div className="mx-auto mt-10 max-w-xl rounded-xl border border-border/90 bg-card shadow-[0_24px_48px_-36px_rgba(8, 14, 24,0.45)]">
       <Empty
         icon={SearchX}
         title="Record not found"

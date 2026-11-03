@@ -6,10 +6,10 @@ export function PageSkeleton({ stats = 0, rows = 6, columns = 6 }: { stats?: num
   return (
     <div aria-busy="true" aria-label="Loading" className="space-y-8">
       <div className="space-y-4">
-        <Skeleton className="h-2.5 w-32 bg-kota/20" />
+        <Skeleton className="h-2.5 w-32 bg-haze/20" />
         <Skeleton className="h-11 w-80 max-w-full" />
         <Skeleton className="h-4 w-[34rem] max-w-full" />
-        <div className="h-px bg-gradient-to-r from-kota/40 via-border to-transparent pt-px" />
+        <div className="h-px bg-gradient-to-r from-haze/40 via-border to-transparent pt-px" />
       </div>
       {strip > 0 && (
         <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-border/90 bg-card lg:grid-cols-4">
@@ -23,10 +23,10 @@ export function PageSkeleton({ stats = 0, rows = 6, columns = 6 }: { stats?: num
       )}
       <div className="overflow-hidden rounded-xl border border-border/90 bg-card">
         <div className="space-y-2.5 px-7 pt-6 pb-5">
-          <Skeleton className="h-2.5 w-20 bg-kota/20" />
+          <Skeleton className="h-2.5 w-20 bg-haze/20" />
           <Skeleton className="h-6 w-52" />
         </div>
-        <div className="border-y border-border/90 bg-paper/40 px-7 py-3">
+        <div className="border-y border-border/90 bg-glass/40 px-7 py-3">
           <Skeleton className="h-2.5 w-full max-w-3xl" />
         </div>
         <div className="divide-y divide-border/60">
