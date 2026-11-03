@@ -43,7 +43,6 @@ const EVENT: Partial<Record<FinancingStatus, { icon: LucideIcon; tone: Chronicle
   REJECTED: { icon: XCircle, tone: "rose" },
 };
 
-const longDate = new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" });
 
 function greeting(now: Date): string {
   const hour = Number(new Intl.DateTimeFormat("en-IN", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Kolkata" }).format(now));
@@ -72,7 +71,7 @@ export default async function BuilderOverviewPage() {
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] font-semibold tracking-[0.18em] text-gold uppercase">
               <span aria-hidden="true" className="h-px w-6 bg-gold/70" />
-              {longDate.format(now)}
+              Executive overview
             </p>
             <h1 className="mt-4 text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.01em] text-white sm:text-[3.25rem]">
               {greeting(now)}, {actor.name.split(" ")[0]}

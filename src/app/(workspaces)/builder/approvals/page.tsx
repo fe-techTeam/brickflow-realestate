@@ -148,65 +148,101 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
             <Empty icon={Inbox} title="No invoices yet" description="Invoices submitted by your empanelled channel partners will appear here." />
           )
         ) : (
-          <Ledger minWidth={940} caption="Invoices">
-            <thead>
-              <tr>
-                <SortTh label="Partner" sortKey="cp" sort={sort} searchParams={sp} pathname={PATH} />
-                <SortTh label="Invoice" sortKey="number" sort={sort} searchParams={sp} pathname={PATH} />
-                <SortTh label="Amount" sortKey="amount" sort={sort} searchParams={sp} pathname={PATH} align="right" />
-                <SortTh label="Invoice date" sortKey="invoiceDate" sort={sort} searchParams={sp} pathname={PATH} />
-                <SortTh label="Waiting" sortKey="submitted" sort={sort} searchParams={sp} pathname={PATH} />
-                <SortTh label="Status" sortKey="status" sort={sort} searchParams={sp} pathname={PATH} />
-                <Th align="right">
-                  <span className="sr-only">Action</span>
-                </Th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            <ul className="divide-y divide-[#f0ebe0] sm:hidden">
               {rows.map((invoice) => {
                 const waiting = AWAITING.includes(invoice.status);
                 return (
-                  <Tr key={invoice.id}>
-                    <Td>
-                      <span className="flex items-center gap-3">
-                        <Monogram name={invoice.cp.name} className="size-8 text-[0.8125rem]" />
-                        <span className="min-w-0">
-                          <span className="block font-medium text-navy">{invoice.cp.name}</span>
-                          <span className="mt-1 block text-[0.75rem] text-muted-foreground">{invoice.project.name}</span>
-                        </span>
-                      </span>
-                    </Td>
-                    <Td>
-                      <RowLink href={`/builder/invoices/${invoice.id}`}>{invoice.invoiceNumber}</RowLink>
-                      <Ref>{invoice.reference}</Ref>
-                    </Td>
-                    <Td align="right">
-                      <Money paise={invoice.amountPaise} className="font-medium text-navy" />
-                    </Td>
-                    <Td className="whitespace-nowrap">{formatDate(invoice.invoiceDate)}</Td>
-                    <Td className="whitespace-nowrap">
-                      {waiting ? (
-                        <AgeingMeter days={ageInDays(invoice.submittedAt, now)} />
-                      ) : (
-                        <span className="text-[0.75rem] text-muted-foreground">Submitted {formatDate(invoice.submittedAt)}</span>
-                      )}
-                    </Td>
-                    <Td>
-                      <StatusBadge kind="invoice" status={invoice.status} />
-                    </Td>
-                    <Td align="right">
-                      <Button variant={waiting ? "default" : "ghost"} size="sm" asChild className={waiting ? undefined : "text-navy"}>
-                        <Link href={`/builder/invoices/${invoice.id}`} aria-label={`${waiting ? "Review" : "View"} invoice ${invoice.invoiceNumber}`}>
-                          {waiting ? "Review" : "View"}
-                          <ArrowRight className="size-3.5" />
-                        </Link>
-                      </Button>
-                    </Td>
-                  </Tr>
+                  <li key={invoice.id}>
+                    <Link
+                      href={`/builder/invoices/${invoice.id}`}
+                      className="flex gap-3.5 px-5 py-4 transition-colors hover:bg-[#fbf9f4] focus-visible:bg-[#fbf9f4] focus-visible:outline-none"
+                    >
+                      <Monogram name={invoice.cp.name} className="size-8 text-[0.8125rem]" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="truncate font-medium text-navy">{invoice.invoiceNumber}</span>
+                          <Money paise={invoice.amountPaise} className="shrink-0 font-medium text-navy" />
+                        </div>
+                        <p className="mt-1 truncate text-[0.75rem] text-muted-foreground">
+                          {invoice.cp.name} · {invoice.project.name}
+                        </p>
+                        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                          <StatusBadge kind="invoice" status={invoice.status} />
+                          {waiting ? (
+                            <AgeingMeter days={ageInDays(invoice.submittedAt, now)} />
+                          ) : (
+                            <span className="text-[0.75rem] text-muted-foreground">Submitted {formatDate(invoice.submittedAt)}</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
                 );
               })}
-            </tbody>
-          </Ledger>
+            </ul>
+            <div className="max-sm:hidden">
+            <Ledger minWidth={940} caption="Invoices">
+              <thead>
+                <tr>
+                  <SortTh label="Partner" sortKey="cp" sort={sort} searchParams={sp} pathname={PATH} />
+                  <SortTh label="Invoice" sortKey="number" sort={sort} searchParams={sp} pathname={PATH} />
+                  <SortTh label="Amount" sortKey="amount" sort={sort} searchParams={sp} pathname={PATH} align="right" />
+                  <SortTh label="Invoice date" sortKey="invoiceDate" sort={sort} searchParams={sp} pathname={PATH} />
+                  <SortTh label="Waiting" sortKey="submitted" sort={sort} searchParams={sp} pathname={PATH} />
+                  <SortTh label="Status" sortKey="status" sort={sort} searchParams={sp} pathname={PATH} />
+                  <Th align="right">
+                    <span className="sr-only">Action</span>
+                  </Th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((invoice) => {
+                  const waiting = AWAITING.includes(invoice.status);
+                  return (
+                    <Tr key={invoice.id}>
+                      <Td>
+                        <span className="flex items-center gap-3">
+                          <Monogram name={invoice.cp.name} className="size-8 text-[0.8125rem]" />
+                          <span className="min-w-0">
+                            <span className="block font-medium text-navy">{invoice.cp.name}</span>
+                            <span className="mt-1 block text-[0.75rem] text-muted-foreground">{invoice.project.name}</span>
+                          </span>
+                        </span>
+                      </Td>
+                      <Td>
+                        <RowLink href={`/builder/invoices/${invoice.id}`}>{invoice.invoiceNumber}</RowLink>
+                        <Ref>{invoice.reference}</Ref>
+                      </Td>
+                      <Td align="right">
+                        <Money paise={invoice.amountPaise} className="font-medium text-navy" />
+                      </Td>
+                      <Td className="whitespace-nowrap">{formatDate(invoice.invoiceDate)}</Td>
+                      <Td className="whitespace-nowrap">
+                        {waiting ? (
+                          <AgeingMeter days={ageInDays(invoice.submittedAt, now)} />
+                        ) : (
+                          <span className="text-[0.75rem] text-muted-foreground">Submitted {formatDate(invoice.submittedAt)}</span>
+                        )}
+                      </Td>
+                      <Td>
+                        <StatusBadge kind="invoice" status={invoice.status} />
+                      </Td>
+                      <Td align="right">
+                        <Button variant={waiting ? "default" : "ghost"} size="sm" asChild className={waiting ? undefined : "text-navy"}>
+                          <Link href={`/builder/invoices/${invoice.id}`} aria-label={`${waiting ? "Review" : "View"} invoice ${invoice.invoiceNumber}`}>
+                            {waiting ? "Review" : "View"}
+                            <ArrowRight className="size-3.5" />
+                          </Link>
+                        </Button>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </tbody>
+            </Ledger>
+            </div>
+          </>
         )}
       </Panel>
     </>
