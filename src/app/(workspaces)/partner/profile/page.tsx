@@ -52,13 +52,12 @@ export default async function OrganisationProfilePage() {
                 <EmptyNote compact icon={Building2} title="No empanelments" description="Ask the platform administrator to add your builder empanelments." />
               </div>
             ) : (
-              <Table minWidth={620}>
+              <Table minWidth={560}>
                 <thead>
                   <tr>
                     <Th>Builder</Th>
                     <Th>Empanelment code</Th>
                     <Th align="right">Credit period</Th>
-                    <Th>Empanelled</Th>
                     <Th>Status</Th>
                   </tr>
                 </thead>
@@ -66,13 +65,12 @@ export default async function OrganisationProfilePage() {
                   {empanelments.map((rel) => (
                     <Tr key={rel.id}>
                       <Td>
-                        <RefCell primary={rel.builder.name} />
+                        <RefCell primary={rel.builder.name} secondary={`Empanelled ${formatDate(rel.empanelledAt)}`} />
                       </Td>
                       <Td className="text-[0.8125rem] tracking-wide">{rel.empanelmentCode}</Td>
                       <Td align="right" className="text-[0.8125rem]">
                         {rel.creditPeriodDays} days
                       </Td>
-                      <Td className="text-[0.8125rem] whitespace-nowrap">{formatDate(rel.empanelledAt)}</Td>
                       <Td>
                         <StatusMark kind="record" status={rel.status} />
                       </Td>
@@ -94,7 +92,7 @@ export default async function OrganisationProfilePage() {
                 <EmptyNote compact icon={Users} title="No team members" />
               </div>
             ) : (
-              <Table minWidth={680}>
+              <Table minWidth={640}>
                 <thead>
                   <tr>
                     <Th>Name</Th>
@@ -116,7 +114,7 @@ export default async function OrganisationProfilePage() {
                                 <span className="ml-2 rounded-full bg-gold-100 px-1.5 py-px text-[0.625rem] font-semibold tracking-wide text-gold-700 uppercase">You</span>
                               )}
                             </p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">{member.user.email}</p>
+                            <p className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">{member.user.email}</p>
                           </div>
                         </div>
                       </Td>

@@ -30,7 +30,7 @@ export default async function DisbursementsPage() {
       <MetricStrip
         className="mb-6"
         items={[
-          { label: "Total received", value: <CompactMoney paise={sumPaise(paid.map((d) => d.amountPaise))} size="xl" />, hint: `${paid.length} completed payouts`, accent: "heritage" },
+          { label: "Total received", value: <CompactMoney paise={sumPaise(paid.map((d) => d.amountPaise))} size="xl" />, hint: `${paid.length} completed ${paid.length === 1 ? "payout" : "payouts"}`, accent: "heritage" },
           {
             label: "In process",
             value: <CompactMoney paise={sumPaise(processing.map((d) => d.amountPaise))} size="xl" />,
@@ -70,14 +70,13 @@ export default async function DisbursementsPage() {
               />
             </div>
           ) : (
-            <Table minWidth={1080}>
+            <Table minWidth={960}>
               <thead>
                 <tr>
                   <Th>Payment reference</Th>
                   <Th>Invoice</Th>
                   <Th align="right">Net amount</Th>
-                  <Th>Status</Th>
-                  <Th>UTR (simulated)</Th>
+                  <Th>Status · UTR (simulated)</Th>
                   <Th>Initiated · Completed</Th>
                   <Th>Beneficiary</Th>
                 </tr>
@@ -86,7 +85,7 @@ export default async function DisbursementsPage() {
                 {disbursements.map((d) => (
                   <Tr key={d.id}>
                     <Td>
-                      <RefCell primary={d.reference} secondary={d.request.reference} />
+                      <RefCell primary={d.reference} secondary={d.request.reference} code />
                     </Td>
                     <Td>
                       <RefCell href={`/partner/invoices/${d.request.invoice.id}`} primary={d.request.invoice.invoiceNumber} secondary={d.request.invoice.builder.name} />
@@ -96,15 +95,15 @@ export default async function DisbursementsPage() {
                     </Td>
                     <Td>
                       <StatusMark kind="disbursement" status={d.status} />
+                      <p className="mt-1 text-xs tracking-wide whitespace-nowrap text-muted-foreground tabular">{d.utr ?? "UTR pending"}</p>
                     </Td>
-                    <Td className="text-[0.8125rem] tracking-wide">{d.utr ?? "Pending"}</Td>
                     <Td className="text-[0.8125rem] whitespace-nowrap">
                       <p>{formatDateTime(d.initiatedAt)}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{d.completedAt ? formatDateTime(d.completedAt) : "Awaiting confirmation"}</p>
                     </Td>
                     <Td>
                       <p className="text-[0.8125rem] tracking-wide text-navy">{d.beneficiaryAccount}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
+                      <p className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">
                         {d.beneficiaryIfsc} · {d.mode === "DEMO_SIMULATED" ? "Simulated" : d.mode}
                       </p>
                     </Td>

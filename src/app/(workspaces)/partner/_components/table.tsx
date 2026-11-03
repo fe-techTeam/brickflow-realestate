@@ -93,8 +93,8 @@ export function SortTh({
   );
 }
 
-/** Primary cell: linked reference with a muted secondary line. */
-export function RefCell({ href, primary, secondary }: { href?: string; primary: ReactNode; secondary?: ReactNode }) {
+/** Primary cell: linked reference with a muted secondary line. `code` keeps a reference-code secondary on one line. */
+export function RefCell({ href, primary, secondary, code }: { href?: string; primary: ReactNode; secondary?: ReactNode; code?: boolean }) {
   return (
     <div className="min-w-0">
       {href ? (
@@ -104,7 +104,7 @@ export function RefCell({ href, primary, secondary }: { href?: string; primary: 
       ) : (
         <p className="font-medium whitespace-nowrap text-navy">{primary}</p>
       )}
-      {secondary && <p className="mt-0.5 text-xs text-muted-foreground">{secondary}</p>}
+      {secondary && <p className={cn("mt-0.5 text-xs text-muted-foreground", code && "tabular tracking-wide whitespace-nowrap")}>{secondary}</p>}
     </div>
   );
 }

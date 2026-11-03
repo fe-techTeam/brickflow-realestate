@@ -427,7 +427,7 @@ function FinancingRequestPanel({ invoice, request }: { invoice: InvoiceDetail; r
             {disbursement ? <StatusMark kind="disbursement" status={disbursement.status} className="text-xs" /> : <span className="text-xs text-muted-foreground">{FINANCING_STATUS[request.status].label}</span>}
           </div>
           <Facts
-            className="gap-x-6 gap-y-4 [&_dd]:text-[0.8125rem] [&_dd]:break-all"
+            className="gap-x-6 gap-y-4 [&_dd]:text-[0.8125rem] [&_dd]:[overflow-wrap:anywhere]"
             items={[
               { label: "Paid amount", value: disbursement ? <Money paise={disbursement.amountPaise} className="font-semibold text-heritage" /> : "—" },
               { label: "Transaction date", value: disbursement ? formatDateTime(disbursement.completedAt ?? disbursement.initiatedAt) : "—" },

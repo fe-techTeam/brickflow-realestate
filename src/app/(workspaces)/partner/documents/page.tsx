@@ -149,7 +149,7 @@ export default async function DocumentsPage() {
                       </div>
                     </Td>
                     <Td>
-                      <RefCell href={`/partner/invoices/${doc.invoice.id}`} primary={doc.invoice.invoiceNumber} secondary={doc.invoice.reference} />
+                      <RefCell href={`/partner/invoices/${doc.invoice.id}`} primary={doc.invoice.invoiceNumber} secondary={doc.invoice.reference} code />
                     </Td>
                     <Td>
                       <p className="text-[0.8125rem] text-navy">{doc.invoice.builder.name}</p>

@@ -152,7 +152,7 @@ export default async function FinancingOffersPage() {
                 {previews.map(({ invoice, programme, preview }) => (
                   <Tr key={invoice.id}>
                     <Td>
-                      <RefCell href={`/partner/invoices/${invoice.id}`} primary={invoice.invoiceNumber} secondary={invoice.reference} />
+                      <RefCell href={`/partner/invoices/${invoice.id}`} primary={invoice.invoiceNumber} secondary={invoice.reference} code />
                     </Td>
                     <Td>
                       <p className="text-[0.8125rem] text-navy">{invoice.builder.name}</p>

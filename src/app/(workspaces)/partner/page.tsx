@@ -204,11 +204,10 @@ export default async function PartnerOverviewPage() {
               <Table minWidth={640} className="hidden md:block">
                 <thead>
                   <tr>
-                    <Th>Invoice</Th>
-                    <Th>Invoice date</Th>
+                    <Th className="w-[40%]">Invoice</Th>
+                    <Th>Dated</Th>
                     <Th align="right">Amount</Th>
-                    <Th>Status</Th>
-                    <Th>Early payment</Th>
+                    <Th className="pl-8">Status · early payment</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -221,11 +220,11 @@ export default async function PartnerOverviewPage() {
                       <Td align="right">
                         <Money paise={invoice.amountPaise} className="font-medium text-navy" />
                       </Td>
-                      <Td>
-                        <StatusMark kind="invoice" status={invoice.status} />
-                      </Td>
-                      <Td>
-                        <StatusMark kind="financing" status={invoice.financingStatus} />
+                      <Td className="pl-8">
+                        <div className="flex flex-col items-start gap-1.5">
+                          <StatusMark kind="invoice" status={invoice.status} />
+                          <StatusMark kind="financing" status={invoice.financingStatus} className="text-xs font-normal opacity-90" />
+                        </div>
                       </Td>
                     </Tr>
                   ))}

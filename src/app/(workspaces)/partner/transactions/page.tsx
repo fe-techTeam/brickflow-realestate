@@ -132,7 +132,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
               ))}
             </ul>
 
-            <Table minWidth={1180} className="hidden md:block">
+            <Table minWidth={1000} className="hidden md:block">
               <thead>
                 <tr>
                   <SortTh label="Request" sortKey="reference" sort={sort} searchParams={params} pathname={PATH} />
@@ -142,7 +142,6 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                   <SortTh label="Net payable" sortKey="net" sort={sort} searchParams={params} pathname={PATH} align="right" />
                   <SortTh label="Status" sortKey="status" sort={sort} searchParams={params} pathname={PATH} />
                   <SortTh label="Accepted" sortKey="accepted" sort={sort} searchParams={params} pathname={PATH} />
-                  <Th>Settlement</Th>
                 </tr>
               </thead>
               <tbody>
@@ -166,18 +165,19 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                     </Td>
                     <Td>
                       <StatusMark kind="financing" status={r.status} />
+                      <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+                        <span>Settlement</span>
+                        {r.settlement ? (
+                          <>
+                            <StatusMark kind="settlement" status={effectiveSettlementStatus(r.settlement)} className="text-xs font-normal" />
+                            <span className="whitespace-nowrap">· due {formatDate(r.settlement.dueDate)}</span>
+                          </>
+                        ) : (
+                          <span>{r.status === "REJECTED" ? "not applicable" : "after disbursement"}</span>
+                        )}
+                      </p>
                     </Td>
                     <Td className="text-[0.8125rem] whitespace-nowrap">{formatDateTime(r.acceptedAt)}</Td>
-                    <Td>
-                      {r.settlement ? (
-                        <>
-                          <StatusMark kind="settlement" status={effectiveSettlementStatus(r.settlement)} />
-                          <p className="mt-1 text-xs text-muted-foreground">Due {formatDate(r.settlement.dueDate)}</p>
-                        </>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">{r.status === "REJECTED" ? "Not applicable" : "After disbursement"}</span>
-                      )}
-                    </Td>
                   </Tr>
                 ))}
               </tbody>

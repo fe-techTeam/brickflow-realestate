@@ -205,7 +205,7 @@ export default async function MyInvoicesPage({ searchParams }: { searchParams: P
                   return (
                     <Tr key={invoice.id}>
                       <Td>
-                        <RefCell href={`/partner/invoices/${invoice.id}`} primary={invoice.invoiceNumber} secondary={invoice.reference} />
+                        <RefCell href={`/partner/invoices/${invoice.id}`} primary={invoice.invoiceNumber} secondary={invoice.reference} code />
                       </Td>
                       <Td className="min-w-[12rem]">
                         <p className="text-[0.8125rem] text-navy">{invoice.builder.name}</p>
