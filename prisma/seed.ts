@@ -579,7 +579,7 @@ async function main() {
 
   const summary = await Promise.all([db.organisation.count(), db.user.count(), db.invoice.count(), db.financingRequest.count()]);
   console.log(`Seeded ${summary[0]} organisations, ${summary[1]} users, ${summary[2]} invoices, ${summary[3]} financing requests.`);
-  console.log(`Demo password for all accounts: ${DEMO_PASSWORD}`);
+  if (process.env.NODE_ENV !== "production") console.log(`Demo password for all accounts: ${DEMO_PASSWORD}`);
 }
 
 main()
