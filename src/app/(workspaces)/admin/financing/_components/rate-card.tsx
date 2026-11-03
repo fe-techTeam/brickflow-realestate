@@ -49,12 +49,12 @@ export function RateCard({ data }: { data: RateCardData }) {
         "relative flex animate-fade-up flex-col overflow-hidden rounded-xl border bg-card shadow-[0_24px_48px_-36px_rgba(20,43,67,0.45)]",
         active && "border-border/90",
         draft && "border-dashed border-navy/25 bg-ivory/40",
-        row.status === "SUSPENDED" && "border-[#efd9ae]",
+        row.status === "SUSPENDED" && "border-warning/30",
         row.status === "CLOSED" && "border-border/70 opacity-80",
       )}
     >
       {active && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-heritage via-heritage/80 to-gold/70" />}
-      {row.status === "SUSPENDED" && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-[#c48a2c]/70" />}
+      {row.status === "SUSPENDED" && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-warning/70" />}
 
       <header className="flex items-start gap-3.5 px-6 pt-7">
         <Monogram name={row.builderName} tone={active ? "navy" : "ivory"} />
@@ -109,7 +109,7 @@ export function RateCard({ data }: { data: RateCardData }) {
         </div>
       </dl>
 
-      {data.builderInactive && <p className="mx-6 mt-3 text-xs text-[#8a5a12]">The builder is inactive, so no new offers are produced.</p>}
+      {data.builderInactive && <p className="mx-6 mt-3 text-xs text-warning">The builder is inactive, so no new offers are produced.</p>}
 
       <footer className="mt-auto px-6 pt-4 pb-5">
         <div className="flex flex-wrap justify-end gap-2">

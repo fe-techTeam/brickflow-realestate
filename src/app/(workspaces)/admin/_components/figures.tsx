@@ -1,20 +1,18 @@
+import { FigureValue } from "@/components/common/money";
 import { formatBps, formatINR, formatINRCompact, type PaiseLike } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 type FigureSize = "sm" | "md" | "lg" | "xl" | "hero";
 
-const SIZE: Record<FigureSize, { body: string; unit: string }> = {
-  sm: { body: "text-sm font-medium", unit: "text-[0.75em]" },
-  md: { body: "text-lg font-medium tracking-[-0.01em]", unit: "text-[0.62em]" },
-  lg: { body: "text-[1.75rem] leading-none font-normal tracking-[-0.02em]", unit: "text-[0.5em]" },
-  xl: { body: "text-[2.5rem] leading-none font-light tracking-[-0.03em]", unit: "text-[0.42em]" },
-  hero: { body: "text-[2.75rem] leading-none font-light tracking-[-0.035em] sm:text-[3.5rem]", unit: "text-[0.36em]" },
+const SIZE: Record<FigureSize, string> = {
+  sm: "text-sm font-medium",
+  md: "text-lg font-medium",
+  lg: "text-[1.75rem] leading-none font-normal tracking-[-0.025em]",
+  xl: "text-[2.5rem] leading-none font-light tracking-[-0.035em]",
+  hero: "text-[2.75rem] leading-none font-light tracking-[-0.04em] sm:text-[3.5rem]",
 };
 
-/**
- * Money in Inter with tabular numerals. Compact mode renders the lakh/crore unit as a quiet suffix,
- * and the rupee symbol is set slightly smaller so the digits carry the weight.
- */
+/** Money in Inter tabular figures at the admin type scale; digits are rendered by the shared figure treatment. */
 export function Money({
   paise,
   compact = false,
@@ -22,48 +20,39 @@ export function Money({
   size = "sm",
   sign,
   className,
-  unitClassName,
 }: {
   paise: PaiseLike;
   compact?: boolean;
   showPaise?: boolean;
   size?: FigureSize;
-  sign?: "+" | "−";
+  sign?: "−";
   className?: string;
-  unitClassName?: string;
 }) {
   const text = compact ? formatINRCompact(paise) : formatINR(paise, { showPaise });
-  const match = /^(-?)₹([\d,.]+)(?:\s(L|Cr))?$/.exec(text);
-  const s = SIZE[size];
-  if (!match) return <span className={cn("tabular font-sans", s.body, className)}>{text}</span>;
-  const [, negative, digits, unit] = match;
   return (
-    <span className={cn("tabular font-sans whitespace-nowrap", s.body, className)} title={compact ? formatINR(paise) : undefined}>
-      {sign ?? (negative ? "−" : "")}
-      <span className={cn("mr-[0.08em] font-normal opacity-70", size === "sm" ? "" : "text-[0.72em]")}>₹</span>
-      {digits}
-      {unit && <span className={cn("ml-[0.22em] font-medium tracking-normal text-muted-foreground", s.unit, unitClassName)}>{unit === "L" ? "L" : "Cr"}</span>}
+    <span className={cn("figure whitespace-nowrap", SIZE[size], className)} title={compact ? formatINR(paise) : undefined}>
+      {sign}
+      <FigureValue value={text} display={size === "lg" || size === "xl" || size === "hero"} />
     </span>
   );
 }
 
 /** A discount rate in Inter tabular figures; the percent sign is set lighter in champagne gold. */
-export function Rate({ bps, size = "md", className, percentClassName }: { bps: number; size?: FigureSize; className?: string; percentClassName?: string }) {
-  const s = SIZE[size];
+export function Rate({ bps, size = "md", className }: { bps: number; size?: FigureSize; className?: string }) {
   return (
-    <span className={cn("tabular font-sans whitespace-nowrap text-navy", s.body, className)}>
+    <span className={cn("figure whitespace-nowrap text-navy", SIZE[size], className)}>
       {formatBps(bps, { suffix: false })}
-      <span className={cn("ml-[0.06em] font-light text-gold-600", size === "sm" ? "" : "text-[0.6em]", percentClassName)}>%</span>
+      <span className={cn("ml-[0.06em] font-light text-gold-600", size !== "sm" && "text-[0.6em]")}>%</span>
     </span>
   );
 }
 
 /** Plain count in Inter tabular figures. */
 export function Count({ value, size = "md", className }: { value: number | string; size?: FigureSize; className?: string }) {
-  return <span className={cn("tabular font-sans text-navy", SIZE[size].body, className)}>{value}</span>;
+  return <span className={cn("figure text-navy", SIZE[size], className)}>{value}</span>;
 }
 
 /** Short champagne rule used under key figures and headings. */
-export function GoldRule({ className, wide = false }: { className?: string; wide?: boolean }) {
-  return <span aria-hidden="true" className={cn("block h-px bg-gradient-to-r from-gold via-gold/70 to-transparent", wide ? "w-full" : "w-12", className)} />;
+export function GoldRule({ className }: { className?: string }) {
+  return <span aria-hidden="true" className={cn("gold-rule block w-12", className)} />;
 }

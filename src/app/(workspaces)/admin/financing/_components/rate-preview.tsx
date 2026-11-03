@@ -30,7 +30,7 @@ function Row({ label, value, tone = "default", hint }: { label: string; value: s
         className={cn(
           "tabular font-sans whitespace-nowrap",
           tone === "total" ? "text-[1.5rem] leading-none font-normal tracking-[-0.02em] text-heritage" : "text-sm font-medium text-navy",
-          tone === "deduct" && "text-[#93342a]",
+          tone === "deduct" && "text-danger",
         )}
       >
         {value}
@@ -62,7 +62,7 @@ export function RatePreview({ rate, currentBps }: { rate: string; currentBps?: n
           <p className="mt-4 text-[0.8125rem] leading-relaxed text-slate-ink">
             On <span className="tabular font-medium text-navy">{inr(SAMPLE_PAISE)}</span> approved
             <ArrowRight className="mx-1 inline size-3 text-gold-600" aria-hidden="true" />
-            discount <span className="tabular font-medium text-[#93342a]">{inr(preview.discountAmountPaise)}</span>
+            discount <span className="tabular font-medium text-danger">{inr(preview.discountAmountPaise)}</span>
             <ArrowRight className="mx-1 inline size-3 text-gold-600" aria-hidden="true" />
             partner receives <span className="tabular font-semibold text-heritage">{inr(preview.netPayablePaise)}</span>
           </p>

@@ -148,8 +148,8 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
           </div>
         )}
         {buildersWithoutActive.length > 0 && (
-          <p className="mt-5 flex items-start gap-2.5 text-[0.8125rem] text-[#6d4710]">
-            <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[#c48a2c]" />
+          <p className="mt-5 flex items-start gap-2.5 text-[0.8125rem] text-warning">
+            <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full bg-warning" />
             <span>
               <span className="font-semibold">{buildersWithoutActive.map((b) => b.name).join(", ")}</span>{" "}
               {buildersWithoutActive.length === 1 ? "has" : "have"} no active programme, so {buildersWithoutActive.length === 1 ? "its" : "their"} channel partners
@@ -236,7 +236,7 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
                         {p.builder.name}
                       </Link>
                       <p className="text-xs text-muted-foreground">{p.financier.name}</p>
-                      {p.builder.status === "INACTIVE" && <p className="text-xs text-[#8a5a12]">Builder inactive</p>}
+                      {p.builder.status === "INACTIVE" && <p className="text-xs text-warning">Builder inactive</p>}
                     </LTd>
                     <LTd align="right">
                       <Rate bps={p.discountRateBps} size="lg" />

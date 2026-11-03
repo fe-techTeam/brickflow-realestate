@@ -38,7 +38,7 @@ export function actionTone(action: string): "gold" | "heritage" | "danger" | "mu
 const DOT = {
   gold: "bg-gold ring-gold/25",
   heritage: "bg-heritage ring-heritage/20",
-  danger: "bg-[#b5473a] ring-[#b5473a]/20",
+  danger: "bg-danger ring-danger/20",
   muted: "bg-slate-ink/30 ring-slate-ink/10",
   navy: "bg-navy ring-navy/15",
 };

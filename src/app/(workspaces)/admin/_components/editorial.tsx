@@ -239,7 +239,7 @@ export function Note({
       className={cn(
         "flex animate-fade-up gap-3.5 rounded-lg border-l-2 px-4 py-3.5 text-[0.8125rem] leading-relaxed",
         tone === "gold" && "border-gold bg-gold-100/45 text-slate-ink",
-        tone === "warning" && "border-[#c48a2c] bg-[#fbf1df] text-[#6d4710]",
+        tone === "warning" && "border-warning/70 bg-warning-soft text-warning",
         tone === "heritage" && "border-heritage bg-sage/50 text-heritage",
         className,
       )}

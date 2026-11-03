@@ -138,7 +138,7 @@ export default async function AdminDashboardPage() {
           <span aria-hidden="true" className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-gold/60 to-transparent" />
           <p className="text-[0.625rem] font-semibold tracking-[0.24em] text-gold uppercase">Financed through BrickFlow</p>
           <div className="mt-5 flex flex-wrap items-end gap-x-5 gap-y-2">
-            <Money paise={requests.financedPaise} compact size="hero" className="text-white" unitClassName="text-gold/80" />
+            <Money paise={requests.financedPaise} compact size="hero" className="text-white" />
             <p className="pb-1.5 text-sm text-white/60">{plural(requests.financedCount, "request")} approved by Veefin</p>
           </div>
           <GoldRule className="mt-6 mb-8 w-16" />
@@ -146,14 +146,14 @@ export default async function AdminDashboardPage() {
             <div>
               <dt className="text-[0.6875rem] text-white/55">Paid out early (simulated)</dt>
               <dd className="mt-1.5">
-                <Money paise={dashboard.disbursed.amountPaise} compact size="md" className="text-white" unitClassName="text-white/50" />
+                <Money paise={dashboard.disbursed.amountPaise} compact size="md" className="text-white" />
               </dd>
               <dd className="mt-0.5 text-[0.6875rem] text-white/45">{plural(dashboard.disbursed.count, "payout")}</dd>
             </div>
             <div>
               <dt className="text-[0.6875rem] text-white/55">Due from builders</dt>
               <dd className="mt-1.5">
-                <Money paise={dashboard.outstanding.amountPaise} compact size="md" className="text-white" unitClassName="text-white/50" />
+                <Money paise={dashboard.outstanding.amountPaise} compact size="md" className="text-white" />
               </dd>
               <dd className="mt-0.5 text-[0.6875rem] text-white/45">{plural(dashboard.outstanding.count, "open settlement")}</dd>
             </div>

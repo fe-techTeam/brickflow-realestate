@@ -126,7 +126,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
                 <Money paise={request.approvedAmountPaise} size="md" className="text-navy" />
               </LedgerLine>
               <LedgerLine label={`Discount at ${formatBps(request.discountRateBps)}`} hint="Agreed programme rate at acceptance">
-                <Money paise={request.discountAmountPaise} size="md" sign="−" className="text-[#93342a]" />
+                <Money paise={request.discountAmountPaise} size="md" sign="−" className="text-danger" />
               </LedgerLine>
               <LedgerLine label="Other charges" hint="None, by design">
                 <Money paise={request.chargesPaise} size="md" className="text-navy" />

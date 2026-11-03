@@ -208,7 +208,7 @@ export function ProgrammeFormDialog(props: Props) {
             </DialogHeader>
 
             {formError && fieldErrorCount === 0 && (
-              <div role="alert" className="mt-5 flex gap-3 rounded-lg border-l-2 border-[#c48a2c] bg-[#fbf1df] px-4 py-3 text-sm text-[#6d4710]">
+              <div role="alert" className="mt-5 flex gap-3 rounded-lg border-l-2 border-warning/70 bg-warning-soft px-4 py-3 text-sm text-warning">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 <div>
                   <p className="font-semibold">The programme could not be saved</p>
@@ -339,7 +339,7 @@ export function ProgrammeFormDialog(props: Props) {
               </Field>
 
               {activeConflict && (
-                <p role="status" className="flex gap-2.5 rounded-lg border-l-2 border-[#c48a2c] bg-[#fbf1df] px-3.5 py-2.5 text-xs leading-relaxed text-[#6d4710] sm:col-span-2">
+                <p role="status" className="flex gap-2.5 rounded-lg border-l-2 border-warning/70 bg-warning-soft px-3.5 py-2.5 text-xs leading-relaxed text-warning sm:col-span-2">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                   This builder already has an active programme ({activeConflict}). Save as draft, or suspend or close {activeConflict} first.
                 </p>
@@ -434,7 +434,7 @@ export function ProgrammeFormDialog(props: Props) {
               <div
                 className={cn(
                   "flex gap-3 rounded-lg border-l-2 px-3.5 py-3 text-xs leading-relaxed transition-colors",
-                  termsChanged ? "border-[#c48a2c] bg-[#fbf1df] text-[#6d4710]" : "border-border bg-card text-slate-ink",
+                  termsChanged ? "border-warning/70 bg-warning-soft text-warning" : "border-border bg-card text-slate-ink",
                 )}
               >
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" strokeWidth={1.6} aria-hidden="true" />

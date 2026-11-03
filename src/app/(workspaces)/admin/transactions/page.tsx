@@ -149,7 +149,7 @@ async function RequestsView({ sp }: { sp: SearchParams }) {
                       )}
                     </LTd>
                     <LTd align="right">
-                      <Money paise={r.discountAmountPaise} sign="−" className="text-[#93342a]" />
+                      <Money paise={r.discountAmountPaise} sign="−" className="text-danger" />
                     </LTd>
                     <LTd align="right">
                       <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />

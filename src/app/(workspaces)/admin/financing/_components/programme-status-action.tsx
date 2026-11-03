@@ -107,7 +107,7 @@ export function ProgrammeStatusAction({ programme, target }: { programme: Progra
           </li>
         </ul>
         {error && (
-          <div role="alert" className="flex gap-3 rounded-lg border-l-2 border-[#c48a2c] bg-[#fbf1df] px-4 py-3 text-sm text-[#6d4710]">
+          <div role="alert" className="flex gap-3 rounded-lg border-l-2 border-warning/70 bg-warning-soft px-4 py-3 text-sm text-warning">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <div>
               <p className="font-medium">{/already has an active programme/i.test(error) ? "Only one active programme per builder" : "Status not changed"}</p>
