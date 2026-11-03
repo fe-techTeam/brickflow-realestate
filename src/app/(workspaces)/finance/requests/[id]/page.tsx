@@ -1,20 +1,26 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, Download, ExternalLink, FileText, Lock, MessageSquareText, ShieldCheck } from "lucide-react";
-import { PageHeader } from "@/components/common/page-header";
-import { AmountRow, DetailList, EmptyState, Section, Timeline, type TimelineEntry } from "@/components/common/panels";
-import { StatusBadge, ToneBadge } from "@/components/common/status-badge";
+import { ArrowRight, Check, Download, ExternalLink, FileText, Lock, MessageSquareText, ShieldCheck } from "lucide-react";
+import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
-import type { ApprovalAction, FinancingStatus } from "@/generated/prisma/enums";
+import type { ApprovalAction, FinancingStatus, SettlementStatus } from "@/generated/prisma/enums";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatBps, formatINR } from "@/lib/money";
 import { FINANCING_STATUS } from "@/lib/status";
+import { cn } from "@/lib/utils";
 import { requireWorkspace } from "@/server/auth/session";
 import { getRequestEmpanelment, getRequestParticipants, maskAccountNumber } from "@/server/queries/finance";
-import { effectiveSettlementStatus, getFinancingRequestDetail, parseOfferTerms, refreshSettlementStatuses } from "@/server/services/financing";
+import {
+  effectiveSettlementStatus,
+  getFinancingRequestDetail,
+  parseOfferTerms,
+  refreshSettlementStatuses,
+  type FinancingRequestDetail,
+} from "@/server/services/financing";
+import { CaseTimeline, EmptyNote, FactList, Masthead, Money, Monogram, Panel, Rule, Seal, SimulatedTag, StatementRow, type CaseEvent } from "../../_components/ledger";
 import { orNotFound } from "../../_lib/records";
 import { toDisbursementSummary, toRequestSummary } from "../../_lib/summaries";
-import { MarkSettledButton } from "../../_components/request-actions";
 import { InternalCommentForm } from "./_components/comment-form";
 import { DecisionPanel } from "./_components/decision-panel";
 
@@ -22,7 +28,9 @@ type Params = { params: Promise<{ id: string }> };
 
 export const metadata: Metadata = { title: "Request review · Veefin Finance" };
 
-const APPROVAL_LABEL: Record<ApprovalAction, { title: string; tone: TimelineEntry["tone"] }> = {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const APPROVAL_LABEL: Record<ApprovalAction, { title: string; tone: CaseEvent["tone"] }> = {
   SUBMITTED: { title: "Submitted by channel partner", tone: "default" },
   UNDER_REVIEW: { title: "Review started by builder", tone: "default" },
   CLARIFICATION_REQUESTED: { title: "Clarification requested", tone: "warning" },
@@ -31,7 +39,7 @@ const APPROVAL_LABEL: Record<ApprovalAction, { title: string; tone: TimelineEntr
   REJECTED: { title: "Rejected by builder", tone: "danger" },
 };
 
-const EVENT_TONE: Partial<Record<FinancingStatus, TimelineEntry["tone"]>> = {
+const EVENT_TONE: Partial<Record<FinancingStatus, CaseEvent["tone"]>> = {
   ACCEPTED_BY_CP: "gold",
   PENDING_APPROVAL: "warning",
   APPROVED: "success",
@@ -40,15 +48,234 @@ const EVENT_TONE: Partial<Record<FinancingStatus, TimelineEntry["tone"]>> = {
   REJECTED: "danger",
 };
 
+const UPCOMING: Partial<Record<FinancingStatus, string[]>> = {
+  PENDING_APPROVAL: ["Credit decision by Veefin", "Simulated payout to channel partner", "Settlement by builder"],
+  APPROVED: ["Payout instruction initiated", "Transfer confirmed", "Settlement by builder"],
+  DISBURSEMENT_INITIATED: ["Transfer confirmed", "Settlement by builder"],
+};
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function Address({ parts }: { parts: (string | null)[] }) {
-  const text = parts.filter(Boolean).join(", ");
-  return <>{text || "—"}</>;
+function CaseFact({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("min-w-0 px-5 py-4 sm:px-6", className)}>
+      <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">{label}</p>
+      <div className="mt-1.5 truncate text-sm font-medium text-navy">{children}</div>
+    </div>
+  );
+}
+
+function Dossier({
+  role,
+  caption,
+  name,
+  href,
+  legalName,
+  tone,
+  facts,
+}: {
+  role: string;
+  caption: string;
+  name: string;
+  href: string;
+  legalName: string;
+  tone: "navy" | "heritage";
+  facts: { label: string; value: ReactNode }[];
+}) {
+  return (
+    <article className="animate-fade-up overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]">
+      <header className="flex items-center gap-4 border-b border-border/70 bg-[linear-gradient(180deg,#fbf9f3,#ffffff)] px-6 py-5">
+        <Monogram name={name} tone={tone} size="lg" />
+        <div className="min-w-0">
+          <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-600 uppercase">{role}</p>
+          <Link href={href} className="mt-0.5 block truncate font-display text-[1.375rem] leading-tight font-medium text-navy underline-offset-4 hover:underline">
+            {name}
+          </Link>
+          <p className="truncate text-xs text-muted-foreground">{caption}</p>
+        </div>
+      </header>
+      <div className="grid gap-x-10 px-6 pt-2 pb-4 md:grid-cols-2">
+        <FactList items={[{ label: "Legal name", value: legalName }, ...facts.slice(0, Math.ceil(facts.length / 2) - 1)]} />
+        <FactList items={facts.slice(Math.ceil(facts.length / 2) - 1)} />
+      </div>
+    </article>
+  );
+}
+
+function TransferStages({ status, initiatedAt, completedAt }: { status: "INITIATED" | "SUCCESS" | "FAILED"; initiatedAt: Date; completedAt: Date | null }) {
+  const stages = [
+    { label: "Instruction booked", at: formatDateTime(initiatedAt), state: "done" as const },
+    { label: "Submitted on demo rail", at: status === "INITIATED" ? "Processing" : "Cleared", state: status === "INITIATED" ? ("active" as const) : ("done" as const) },
+    {
+      label: status === "FAILED" ? "Transfer failed" : "Credited · UTR issued",
+      at: completedAt ? formatDateTime(completedAt) : "Awaiting confirmation",
+      state: status === "SUCCESS" ? ("done" as const) : status === "FAILED" ? ("failed" as const) : ("pending" as const),
+    },
+  ];
+  return (
+    <ol className="grid gap-4 sm:grid-cols-3 sm:gap-0">
+      {stages.map((stage, i) => (
+        <li key={stage.label} className="relative flex gap-3 sm:block">
+          {i < stages.length - 1 && (
+            <span
+              aria-hidden="true"
+              className={cn(
+                "absolute top-3 left-[2.25rem] hidden h-px w-[calc(100%-2.75rem)] sm:block",
+                stage.state === "done" && stages[i + 1]!.state !== "pending" ? "bg-heritage/60" : "bg-[repeating-linear-gradient(90deg,#d9d2c2_0_4px,transparent_4px_8px)]",
+              )}
+            />
+          )}
+          <span
+            className={cn(
+              "relative flex size-6 shrink-0 items-center justify-center rounded-full ring-1",
+              stage.state === "done" && "bg-heritage text-white ring-heritage",
+              stage.state === "active" && "bg-navy text-gold ring-navy",
+              stage.state === "pending" && "bg-card text-muted-foreground ring-border",
+              stage.state === "failed" && "bg-[#b5473a] text-white ring-[#b5473a]",
+            )}
+          >
+            {stage.state === "active" && <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-gold/40" />}
+            {stage.state === "done" ? <Check className="size-3.5" /> : <span className="tabular text-[0.625rem] font-semibold">{i + 1}</span>}
+          </span>
+          <div className="min-w-0 sm:mt-3 sm:pr-4">
+            <p className={cn("text-[0.8125rem] font-medium", stage.state === "pending" ? "text-muted-foreground" : "text-navy")}>{stage.label}</p>
+            <p className={cn("tabular mt-0.5 text-[0.6875rem]", stage.state === "active" ? "font-semibold tracking-[0.14em] text-gold-600 uppercase" : "text-muted-foreground")}>
+              {stage.at}
+            </p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function DisbursementAdvice({ request, nameOf }: { request: FinancingRequestDetail; nameOf: (id: string | null | undefined) => string }) {
+  const d = request.disbursement!;
+  return (
+    <section aria-label="Disbursement" className="relative animate-fade-up overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]">
+      <header className="relative flex flex-col gap-3 overflow-hidden bg-navy px-6 py-5 text-white sm:flex-row sm:items-center sm:justify-between sm:px-7">
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
+        <div>
+          <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-gold uppercase">Payment advice · Disbursement</p>
+          <h2 className="mt-1 font-display text-[1.5rem] leading-tight font-medium text-white">Transfer to channel partner</h2>
+        </div>
+        <div className="text-left sm:text-right">
+          <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-white/50 uppercase">Payment reference</p>
+          <p className="tabular mt-1 text-sm font-medium tracking-wide text-white">{d.reference}</p>
+        </div>
+      </header>
+
+      <div className="relative px-6 py-6 sm:px-7">
+        <Seal id="bf-seal-advice" className="absolute top-4 right-4 size-[5.5rem] opacity-90 sm:top-5 sm:right-7 sm:size-28" />
+        <div className="grid gap-6 pr-24 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-start sm:pr-32">
+          <div className="min-w-0">
+            <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Remitter</p>
+            <p className="mt-1.5 text-sm font-medium text-navy">{request.financier.name}</p>
+            <p className="text-xs text-muted-foreground">Disbursement pool · demo rail</p>
+          </div>
+          <ArrowRight className="hidden size-4 self-center text-gold-600 sm:block" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Beneficiary</p>
+            <p className="mt-1.5 text-sm font-medium text-navy">{d.beneficiaryName}</p>
+            <p className="tabular text-xs text-muted-foreground">
+              {d.beneficiaryAccount} · {d.beneficiaryIfsc}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-1 border-y border-dashed border-gold/40 py-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">{d.status === "SUCCESS" ? "Amount credited" : "Amount in transfer"}</p>
+            <Money paise={d.amountPaise} size="xl" className="mt-2 block text-heritage" />
+          </div>
+          <div className="flex items-center gap-2 sm:pb-1">
+            <StatusBadge kind="disbursement" status={d.status} />
+            <SimulatedTag />
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <TransferStages status={d.status} initiatedAt={d.initiatedAt} completedAt={d.completedAt} />
+        </div>
+
+        <div className="mt-6 grid gap-x-8 sm:grid-cols-2">
+          <FactList
+            items={[
+              { label: "UTR", value: <span className="tabular">{d.utr ?? "Pending confirmation"}</span> },
+              { label: "Initiated by", value: nameOf(d.initiatedById) },
+            ]}
+          />
+          <FactList
+            items={[
+              { label: "Completed by", value: d.completedAt ? nameOf(d.completedById) : "—" },
+              { label: "Mode", value: "Demo rail · no real funds moved" },
+            ]}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SettlementCard({ request, status, now, nameOf }: { request: FinancingRequestDetail; status: SettlementStatus; now: Date; nameOf: (id: string | null | undefined) => string }) {
+  const s = request.settlement!;
+  const settled = status === "SETTLED";
+  const start = request.disbursement?.completedAt ?? request.acceptedAt ?? s.dueDate;
+  const span = Math.max(1, s.dueDate.getTime() - start.getTime());
+  const progress = settled ? 100 : Math.min(100, Math.max(0, ((now.getTime() - start.getTime()) / span) * 100));
+  const daysToDue = Math.round((s.dueDate.getTime() - now.getTime()) / DAY_MS);
+  const dueText = settled
+    ? `Settled ${formatDate(s.settledAt)}`
+    : daysToDue < 0
+      ? `${Math.abs(daysToDue)} day${daysToDue === -1 ? "" : "s"} overdue`
+      : daysToDue === 0
+        ? "Due today"
+        : `${daysToDue} day${daysToDue === 1 ? "" : "s"} to due date`;
+
+  return (
+    <Panel
+      eyebrow="Builder repayment"
+      title="Settlement"
+      description={`${request.builder.name} repays the builder-approved amount to ${request.financier.name}`}
+    >
+      <div className="grid gap-6 border-t border-border/70 pt-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div>
+          <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Settlement amount</p>
+          <Money paise={s.amountPaise} size="xl" className={cn("mt-2 block", settled ? "text-heritage" : status === "OVERDUE" ? "text-[#93342a]" : "text-navy")} />
+        </div>
+        <div className="sm:text-right">
+          <StatusBadge kind="settlement" status={status} />
+          <p className="mt-1.5 text-xs text-muted-foreground">Due {formatDate(s.dueDate)}</p>
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <div className="relative h-1.5 rounded-full bg-ivory-200" role="presentation">
+          <span
+            className={cn("absolute inset-y-0 left-0 rounded-full", settled ? "bg-heritage" : status === "OVERDUE" ? "bg-[#b5473a]" : "bg-gradient-to-r from-navy to-gold")}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="mt-2 flex justify-between gap-3 text-[0.6875rem] text-muted-foreground">
+          <span>Disbursed {formatDate(start)}</span>
+          <span className={cn("font-medium", status === "OVERDUE" ? "text-[#93342a]" : settled ? "text-heritage" : "text-navy")}>{dueText}</span>
+          <span>Due {formatDate(s.dueDate)}</span>
+        </div>
+      </div>
+
+      {settled && (
+        <div className="mt-6 grid gap-x-8 sm:grid-cols-2">
+          <FactList items={[{ label: "Settlement reference", value: <span className="tabular">{s.reference ?? "—"}</span> }]} />
+          <FactList items={[{ label: "Recorded by", value: nameOf(s.settledById) }]} />
+        </div>
+      )}
+      {s.note && <p className="mt-4 border-l-2 border-gold/60 pl-3 text-[0.8125rem] leading-relaxed text-slate-ink italic">{s.note}</p>}
+    </Panel>
+  );
 }
 
 export default async function RequestReviewPage({ params }: Params) {
@@ -74,10 +301,11 @@ export default async function RequestReviewPage({ params }: Params) {
     ifsc: request.cp.bankIfsc ?? "DEMO0000001",
   });
 
-  const events: TimelineEntry[] = request.events.map((e) => ({
+  const events: CaseEvent[] = request.events.map((e) => ({
     id: e.id,
     title: FINANCING_STATUS[e.toStatus].label,
-    meta: `${e.actorName} · ${formatDateTime(e.createdAt)}`,
+    actor: e.actorName,
+    at: formatDateTime(e.createdAt),
     body: e.note ?? undefined,
     tone: EVENT_TONE[e.toStatus] ?? "default",
   }));
@@ -85,48 +313,50 @@ export default async function RequestReviewPage({ params }: Params) {
     events.push({
       id: `settlement-${request.settlement.id}`,
       title: "Settled by builder",
-      meta: `${nameOf(request.settlement.settledById)} · ${formatDateTime(request.settlement.settledAt)}`,
+      actor: nameOf(request.settlement.settledById),
+      at: formatDateTime(request.settlement.settledAt),
       body: `Reference ${request.settlement.reference}${request.settlement.note ? ` — ${request.settlement.note}` : ""}`,
       tone: "success",
     });
   }
+  const upcoming = request.status === "DISBURSED" && settlementStatus !== "SETTLED" ? ["Settlement by builder"] : (UPCOMING[request.status] ?? []);
+  for (const label of upcoming) events.push({ id: `next-${label}`, title: label, at: "Upcoming", tone: "pending" });
 
-  const approvals: TimelineEntry[] = invoice.approvals.map((a) => ({
+  const approvals: CaseEvent[] = invoice.approvals.map((a) => ({
     id: a.id,
     title: APPROVAL_LABEL[a.action].title,
-    meta: `${a.actorName} · ${formatDateTime(a.createdAt)}`,
+    actor: a.actorName,
+    at: formatDateTime(a.createdAt),
     body: a.comment ?? undefined,
     tone: APPROVAL_LABEL[a.action].tone,
   }));
 
+  const comments = request.comments ?? [];
+
   return (
     <>
-      <PageHeader
+      <Masthead
         back={{ href: "/finance/requests", label: "Financing requests" }}
-        eyebrow="Financing request · Case file"
+        eyebrow="Case file · Financing request"
         title={<span className="tabular">{request.reference}</span>}
-        description={
-          <span className="flex flex-col gap-3">
-            <span className="flex flex-wrap items-center gap-2">
-              <StatusBadge kind="financing" status={request.status} />
-              {settlementStatus && <StatusBadge kind="settlement" status={settlementStatus} />}
-              {request.disbursement && <StatusBadge kind="disbursement" status={request.disbursement.status} />}
-            </span>
-            <span className="flex flex-wrap items-center gap-1.5 text-sm">
-              <Link href={`/finance/partners/${request.cpId}`} className="font-medium text-navy hover:underline">
-                {request.cp.name}
-              </Link>
-              <ArrowRight className="size-3.5 text-gold-600" aria-label="to" />
-              <Link href={`/finance/builders/${request.builderId}`} className="font-medium text-navy hover:underline">
-                {request.builder.name}
-              </Link>
-              <span className="text-muted-foreground">· requested {formatDateTime(request.createdAt)}</span>
-            </span>
-          </span>
-        }
+        context={[
+          <StatusBadge key="s" kind="financing" status={request.status} />,
+          <span key="p" className="inline-flex flex-wrap items-center gap-1.5">
+            <Link href={`/finance/partners/${request.cpId}`} className="font-medium text-navy underline-offset-4 hover:underline">
+              {request.cp.name}
+            </Link>
+            <ArrowRight className="size-3.5 text-gold-600" aria-label="to" />
+            <Link href={`/finance/builders/${request.builderId}`} className="font-medium text-navy underline-offset-4 hover:underline">
+              {request.builder.name}
+            </Link>
+          </span>,
+          <span key="d" className="text-muted-foreground">
+            Requested {formatDateTime(request.createdAt)}
+          </span>,
+        ]}
         actions={
           document ? (
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="bg-card">
               <a href={`/api/documents/invoices/${document.id}`} target="_blank" rel="noopener noreferrer">
                 <FileText className="size-4" />
                 Invoice PDF
@@ -136,106 +366,86 @@ export default async function RequestReviewPage({ params }: Params) {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-[auto_1fr]">
+      <div className="mb-8 grid animate-fade-up grid-cols-2 divide-border/70 overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-32px_rgba(20,43,67,0.3)] max-sm:divide-y sm:grid-cols-5 sm:divide-x">
+        <CaseFact label="Invoice">
+          <span className="tabular">{invoice.invoiceNumber}</span>
+        </CaseFact>
+        <CaseFact label="Programme">
+          <span className="tabular">{terms.programmeCode}</span>
+        </CaseFact>
+        <CaseFact label="Agreed rate">
+          <span className="tabular">{formatBps(request.discountRateBps)}</span>
+        </CaseFact>
+        <CaseFact label="Builder-approved">
+          <Money paise={request.approvedAmountPaise} paiseMode="hide" />
+        </CaseFact>
+        <CaseFact label="Settlement due" className="max-sm:col-span-2">{formatDate(request.settlement?.dueDate ?? invoice.dueDate)}</CaseFact>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-[auto_1fr] xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="min-w-0 lg:col-start-2 lg:row-start-1">
           <DecisionPanel request={request} summary={summary} disbursement={disbursementSummary} settlementStatus={settlementStatus} names={names} />
         </div>
 
         <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-span-2 lg:row-start-1">
-          <Section
+          <Panel
+            eyebrow={`Programme ${terms.programmeCode} · ${terms.financier}`}
             title="Financing calculation"
-            description={`Programme ${terms.programmeCode} · ${terms.financier}`}
-            actions={<ToneBadge meta={{ label: "Accepted snapshot", tone: "navy" }} />}
+            actions={
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-navy/15 bg-navy/[0.04] px-2.5 py-1 text-[0.625rem] font-semibold tracking-[0.16em] text-navy uppercase">
+                <Lock className="size-3" aria-hidden="true" />
+                Snapshot locked
+              </span>
+            }
           >
-            <div className="divide-y divide-border/60">
-              <AmountRow label="Invoice amount" hint="Gross, including GST" value={formatINR(request.offer.invoiceAmountPaise)} />
-              <AmountRow
+            <div className="border-t border-border/70 pt-2">
+              <StatementRow index="01" label="Invoice amount" hint="Gross, including GST" value={<Money paise={request.offer.invoiceAmountPaise} className="font-normal" />} />
+              <StatementRow
+                index="02"
                 label="Builder-approved amount"
-                hint={reduced ? "Builder approved a reduced amount; financing applies to this figure" : "Approved in full by the builder"}
-                value={formatINR(request.approvedAmountPaise)}
+                hint={reduced ? "Builder approved a reduced amount; financing applies to this figure." : "Approved in full by the builder."}
+                value={<Money paise={request.approvedAmountPaise} />}
               />
-              <AmountRow label="Agreed discount" hint="Fixed rate agreed between Veefin and the builder" value={formatBps(request.discountRateBps)} />
-              <AmountRow label="Discount amount" tone="deduct" value={`− ${formatINR(request.discountAmountPaise)}`} />
-              <AmountRow label="Other charges" hint="No processing fees under this programme" value={formatINR(request.chargesPaise)} />
-              <AmountRow label="Net payable to CP" tone="total" value={formatINR(request.netPayablePaise)} />
+              <StatementRow index="03" label="Agreed discount rate" hint="Fixed rate agreed between Veefin and the builder" value={<span className="tabular text-sm font-medium">{formatBps(request.discountRateBps)}</span>} />
+              <StatementRow index="04" label="Discount amount" tone="deduct" value={<Money paise={request.discountAmountPaise} sign="−" />} />
+              <StatementRow index="05" label="Other charges" hint="No processing fees under this programme" value={<Money paise={request.chargesPaise} className="font-normal" />} />
             </div>
-            <p className="mt-4 rounded-md bg-ivory/70 px-4 py-3 text-xs leading-relaxed text-slate-ink">
-              <ShieldCheck className="mr-1.5 inline size-3.5 -translate-y-px text-heritage" aria-hidden="true" />
-              These figures are the snapshot accepted by the channel partner on {formatDateTime(request.acceptedAt)}. Later changes to the programme rate do not
-              affect this request. The builder settles {formatINR(request.approvedAmountPaise)} with Veefin on the invoice due date.
+
+            <div className="relative mt-5 overflow-hidden rounded-xl bg-[linear-gradient(135deg,#fbf8f1,#f3ede0)] px-6 py-6 ring-1 ring-gold/30 sm:px-7">
+              <div aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-gold/0 via-gold to-gold/0" />
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-gold-600 uppercase">Net payable to channel partner</p>
+                  <Money paise={request.netPayablePaise} size="hero" className="mt-3 block text-heritage" />
+                </div>
+                <div className="tabular text-xs leading-relaxed text-muted-foreground sm:text-right">
+                  <p>
+                    {formatINR(request.approvedAmountPaise)} − {formatINR(request.discountAmountPaise)}
+                    {request.chargesPaise > 0n ? ` − ${formatINR(request.chargesPaise)}` : ""}
+                  </p>
+                  <p className="mt-0.5">
+                    Builder settles <span className="font-medium text-navy">{formatINR(request.approvedAmountPaise)}</span> on {formatDate(invoice.dueDate)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-5 flex gap-3 text-xs leading-relaxed text-slate-ink">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-heritage" aria-hidden="true" />
+              <span>
+                These figures are the snapshot accepted by the channel partner on {formatDateTime(request.acceptedAt)}. Later changes to the programme rate do not affect this
+                request. The builder settles {formatINR(request.approvedAmountPaise)} with Veefin on the invoice due date.
+              </span>
             </p>
-          </Section>
+          </Panel>
 
-          {request.disbursement && (
-            <Section
-              title="Disbursement"
-              description="Payout of the net amount to the channel partner"
-              actions={<ToneBadge meta={{ label: "DEMO / SIMULATED", tone: "gold" }} />}
-            >
-              <DetailList
-                columns={3}
-                items={[
-                  { label: "Payment reference", value: <span className="tabular">{request.disbursement.reference}</span> },
-                  { label: "UTR", value: <span className="tabular">{request.disbursement.utr ?? "Pending confirmation"}</span> },
-                  { label: "Status", value: <StatusBadge kind="disbursement" status={request.disbursement.status} /> },
-                  { label: "Amount", value: <span className="tabular font-medium text-heritage">{formatINR(request.disbursement.amountPaise)}</span> },
-                  { label: "Beneficiary", value: request.disbursement.beneficiaryName },
-                  {
-                    label: "Account",
-                    value: (
-                      <span className="tabular">
-                        {request.disbursement.beneficiaryAccount} · {request.disbursement.beneficiaryIfsc}
-                      </span>
-                    ),
-                  },
-                  { label: "Initiated", value: `${formatDateTime(request.disbursement.initiatedAt)} · ${nameOf(request.disbursement.initiatedById)}` },
-                  {
-                    label: "Completed",
-                    value: request.disbursement.completedAt
-                      ? `${formatDateTime(request.disbursement.completedAt)} · ${nameOf(request.disbursement.completedById)}`
-                      : "Awaiting confirmation",
-                  },
-                  { label: "Mode", value: "Demo rail — no real funds moved" },
-                ]}
-              />
-            </Section>
-          )}
+          {request.disbursement && <DisbursementAdvice request={request} nameOf={nameOf} />}
 
-          {request.settlement && settlementStatus && (
-            <Section
-              title="Builder settlement"
-              description={`${request.builder.name} repays the builder-approved amount to Veefin`}
-              actions={
-                settlementStatus !== "SETTLED" ? (
-                  <MarkSettledButton
-                    requestId={request.id}
-                    requestReference={request.reference}
-                    builderName={request.builder.name}
-                    amountPaise={request.settlement.amountPaise.toString()}
-                    size="sm"
-                  />
-                ) : (
-                  <StatusBadge kind="settlement" status="SETTLED" />
-                )
-              }
-            >
-              <DetailList
-                columns={3}
-                items={[
-                  { label: "Settlement amount", value: formatINR(request.settlement.amountPaise), emphasis: true },
-                  { label: "Due date", value: formatDate(request.settlement.dueDate) },
-                  { label: "Status", value: <StatusBadge kind="settlement" status={settlementStatus} /> },
-                  { label: "Settled on", value: formatDateTime(request.settlement.settledAt) },
-                  { label: "Settlement reference", value: <span className="tabular">{request.settlement.reference ?? "—"}</span> },
-                  { label: "Recorded by", value: nameOf(request.settlement.settledById) },
-                ]}
-              />
-              {request.settlement.note && <p className="mt-4 rounded-md bg-muted/70 px-3 py-2 text-sm text-slate-ink">{request.settlement.note}</p>}
-            </Section>
-          )}
-          <Section
+          {request.settlement && settlementStatus && <SettlementCard request={request} status={settlementStatus} now={now} nameOf={nameOf} />}
+
+          <Panel
+            eyebrow={`${invoice.reference} · ${invoice.project.name}`}
             title="Invoice"
-            description={`${invoice.reference} · ${invoice.project.name}`}
             actions={
               document ? (
                 <>
@@ -255,42 +465,46 @@ export default async function RequestReviewPage({ params }: Params) {
               ) : undefined
             }
           >
-            <DetailList
-              columns={3}
-              items={[
-                { label: "Invoice number", value: <span className="tabular">{invoice.invoiceNumber}</span> },
-                { label: "Invoice date", value: formatDate(invoice.invoiceDate) },
-                { label: "Due date", value: invoice.dueDate ? formatDate(invoice.dueDate) : "Not stated" },
-                { label: "Invoice amount", value: <span className="tabular">{formatINR(invoice.amountPaise)}</span> },
-                { label: "GST component", value: <span className="tabular">{invoice.gstAmountPaise !== null ? formatINR(invoice.gstAmountPaise) : "—"}</span> },
-                { label: "Builder-approved", value: <span className="tabular">{invoice.approvedAmountPaise !== null ? formatINR(invoice.approvedAmountPaise) : "—"}</span> },
-                { label: "Project", value: `${invoice.project.name} · ${invoice.project.city}` },
-                { label: "Project RERA", value: invoice.project.reraNumber ?? "—" },
-                { label: "Invoice status", value: <StatusBadge kind="invoice" status={invoice.status} /> },
-              ]}
-            />
+            <div className="grid gap-x-8 border-t border-border/70 pt-1 sm:grid-cols-2">
+              <FactList
+                items={[
+                  { label: "Invoice number", value: <span className="tabular">{invoice.invoiceNumber}</span> },
+                  { label: "Invoice date", value: formatDate(invoice.invoiceDate) },
+                  { label: "Due date", value: invoice.dueDate ? formatDate(invoice.dueDate) : "Not stated" },
+                  { label: "Invoice status", value: <StatusBadge kind="invoice" status={invoice.status} /> },
+                ]}
+              />
+              <FactList
+                items={[
+                  { label: "Invoice amount", value: <Money paise={invoice.amountPaise} /> },
+                  { label: "GST component", value: invoice.gstAmountPaise !== null ? <Money paise={invoice.gstAmountPaise} /> : "—" },
+                  { label: "Builder-approved", value: invoice.approvedAmountPaise !== null ? <Money paise={invoice.approvedAmountPaise} /> : "—" },
+                  { label: "Project RERA", value: <span className="tabular text-xs">{invoice.project.reraNumber ?? "—"}</span> },
+                ]}
+              />
+            </div>
             {invoice.description && (
-              <div className="mt-5">
-                <p className="eyebrow mb-1">Description</p>
-                <p className="text-sm leading-relaxed text-slate-ink">{invoice.description}</p>
-              </div>
+              <p className="mt-5 rounded-lg bg-ivory/60 px-4 py-3 text-[0.8125rem] leading-relaxed text-slate-ink">
+                <span className="mr-2 text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Description</span>
+                {invoice.description}
+              </p>
             )}
             {invoice.documents.length > 0 && (
-              <ul className="mt-5 divide-y divide-border/70 rounded-md border border-border">
+              <ul className="mt-5 space-y-2">
                 {invoice.documents.map((doc) => (
-                  <li key={doc.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <li key={doc.id} className="flex flex-col gap-3 rounded-lg border border-border/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-navy/[0.06] text-navy">
-                        <FileText className="size-4" strokeWidth={1.75} />
+                      <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-[4px] border border-[#e6dfd0] bg-ivory text-[0.5625rem] font-bold tracking-wider text-[#93342a]">
+                        PDF
                       </span>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-navy">{doc.fileName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatBytes(doc.sizeBytes)} · uploaded {formatDateTime(doc.createdAt)} · SHA-256 {doc.sha256.slice(0, 12)}…
+                        <p className="truncate text-[0.6875rem] text-muted-foreground">
+                          {formatBytes(doc.sizeBytes)} · uploaded {formatDateTime(doc.createdAt)} · SHA-256 <span className="tabular">{doc.sha256.slice(0, 12)}…</span>
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       <Button asChild size="sm" variant="ghost">
                         <a href={`/api/documents/invoices/${doc.id}`} target="_blank" rel="noopener noreferrer" aria-label={`View ${doc.fileName}`}>
                           View
@@ -306,144 +520,162 @@ export default async function RequestReviewPage({ params }: Params) {
                 ))}
               </ul>
             )}
-            <div className="mt-6">
-              <p className="eyebrow mb-4">Builder approval history</p>
-              <Timeline entries={approvals} />
-            </div>
-          </Section>
+            <Rule label="Builder approval history" className="mt-7 mb-5" />
+            <CaseTimeline events={approvals} />
+          </Panel>
 
-          <div className="grid gap-6 xl:grid-cols-2">
-            <Section title="Channel partner" description="Beneficiary of the early payment">
-              <DetailList
-                columns={1}
-                items={[
-                  { label: "Legal name", value: request.cp.legalName },
-                  { label: "GSTIN", value: <span className="tabular">{request.cp.gstin ?? "—"}</span> },
-                  { label: "PAN", value: <span className="tabular">{request.cp.pan ?? "—"}</span> },
-                  { label: "RERA registration", value: request.cp.reraNumber ?? "—" },
-                  {
-                    label: "Contact",
-                    value: (
-                      <>
-                        {request.cp.contactName ?? "—"}
-                        <span className="block text-xs text-muted-foreground">
-                          {[request.cp.contactEmail, request.cp.contactPhone].filter(Boolean).join(" · ")}
-                        </span>
-                      </>
-                    ),
-                  },
-                  {
-                    label: "Bank account",
-                    value: (
-                      <>
-                        <span className="tabular">{accountMasked}</span>
-                        <span className="block text-xs text-muted-foreground">
-                          {request.cp.bankName ?? "—"} · IFSC {request.cp.bankIfsc ?? "—"}
-                        </span>
-                      </>
-                    ),
-                  },
-                  {
-                    label: "Empanelment",
-                    value: empanelment ? `${empanelment.empanelmentCode} · ${empanelment.creditPeriodDays}-day credit period` : "—",
-                  },
-                ]}
-              />
-            </Section>
-            <Section title="Builder" description="Obligor for settlement on the due date">
-              <DetailList
-                columns={1}
-                items={[
-                  { label: "Legal name", value: request.builder.legalName },
-                  { label: "GSTIN", value: <span className="tabular">{request.builder.gstin ?? "—"}</span> },
-                  { label: "PAN", value: <span className="tabular">{request.builder.pan ?? "—"}</span> },
-                  { label: "RERA registration", value: request.builder.reraNumber ?? "—" },
-                  {
-                    label: "Contact",
-                    value: (
-                      <>
-                        {request.builder.contactName ?? "—"}
-                        <span className="block text-xs text-muted-foreground">
-                          {[request.builder.contactEmail, request.builder.contactPhone].filter(Boolean).join(" · ")}
-                        </span>
-                      </>
-                    ),
-                  },
-                  {
-                    label: "Registered address",
-                    value: <Address parts={[request.builder.addressLine, request.builder.city, request.builder.state, request.builder.pincode]} />,
-                  },
-                ]}
-              />
-            </Section>
-          </div>
-
-          <Section title="Offer and consent" description="What the channel partner saw and agreed to">
-            <DetailList
-              columns={3}
-              items={[
-                { label: "Offer reference", value: <span className="tabular">{request.offer.reference}</span> },
-                { label: "Offer status", value: <StatusBadge kind="offer" status={request.offer.status} /> },
-                { label: "Valid until", value: formatDateTime(request.offer.validUntil) },
-                { label: "Generated", value: formatDateTime(request.offer.generatedAt) },
-                { label: "Accepted", value: formatDateTime(request.offer.acceptedAt ?? request.acceptedAt) },
-                { label: "Accepted by", value: `${nameOf(request.offer.acceptedById ?? request.acceptedById)} · ${request.cp.name}` },
+          <div className="grid gap-6">
+            <Dossier
+              role="Channel partner · Beneficiary"
+              caption="Receives the early payment"
+              name={request.cp.name}
+              href={`/finance/partners/${request.cpId}`}
+              legalName={request.cp.legalName}
+              tone="navy"
+              facts={[
+                { label: "GSTIN", value: <span className="tabular">{request.cp.gstin ?? "—"}</span> },
+                { label: "PAN", value: <span className="tabular">{request.cp.pan ?? "—"}</span> },
+                { label: "RERA", value: <span className="text-xs">{request.cp.reraNumber ?? "—"}</span> },
+                {
+                  label: "Contact",
+                  value: (
+                    <>
+                      {request.cp.contactName ?? "—"}
+                      <span className="block text-xs text-muted-foreground">{[request.cp.contactEmail, request.cp.contactPhone].filter(Boolean).join(" · ")}</span>
+                    </>
+                  ),
+                },
+                {
+                  label: "Payout account",
+                  value: (
+                    <>
+                      <span className="tabular">{accountMasked}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {request.cp.bankName ?? "—"} · {request.cp.bankIfsc ?? "—"}
+                      </span>
+                    </>
+                  ),
+                },
+                { label: "Empanelment", value: empanelment ? `${empanelment.empanelmentCode} · ${empanelment.creditPeriodDays}-day credit` : "—" },
               ]}
             />
-            <div className="mt-5">
-              <p className="eyebrow mb-2">Consent text</p>
-              <blockquote className="border-l-2 border-gold bg-ivory/60 px-4 py-3 text-sm leading-relaxed text-slate-ink italic">
-                {request.offer.consentText ?? "No consent text recorded."}
-              </blockquote>
-            </div>
-            <div className="mt-5 rounded-md border border-border p-4">
-              <p className="eyebrow mb-3">Programme terms snapshot</p>
-              <DetailList
-                columns={3}
+            <Dossier
+              role="Builder · Obligor"
+              caption="Settles with Veefin on the due date"
+              name={request.builder.name}
+              href={`/finance/builders/${request.builderId}`}
+              legalName={request.builder.legalName}
+              tone="heritage"
+              facts={[
+                { label: "GSTIN", value: <span className="tabular">{request.builder.gstin ?? "—"}</span> },
+                { label: "PAN", value: <span className="tabular">{request.builder.pan ?? "—"}</span> },
+                { label: "RERA", value: <span className="text-xs">{request.builder.reraNumber ?? "—"}</span> },
+                {
+                  label: "Contact",
+                  value: (
+                    <>
+                      {request.builder.contactName ?? "—"}
+                      <span className="block text-xs text-muted-foreground">
+                        {[request.builder.contactEmail, request.builder.contactPhone].filter(Boolean).join(" · ")}
+                      </span>
+                    </>
+                  ),
+                },
+                {
+                  label: "Registered address",
+                  value: [request.builder.addressLine, request.builder.city, request.builder.state, request.builder.pincode].filter(Boolean).join(", ") || "—",
+                },
+              ]}
+            />
+          </div>
+
+          <Panel eyebrow="What the channel partner agreed to" title="Offer and consent" actions={<StatusBadge kind="offer" status={request.offer.status} />}>
+            <div className="grid gap-x-8 border-t border-border/70 pt-1 sm:grid-cols-2">
+              <FactList
                 items={[
-                  { label: "Programme", value: `${terms.programmeCode}` },
-                  { label: "Agreed discount", value: formatBps(terms.discountRateBps) },
-                  { label: "Offer validity", value: `${terms.offerValidityDays} days` },
+                  { label: "Offer reference", value: <span className="tabular">{request.offer.reference}</span> },
+                  { label: "Generated", value: formatDateTime(request.offer.generatedAt) },
                 ]}
               />
-              <p className="mt-4 text-sm font-medium text-navy">{terms.programmeName}</p>
-              <p className="mt-1 text-sm leading-relaxed text-slate-ink">{terms.terms}</p>
+              <FactList
+                items={[
+                  { label: "Valid until", value: formatDateTime(request.offer.validUntil) },
+                  { label: "Accepted", value: formatDateTime(request.offer.acceptedAt ?? request.acceptedAt) },
+                ]}
+              />
             </div>
-          </Section>
 
+            <figure className="relative mt-6 rounded-xl bg-ivory/60 px-6 pt-8 pb-6 sm:px-8">
+              <span aria-hidden="true" className="absolute top-1 left-5 font-display text-[4.5rem] leading-none text-gold/50">
+                “
+              </span>
+              <blockquote className="font-display text-[1.1875rem] leading-relaxed text-navy italic">{request.offer.consentText ?? "No consent text recorded."}</blockquote>
+              <figcaption className="mt-5 flex flex-wrap items-end justify-between gap-3 border-t border-gold/30 pt-3">
+                <span>
+                  <span className="block text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Accepted by</span>
+                  <span className="mt-0.5 block text-sm font-medium text-navy">
+                    {nameOf(request.offer.acceptedById ?? request.acceptedById)} · {request.cp.name}
+                  </span>
+                </span>
+                <span className="tabular text-xs text-muted-foreground">{formatDateTime(request.offer.acceptedAt ?? request.acceptedAt)}</span>
+              </figcaption>
+            </figure>
+
+            <div className="mt-6 rounded-xl border border-border/80 p-5">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-600 uppercase">Programme terms snapshot</p>
+                <p className="tabular text-xs text-muted-foreground">
+                  {terms.programmeCode} · {formatBps(terms.discountRateBps)} · {terms.offerValidityDays}-day offer validity
+                </p>
+              </div>
+              <p className="mt-3 font-display text-lg leading-snug font-medium text-navy">{terms.programmeName}</p>
+              <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-slate-ink">{terms.terms}</p>
+            </div>
+          </Panel>
         </div>
 
         <aside className="min-w-0 space-y-6 lg:col-start-2 lg:row-start-2 lg:self-start">
-          <Section title="Lifecycle" description="Every status change on this request">
-            <Timeline entries={events} />
-          </Section>
+          <Panel eyebrow="Lifecycle" title="Case history" description="Every status change on this request, and what comes next">
+            <div className="border-t border-border/70 pt-5">
+              <CaseTimeline events={events} />
+            </div>
+          </Panel>
 
-          <Section
-            title="Internal comments"
-            description={
-              <span className="inline-flex items-center gap-1">
-                <Lock className="size-3" aria-hidden="true" />
-                Internal — not visible to CP or builder
-              </span>
-            }
-          >
-            <InternalCommentForm requestId={request.id} />
-            {request.comments && request.comments.length > 0 ? (
-              <ul className="mt-5 space-y-4">
-                {request.comments.map((c) => (
-                  <li key={c.id} className="rounded-md border border-border bg-ivory/40 px-4 py-3">
-                    <p className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
-                      <span className="font-semibold text-navy">{c.authorName}</span>
-                      <span className="text-muted-foreground">{formatDateTime(c.createdAt)}</span>
-                    </p>
-                    <p className="mt-1.5 text-sm leading-relaxed whitespace-pre-line text-slate-ink">{c.body}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState icon={MessageSquareText} title="No comments yet" description="Notes added here are shared only within Veefin." className="py-8" />
-            )}
-          </Section>
+          <section aria-label="Internal annotations" className="animate-fade-up overflow-hidden rounded-xl border border-gold/30 bg-[linear-gradient(180deg,#fbf8f0,#f6f1e5)]">
+            <header className="flex items-start justify-between gap-3 px-6 pt-6 pb-4">
+              <div>
+                <p className="flex items-center gap-1.5 text-[0.625rem] font-semibold tracking-[0.2em] text-gold-600 uppercase">
+                  <Lock className="size-3" aria-hidden="true" />
+                  Private to Veefin
+                </p>
+                <h2 className="mt-1 font-display text-[1.5rem] leading-tight font-medium">Internal annotations</h2>
+                <p className="mt-1 text-[0.8125rem] text-muted-foreground">Not visible to the channel partner or the builder.</p>
+              </div>
+              <span className="tabular rounded-full bg-card px-2 py-0.5 text-[0.6875rem] font-semibold text-navy ring-1 ring-gold/30">{comments.length}</span>
+            </header>
+            <div className="px-6 pb-6">
+              <InternalCommentForm requestId={request.id} />
+              {comments.length > 0 ? (
+                <ul className="mt-6 space-y-4">
+                  {comments.map((c) => (
+                    <li key={c.id} className="relative rounded-lg bg-card px-4 py-4 shadow-[0_10px_24px_-20px_rgba(20,43,67,0.5)] ring-1 ring-[#e6dfd0]">
+                      <span aria-hidden="true" className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-gold" />
+                      <div className="flex items-center gap-2.5">
+                        <Monogram name={c.authorName} size="sm" tone="ivory" />
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold text-navy">{c.authorName}</p>
+                          <p className="tabular text-[0.6875rem] text-muted-foreground">{formatDateTime(c.createdAt)}</p>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-[0.875rem] leading-relaxed whitespace-pre-line text-slate-ink">{c.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <EmptyNote icon={MessageSquareText} title="No annotations yet" description="Notes added here are shared only within Veefin." compact />
+              )}
+            </div>
+          </section>
         </aside>
       </div>
     </>

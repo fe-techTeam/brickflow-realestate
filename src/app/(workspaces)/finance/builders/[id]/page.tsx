@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, BadgeCheck, Building2, ListChecks, Wallet } from "lucide-react";
-import { DataTable, Td, Th, Tr } from "@/components/common/data-table";
-import { PageHeader } from "@/components/common/page-header";
-import { DetailList, EmptyState, Section } from "@/components/common/panels";
-import { StatCard, StatGrid } from "@/components/common/stat-card";
+import { Building2, ListChecks } from "lucide-react";
 import { StatusBadge } from "@/components/common/status-badge";
 import { formatDate } from "@/lib/format";
-import { formatBps, formatINR, formatINRCompact } from "@/lib/money";
+import { formatBps } from "@/lib/money";
 import { requireWorkspace } from "@/server/auth/session";
 import { getFinanceBuilderDetail } from "@/server/queries/finance";
+import { FacilityCard } from "../../_components/facility";
+import { Count, EmptyNote, FactList, KeyFigures, Masthead, Money, Monogram, Panel } from "../../_components/ledger";
+import { LedgerTable, LTd, LTh, LTr } from "../../_components/ledger-table";
 import { RequestTable } from "../../_components/request-table";
 import { orNotFound } from "../../_lib/records";
 
@@ -19,155 +18,193 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
   const actor = await requireWorkspace("finance");
   const { id } = await params;
   const { organisation: org, programme, programmes, requests, watchlist, metrics } = await orNotFound(getFinanceBuilderDetail(actor, id));
+  const earlier = programmes.filter((p) => p.id !== programme.id);
 
   return (
     <>
-      <PageHeader
+      <Masthead
         back={{ href: "/finance/builders", label: "Builders" }}
-        eyebrow="Builder"
-        title={org.name}
-        description={
-          <span className="flex flex-wrap items-center gap-2">
-            <StatusBadge kind="record" status={org.status} />
-            <span>{org.legalName}</span>
+        eyebrow="Builder · Obligor dossier"
+        title={
+          <span className="flex items-center gap-4">
+            <Monogram name={org.name} tone="heritage" size="lg" />
+            <span className="min-w-0">{org.name}</span>
           </span>
         }
+        context={[
+          <StatusBadge key="s" kind="record" status={org.status} />,
+          <span key="l">{org.legalName}</span>,
+          <span key="c" className="text-muted-foreground">
+            {[org.city, org.state].filter(Boolean).join(", ")}
+          </span>,
+        ]}
       />
 
-      <StatGrid className="xl:grid-cols-4 2xl:grid-cols-4">
-        <StatCard label="Agreed discount" value={formatBps(programme.discountRateBps)} hint={`${programme.code} · ${programme.status.toLowerCase()}`} icon={BadgeCheck} tone="gold" />
-        <StatCard label="Approved invoices" value={formatINRCompact(metrics.approvedInvoiceValue)} hint={`${metrics.approvedInvoiceCount} builder-approved`} icon={Building2} tone="slate" />
-        <StatCard label="Financed" value={formatINRCompact(metrics.financedValue)} hint={`${metrics.financedCount} of ${metrics.requestCount} requests`} icon={Wallet} tone="heritage" />
-        <StatCard
-          label="Outstanding settlement"
-          value={formatINRCompact(metrics.outstandingValue)}
-          hint={metrics.overdueCount ? `${formatINR(metrics.overdueValue)} overdue` : "None overdue"}
-          icon={metrics.overdueCount ? AlertTriangle : ListChecks}
-          tone={metrics.overdueCount ? "gold" : "navy"}
-        />
-      </StatGrid>
+      <KeyFigures
+        items={[
+          {
+            label: "Agreed discount",
+            value: <Count value={formatBps(programme.discountRateBps)} className="text-gold-600" />,
+            hint: `${programme.code} · ${programme.status.toLowerCase()}`,
+            accent: "gold",
+          },
+          {
+            label: "Approved invoices",
+            value: <Money paise={metrics.approvedInvoiceValue} compact size="lg" />,
+            hint: `${metrics.approvedInvoiceCount} builder-approved`,
+            accent: "navy",
+          },
+          {
+            label: "Financed",
+            value: <Money paise={metrics.financedValue} compact size="lg" className="text-heritage" />,
+            hint: `${metrics.financedCount} of ${metrics.requestCount} requests`,
+            accent: "heritage",
+          },
+          {
+            label: "Outstanding settlement",
+            value: <Money paise={metrics.outstandingValue} compact size="lg" className={metrics.overdueCount ? "text-[#93342a]" : undefined} />,
+            hint: metrics.overdueCount ? (
+              <>
+                <Money paise={metrics.overdueValue} size="xs" /> overdue
+              </>
+            ) : (
+              "None overdue"
+            ),
+            accent: metrics.overdueCount ? "danger" : "navy",
+          },
+        ]}
+      />
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <Section title="Organisation profile">
-          <DetailList
-            items={[
-              { label: "Legal name", value: org.legalName },
-              { label: "GSTIN", value: <span className="tabular">{org.gstin ?? "—"}</span> },
-              { label: "PAN", value: <span className="tabular">{org.pan ?? "—"}</span> },
-              { label: "RERA registration", value: org.reraNumber ?? "—" },
-              { label: "Registered address", value: [org.addressLine, org.city, org.state, org.pincode].filter(Boolean).join(", ") || "—" },
-              {
-                label: "Accounts contact",
-                value: (
-                  <>
-                    {org.contactName ?? "—"}
-                    <span className="block text-xs text-muted-foreground">{[org.contactEmail, org.contactPhone].filter(Boolean).join(" · ")}</span>
-                  </>
-                ),
-              },
-              { label: "Empanelled channel partners", value: org.builderRelationships.length },
-              { label: "Projects", value: org.projects.length },
-            ]}
-          />
-        </Section>
-
-        <Section title="Programme" description="Agreed with Veefin off-platform; configured by the Super Admin">
-          <p className="eyebrow tabular text-gold-600">{programme.code}</p>
-          <p className="mt-1 font-display text-lg leading-snug font-semibold text-navy">{programme.name}</p>
-          <div className="mt-4">
-            <DetailList
+      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">
+        <Panel eyebrow="Know your obligor" title="Organisation profile">
+          <div className="border-t border-border/70 pt-1">
+            <FactList
               items={[
-                { label: "Discount", value: <span className="tabular font-semibold text-heritage">{formatBps(programme.discountRateBps)}</span> },
-                { label: "Status", value: <StatusBadge kind="programme" status={programme.status} /> },
-                { label: "Effective", value: `${formatDate(programme.effectiveFrom)} – ${programme.effectiveTo ? formatDate(programme.effectiveTo) : "open"}` },
-                { label: "Offer validity", value: `${programme.offerValidityDays} days` },
+                { label: "Legal name", value: org.legalName },
+                { label: "GSTIN", value: <span className="tabular">{org.gstin ?? "—"}</span> },
+                { label: "PAN", value: <span className="tabular">{org.pan ?? "—"}</span> },
+                { label: "RERA registration", value: <span className="text-xs">{org.reraNumber ?? "—"}</span> },
+
+                { label: "Registered address", value: [org.addressLine, org.city, org.state, org.pincode].filter(Boolean).join(", ") || "—" },
+                {
+                  label: "Accounts contact",
+                  value: (
+                    <>
+                      {org.contactName ?? "—"}
+                      <span className="block text-xs text-muted-foreground">{[org.contactEmail, org.contactPhone].filter(Boolean).join(" · ")}</span>
+                    </>
+                  ),
+                },
+                { label: "Empanelled channel partners", value: <span className="tabular">{org.builderRelationships.length}</span> },
+                { label: "Projects", value: <span className="tabular">{org.projects.length}</span> },
               ]}
             />
           </div>
-          <p className="mt-4 text-sm leading-relaxed text-slate-ink">{programme.terms}</p>
-          {programmes.length > 1 && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              {programmes.length - 1} earlier programme{programmes.length === 2 ? "" : "s"}: {programmes.filter((p) => p.id !== programme.id).map((p) => `${p.code} (${formatBps(p.discountRateBps)}, ${p.status.toLowerCase()})`).join("; ")}
+        </Panel>
+
+        <div className="space-y-4">
+          <FacilityCard
+            code={programme.code}
+            name={programme.name}
+            rateBps={programme.discountRateBps}
+            status={programme.status}
+            effectiveFrom={programme.effectiveFrom}
+            effectiveTo={programme.effectiveTo}
+            offerValidityDays={programme.offerValidityDays}
+            footer={programme.terms}
+          />
+          {earlier.length > 0 && (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {earlier.length} earlier programme{earlier.length === 1 ? "" : "s"}:{" "}
+              {earlier.map((p) => `${p.code} (${formatBps(p.discountRateBps)}, ${p.status.toLowerCase()})`).join("; ")}
             </p>
           )}
-        </Section>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <Section title="Projects" description={`${org.projects.length} registered project${org.projects.length === 1 ? "" : "s"}`}>
+        <Panel eyebrow="Developments" title="Projects" description={`${org.projects.length} registered project${org.projects.length === 1 ? "" : "s"}`} bodyClassName={org.projects.length ? "pb-0" : undefined}>
           {org.projects.length === 0 ? (
-            <EmptyState icon={Building2} title="No projects" className="py-8" />
+            <EmptyNote icon={Building2} title="No projects" compact className="border-t border-border/70" />
           ) : (
-            <DataTable minWidth={520}>
+            <LedgerTable minWidth={520}>
               <thead>
                 <tr>
-                  <Th>Project</Th>
-                  <Th>City</Th>
-                  <Th>RERA</Th>
-                  <Th>Status</Th>
+                  <LTh>Project</LTh>
+                  <LTh>City</LTh>
+                  <LTh>RERA</LTh>
+                  <LTh>Status</LTh>
                 </tr>
               </thead>
               <tbody>
                 {org.projects.map((p) => (
-                  <Tr key={p.id}>
-                    <Td>
+                  <LTr key={p.id}>
+                    <LTd>
                       <span className="font-medium text-navy">{p.name}</span>
-                      <p className="tabular text-xs text-muted-foreground">{p.code}</p>
-                    </Td>
-                    <Td>{p.city}</Td>
-                    <Td className="tabular text-xs">{p.reraNumber ?? "—"}</Td>
-                    <Td>
+                      <p className="tabular text-[0.6875rem] text-muted-foreground">{p.code}</p>
+                    </LTd>
+                    <LTd>{p.city}</LTd>
+                    <LTd className="tabular text-xs">{p.reraNumber ?? "—"}</LTd>
+                    <LTd>
                       <StatusBadge kind="record" status={p.status} />
-                    </Td>
-                  </Tr>
+                    </LTd>
+                  </LTr>
                 ))}
               </tbody>
-            </DataTable>
+            </LedgerTable>
           )}
-        </Section>
+        </Panel>
 
-        <Section title="Open settlements" description="Builder repayments due to Veefin">
+        <Panel eyebrow="Repayments due to Veefin" title="Open settlements" bodyClassName={watchlist.length ? "pb-0" : undefined}>
           {watchlist.length === 0 ? (
-            <EmptyState icon={ListChecks} title="Nothing outstanding" description="All disbursed requests for this builder are settled." className="py-8" />
+            <EmptyNote icon={ListChecks} title="Nothing outstanding" description="All disbursed requests for this builder are settled." compact className="border-t border-border/70" />
           ) : (
-            <DataTable minWidth={520}>
+            <LedgerTable minWidth={520}>
               <thead>
                 <tr>
-                  <Th>Request</Th>
-                  <Th>Due</Th>
-                  <Th align="right">Amount</Th>
-                  <Th>Status</Th>
+                  <LTh>Request</LTh>
+                  <LTh>Due</LTh>
+                  <LTh align="right">Amount</LTh>
+                  <LTh>Status</LTh>
                 </tr>
               </thead>
               <tbody>
                 {watchlist.map((w) => (
-                  <Tr key={w.request.id}>
-                    <Td>
-                      <Link href={`/finance/requests/${w.request.id}`} className="tabular font-medium whitespace-nowrap text-navy hover:underline">
+                  <LTr key={w.request.id}>
+                    <LTd>
+                      <Link href={`/finance/requests/${w.request.id}`} className="tabular font-medium whitespace-nowrap text-navy underline-offset-4 hover:underline">
                         {w.request.reference}
                       </Link>
                       <p className="text-xs text-muted-foreground">{w.request.cp.name}</p>
-                    </Td>
-                    <Td className="whitespace-nowrap">{formatDate(w.dueDate)}</Td>
-                    <Td align="right">{formatINR(w.amountPaise)}</Td>
-                    <Td>
+                    </LTd>
+                    <LTd className="text-xs whitespace-nowrap">{formatDate(w.dueDate)}</LTd>
+                    <LTd align="right">
+                      <Money paise={w.amountPaise} className="text-navy" />
+                    </LTd>
+                    <LTd>
                       <StatusBadge kind="settlement" status={w.status} />
-                    </Td>
-                  </Tr>
+                    </LTd>
+                  </LTr>
                 ))}
               </tbody>
-            </DataTable>
+            </LedgerTable>
           )}
-        </Section>
+        </Panel>
       </div>
 
-      <Section className="mt-6" title="Financing requests" description={`${requests.length} request${requests.length === 1 ? "" : "s"} on invoices approved by ${org.name}`}>
+      <Panel
+        className="mt-6"
+        eyebrow="Requests on this builder"
+        title="Financing requests"
+        description={`${requests.length} request${requests.length === 1 ? "" : "s"} on invoices approved by ${org.name}`}
+        bodyClassName={requests.length ? "pb-0" : undefined}
+      >
         {requests.length === 0 ? (
-          <EmptyState icon={ListChecks} title="No financing requests yet" className="py-10" />
+          <EmptyNote icon={ListChecks} title="No financing requests yet" compact className="border-t border-border/70" />
         ) : (
           <RequestTable rows={requests} hide={["builder"]} />
         )}
-      </Section>
+      </Panel>
     </>
   );
 }

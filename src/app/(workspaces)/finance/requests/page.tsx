@@ -3,20 +3,35 @@ import Link from "next/link";
 import { ListChecks } from "lucide-react";
 import { readSort, sortRows } from "@/components/common/data-table";
 import { ListToolbar } from "@/components/common/list-toolbar";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
 import { Button } from "@/components/ui/button";
 import { FINANCING_STATUS } from "@/lib/status";
-import { formatINR, sumPaise } from "@/lib/money";
+import { formatINRCompact, sumPaise } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { requireWorkspace } from "@/server/auth/session";
 import { FINANCIER_REQUEST_STATUSES, listFinancierBuilderOptions, parseLedgerFilters } from "@/server/queries/finance";
 import { listFinancingRequests } from "@/server/services/financing";
+import { EmptyNote, Masthead, Panel } from "../_components/ledger";
 import { REQUEST_SORT_KEYS, RequestTable, requestSortAccessors } from "../_components/request-table";
 
 export const metadata: Metadata = { title: "Financing requests · Veefin Finance" };
 
 const PATH = "/finance/requests";
+
+const SHORT_LABEL: Record<(typeof FINANCIER_REQUEST_STATUSES)[number], string> = {
+  PENDING_APPROVAL: "Pending approval",
+  APPROVED: "Approved",
+  DISBURSEMENT_INITIATED: "Payout in flight",
+  DISBURSED: "Disbursed",
+  REJECTED: "Rejected",
+};
+
+const DOT: Record<(typeof FINANCIER_REQUEST_STATUSES)[number], string> = {
+  PENDING_APPROVAL: "bg-[#c48a2c]",
+  APPROVED: "bg-heritage",
+  DISBURSEMENT_INITIATED: "bg-navy",
+  DISBURSED: "bg-heritage",
+  REJECTED: "bg-[#b5473a]",
+};
 
 function tabHref(searchParams: Record<string, string | string[] | undefined>, status: string | null) {
   const params = new URLSearchParams();
@@ -36,53 +51,68 @@ export default async function FinancingRequestsPage({ searchParams }: { searchPa
     listFinancingRequests(actor, { search: filters.search, builderId: filters.builderId }),
     listFinancierBuilderOptions(actor),
   ]);
-  const counts = Object.fromEntries(FINANCIER_REQUEST_STATUSES.map((s) => [s, all.filter((r) => r.status === s).length]));
+  const byStatus = Object.fromEntries(FINANCIER_REQUEST_STATUSES.map((s) => [s, all.filter((r) => r.status === s)])) as Record<
+    (typeof FINANCIER_REQUEST_STATUSES)[number],
+    typeof all
+  >;
   const visible = filters.status ? all.filter((r) => r.status === filters.status) : all;
   const rows = sortRows(visible, sort, requestSortAccessors);
-  const pendingValue = sumPaise(all.filter((r) => r.status === "PENDING_APPROVAL").map((r) => r.netPayablePaise));
+  const pending = byStatus.PENDING_APPROVAL;
+  const pendingValue = sumPaise(pending.map((r) => r.netPayablePaise));
+  const filtered = Boolean(filters.search || filters.builderId || filters.status);
 
-  const tabs = [{ value: null, label: "All", count: all.length }, ...FINANCIER_REQUEST_STATUSES.map((s) => ({ value: s, label: FINANCING_STATUS[s].label, count: counts[s] ?? 0 }))];
+  const tabs = [
+    { value: null, label: "All requests", count: all.length, valuePaise: sumPaise(all.map((r) => r.netPayablePaise)), dot: "bg-gold" },
+    ...FINANCIER_REQUEST_STATUSES.map((s) => ({
+      value: s,
+      label: SHORT_LABEL[s],
+      count: byStatus[s].length,
+      valuePaise: sumPaise(byStatus[s].map((r) => r.netPayablePaise)),
+      dot: DOT[s],
+    })),
+  ];
 
   return (
     <>
-      <PageHeader
-        eyebrow="Operations"
+      <Masthead
+        eyebrow="Operations · Credit desk"
         title="Financing requests"
-        description="Early-payment requests accepted by channel partners on builder-approved invoices. Approve or reject pending requests, then disburse."
-        actions={
-          counts.PENDING_APPROVAL ? (
-            <p className="rounded-md border border-[#efd9ae] bg-[#fbf1df] px-3 py-2 text-xs text-[#8a5a12]">
-              <span className="tabular font-semibold">{counts.PENDING_APPROVAL}</span> pending approval ·{" "}
-              <span className="tabular font-semibold">{formatINR(pendingValue)}</span> net payable
-            </p>
-          ) : undefined
-        }
+        context={[
+          <span key="p">
+            <strong className="font-semibold text-navy">{pending.length}</strong> awaiting approval
+          </span>,
+          <span key="v">
+            <strong className="tabular font-semibold text-navy">{formatINRCompact(pendingValue)}</strong> net payable pending
+          </span>,
+          <span key="a" className="text-muted-foreground">
+            {all.length} request{all.length === 1 ? "" : "s"} on the book
+          </span>,
+        ]}
       />
 
-      <nav aria-label="Filter by status" className="mb-4 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <ul className="flex w-max gap-1 rounded-lg border border-border bg-card p-1">
-          {tabs.map((tab) => {
+      <nav aria-label="Filter by status" className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <ul className="grid min-w-[760px] animate-fade-up grid-cols-6 overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-32px_rgba(20,43,67,0.3)]">
+          {tabs.map((tab, i) => {
             const active = (filters.status ?? null) === tab.value;
             return (
-              <li key={tab.label}>
+              <li key={tab.label} className={cn(i > 0 && "border-l border-border/70")}>
                 <Link
                   href={tabHref(params, tab.value)}
                   scroll={false}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
-                    active ? "bg-navy text-white" : "text-slate-ink hover:bg-muted",
+                    "relative flex h-full flex-col px-4 py-4 transition-colors",
+                    active ? "bg-navy text-white" : "hover:bg-ivory/50",
+                    !active && tab.value === "PENDING_APPROVAL" && tab.count > 0 && "bg-[#fbf6ea]",
                   )}
                 >
-                  {tab.label}
-                  <span
-                    className={cn(
-                      "tabular rounded-full px-1.5 py-px text-[0.625rem] font-semibold",
-                      active ? "bg-white/15 text-white" : tab.value === "PENDING_APPROVAL" && tab.count > 0 ? "bg-[#fbf1df] text-[#8a5a12]" : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {tab.count}
+                  {active && <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-gold" />}
+                  <span className={cn("flex items-center gap-1.5 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap uppercase", active ? "text-gold" : "text-muted-foreground")}>
+                    <span aria-hidden="true" className={cn("size-1.5 rounded-full", tab.dot)} />
+                    {tab.label}
                   </span>
+                  <span className={cn("tabular mt-2.5 font-sans text-[1.5rem] leading-none font-light", active ? "text-white" : "text-navy")}>{tab.count}</span>
+                  <span className={cn("tabular mt-1.5 text-[0.6875rem]", active ? "text-white/60" : "text-muted-foreground")}>{formatINRCompact(tab.valuePaise)} net</span>
                 </Link>
               </li>
             );
@@ -90,12 +120,13 @@ export default async function FinancingRequestsPage({ searchParams }: { searchPa
         </ul>
       </nav>
 
-      <Section
+      <Panel
+        eyebrow={filters.status ? "Filtered view" : "Complete register"}
         title={filters.status ? FINANCING_STATUS[filters.status].label : "All requests"}
         description={`${rows.length} request${rows.length === 1 ? "" : "s"} · newest first unless sorted`}
-        bodyClassName="p-0 sm:p-0"
+        bodyClassName="pb-0"
       >
-        <div className="border-b border-border/80 px-5 py-4 sm:px-6">
+        <div className="border-t border-border/70 py-4">
           <ListToolbar
             searchPlaceholder="Search reference, invoice, CP or builder…"
             filters={[
@@ -105,26 +136,23 @@ export default async function FinancingRequestsPage({ searchParams }: { searchPa
           />
         </div>
         {rows.length === 0 ? (
-          <EmptyState
+          <EmptyNote
             icon={ListChecks}
             title={filters.status === "PENDING_APPROVAL" ? "No requests awaiting approval" : "No matching requests"}
-            description={
-              filters.search || filters.builderId || filters.status ? "Try clearing the filters to see every financing request." : "Requests appear here once a channel partner accepts an offer."
-            }
+            description={filtered ? "Nothing matches this view. Clear the filters to see every financing request." : "Requests appear here once a channel partner accepts an offer."}
             action={
-              filters.search || filters.builderId || filters.status ? (
+              filtered ? (
                 <Button asChild variant="outline">
                   <Link href={PATH}>Show all requests</Link>
                 </Button>
               ) : undefined
             }
+            className="border-t border-border/70"
           />
         ) : (
-          <div className="px-5 sm:px-6">
-            <RequestTable rows={rows} sort={sort} searchParams={params} pathname={PATH} />
-          </div>
+          <RequestTable rows={rows} sort={sort} searchParams={params} pathname={PATH} />
         )}
-      </Section>
+      </Panel>
     </>
   );
 }
