@@ -1,20 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BadgePercent, Banknote, Clock, HandCoins, SearchX } from "lucide-react";
-import { DataTable, readSort, SortTh, sortRows, Td, Th, Tr } from "@/components/common/data-table";
+import { HandCoins, SearchX } from "lucide-react";
+import { readSort, sortRows } from "@/components/common/data-table";
 import { ListToolbar } from "@/components/common/list-toolbar";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
-import { StatCard, StatGrid } from "@/components/common/stat-card";
 import { DemoBadge, StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import type { FinancingStatus } from "@/generated/prisma/enums";
 import { formatDate } from "@/lib/format";
-import { formatBps, formatINR, formatINRCompact, sumPaise } from "@/lib/money";
+import { formatBps, sumPaise } from "@/lib/money";
 import { FINANCING_STATUS } from "@/lib/status";
 import { requireWorkspace } from "@/server/auth/session";
 import { effectiveSettlementStatus, listFinancingRequests } from "@/server/services/financing";
-import { ToolbarRow } from "../_components/toolbar-row";
+import { Empty, Figure, Masthead, Metric, MetricStrip, Panel } from "../_components/kit";
+import { Money } from "../_components/money";
+import { Ledger, Ref, RowLink, SortTh, TableToolbar, Td, Tr } from "../_components/table";
 import { enumParam, param, type SearchParams } from "../_lib/params";
 
 export const metadata: Metadata = { title: "Financed invoices" };
@@ -22,6 +21,8 @@ export const metadata: Metadata = { title: "Financed invoices" };
 const PATH = "/builder/financed";
 const STATUS_FILTER: FinancingStatus[] = ["PENDING_APPROVAL", "APPROVED", "DISBURSEMENT_INITIATED", "DISBURSED", "REJECTED"];
 const SORT_KEYS = ["invoice", "cp", "approved", "rate", "discount", "net", "status", "due"] as const;
+
+const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
 
 export default async function FinancedInvoicesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const actor = await requireWorkspace("builder");
@@ -49,52 +50,57 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
 
   return (
     <>
-      <PageHeader
+      <Masthead
         eyebrow="Invoices"
         title="Financed invoices"
-        description="Approved invoices on which channel partners have taken early payment from Veefin. You settle the full approved amount with Veefin on each invoice's original due date."
+        lede="Approved invoices on which channel partners have taken early payment from Veefin. You settle the full approved amount with Veefin on each invoice's original due date."
       />
 
-      <StatGrid className="mb-8 xl:grid-cols-4 2xl:grid-cols-4">
-        <StatCard
+      <MetricStrip className="mb-6 grid-cols-1 sm:mb-8 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric
           label="Financed value"
-          value={formatINRCompact(sumPaise(live.map((r) => r.approvedAmountPaise)))}
-          hint={`${live.length} ${live.length === 1 ? "request" : "requests"}, excluding rejected`}
-          icon={HandCoins}
-          tone="heritage"
+          accent="heritage"
+          value={<Money paise={sumPaise(live.map((r) => r.approvedAmountPaise))} compact size="xl" className="font-normal" />}
+          caption={`${plural(live.length, "request")}, excluding rejected`}
         />
-        <StatCard
+        <Metric
           label="Net paid to partners"
-          value={formatINRCompact(sumPaise(disbursed.map((r) => r.netPayablePaise)))}
-          hint={`${disbursed.length} simulated ${disbursed.length === 1 ? "disbursement" : "disbursements"} completed`}
-          icon={Banknote}
+          accent="navy"
+          value={<Money paise={sumPaise(disbursed.map((r) => r.netPayablePaise))} compact size="xl" className="font-normal" />}
+          caption={`${plural(disbursed.length, "simulated disbursement")} completed`}
         />
-        <StatCard
-          label="Discount borne by partners"
-          value={formatINRCompact(sumPaise(live.map((r) => r.discountAmountPaise)))}
-          hint="Deducted upfront from the partner's payout, not charged to you"
-          icon={BadgePercent}
-          tone="gold"
+        <Metric
+          label="Partner discount"
+          accent="gold"
+          value={<Money paise={sumPaise(live.map((r) => r.discountAmountPaise))} compact size="xl" className="font-normal" />}
+          caption="Deducted from the partner's payout, never charged to you"
         />
-        <StatCard
+        <Metric
           label="Pending Veefin approval"
-          value={pending.length}
-          hint={pending.length > 0 ? `${formatINRCompact(sumPaise(pending.map((r) => r.approvedAmountPaise)))} under credit review` : "No requests under review"}
-          icon={Clock}
-          tone="slate"
+          accent="amber"
+          value={<Figure unit={pending.length === 1 ? "request" : "requests"}>{pending.length}</Figure>}
+          caption={
+            pending.length > 0 ? (
+              <>
+                <Money paise={sumPaise(pending.map((r) => r.approvedAmountPaise))} compact /> under credit review
+              </>
+            ) : (
+              "No requests under review"
+            )
+          }
         />
-      </StatGrid>
+      </MetricStrip>
 
-      <Section title="Financing requests" description={rows.length > 0 ? `${rows.length} of ${all.length} shown` : undefined} bodyClassName="py-0">
-        <ToolbarRow>
+      <Panel title="Financing requests" description={rows.length > 0 ? `${rows.length} of ${all.length} shown` : undefined} flush>
+        <TableToolbar>
           <ListToolbar
             searchPlaceholder="Search request, invoice or partner…"
             filters={[{ param: "status", label: "Financing statuses", options: STATUS_FILTER.map((s) => ({ value: s, label: FINANCING_STATUS[s].label })) }]}
           />
-        </ToolbarRow>
+        </TableToolbar>
         {rows.length === 0 ? (
           all.length === 0 ? (
-            <EmptyState
+            <Empty
               icon={HandCoins}
               title="No financed invoices yet"
               description="When a channel partner takes early payment on one of your approved invoices, it appears here with its settlement date."
@@ -105,20 +111,18 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
               }
             />
           ) : (
-            <EmptyState icon={SearchX} title="No requests match your filters" description="Try a different search term or clear the filters." />
+            <Empty icon={SearchX} title="No requests match your filters" description="Try a different search term or clear the filters." />
           )
         ) : (
-          <DataTable minWidth={1080}>
+          <Ledger minWidth={960} caption="Financing requests">
             <thead>
               <tr>
                 <SortTh label="Original invoice" sortKey="invoice" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Partner" sortKey="cp" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Approved" sortKey="approved" sort={sort} searchParams={sp} pathname={PATH} align="right" />
-                <SortTh label="Rate" sortKey="rate" sort={sort} searchParams={sp} pathname={PATH} align="right" />
                 <SortTh label="Discount" sortKey="discount" sort={sort} searchParams={sp} pathname={PATH} align="right" />
                 <SortTh label="Net to CP" sortKey="net" sort={sort} searchParams={sp} pathname={PATH} align="right" />
-                <SortTh label="Financing" sortKey="status" sort={sort} searchParams={sp} pathname={PATH} />
-                <Th>Disbursement</Th>
+                <SortTh label="Financing · disbursement" sortKey="status" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Settlement" sortKey="due" sort={sort} searchParams={sp} pathname={PATH} />
               </tr>
             </thead>
@@ -128,49 +132,49 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
                 return (
                   <Tr key={r.id}>
                     <Td>
-                      <Link href={`/builder/invoices/${r.invoice.id}`} className="font-medium text-navy underline-offset-4 hover:underline">
-                        {r.invoice.invoiceNumber}
-                      </Link>
-                      <p className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">{formatINR(r.invoice.amountPaise)} invoiced</p>
-                      <p className="font-mono text-[0.6875rem] text-muted-foreground">{r.reference}</p>
+                      <RowLink href={`/builder/invoices/${r.invoice.id}`}>{r.invoice.invoiceNumber}</RowLink>
+                      <p className="mt-1 text-[0.75rem] whitespace-nowrap text-muted-foreground">
+                        <Money paise={r.invoice.amountPaise} className="text-[0.75rem]" /> invoiced
+                      </p>
+                      <Ref>{r.reference}</Ref>
                     </Td>
                     <Td className="font-medium text-navy">{r.cp.name}</Td>
-                    <Td align="right">{formatINR(r.approvedAmountPaise)}</Td>
-                    <Td align="right">{formatBps(r.discountRateBps)}</Td>
-                    <Td align="right" className="text-[#93342a]">
-                      {formatINR(r.discountAmountPaise)}
+                    <Td align="right">
+                      <Money paise={r.approvedAmountPaise} className="text-navy" />
                     </Td>
-                    <Td align="right" className="font-semibold text-heritage">
-                      {formatINR(r.netPayablePaise)}
+                    <Td align="right">
+                      <Money paise={r.discountAmountPaise} sign="minus" className="text-[#93342a]" />
+                      <p className="mt-1 text-[0.6875rem] text-muted-foreground">at {formatBps(r.discountRateBps)}</p>
+                    </Td>
+                    <Td align="right">
+                      <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
                     </Td>
                     <Td>
                       <StatusBadge kind="financing" status={r.status} />
-                    </Td>
-                    <Td>
                       {r.disbursement ? (
-                        <div className="space-y-1">
-                          <p className="font-mono text-xs whitespace-nowrap">{r.disbursement.reference}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-[0.6875rem] whitespace-nowrap text-slate-ink">{r.disbursement.reference}</span>
                           <DemoBadge />
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground">{r.status === "REJECTED" ? "Not applicable" : "Not yet disbursed"}</span>
+                        <p className="mt-1.5 text-[0.75rem] text-muted-foreground">{r.status === "REJECTED" ? "Not applicable" : "Not yet disbursed"}</p>
                       )}
                     </Td>
                     <Td className="whitespace-nowrap">
                       {settlementStatus ? (
                         <StatusBadge kind="settlement" status={settlementStatus} />
                       ) : (
-                        <span className="text-xs text-muted-foreground">{r.status === "REJECTED" ? "No settlement" : "After disbursement"}</span>
+                        <span className="text-[0.75rem] text-muted-foreground">{r.status === "REJECTED" ? "No settlement" : "After disbursement"}</span>
                       )}
-                      <p className="mt-1 text-xs text-slate-ink">Due {formatDate(r.settlement?.dueDate ?? r.invoice.dueDate)}</p>
+                      <p className="mt-1.5 text-[0.75rem] text-slate-ink">Due {formatDate(r.settlement?.dueDate ?? r.invoice.dueDate)}</p>
                     </Td>
                   </Tr>
                 );
               })}
             </tbody>
-          </DataTable>
+          </Ledger>
         )}
-      </Section>
+      </Panel>
     </>
   );
 }

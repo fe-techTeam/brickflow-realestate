@@ -14,6 +14,8 @@ import { matchBuilder, matchProject, parseInvoiceText, type ExtractedInvoiceFiel
 import { formatINR, parseRupeesToPaise } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { submitInvoiceAction } from "@/server/actions/invoices";
+import { Money } from "../../../_components/money";
+import { ArchMotif } from "../../../_components/ui";
 import { extractPdfText } from "./pdf-text";
 
 export interface UploadBuilder {
@@ -259,13 +261,16 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
       <div className="flex min-w-0 flex-col gap-6">
         <FormSection step="1" title="Invoice document" description="Upload the signed tax invoice PDF. We read it in your browser to pre-fill the form.">
           {file ? (
-            <div className={cn("flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center", errors.file ? "border-destructive/50 bg-[#f8e7e4]/40" : "border-border bg-ivory/50")}>
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-navy text-gold">
-                <FileText className="size-5" strokeWidth={1.6} />
+            <div className={cn("flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:p-5", errors.file ? "border-destructive/50 bg-danger-soft/50" : "border-border bg-ivory-100")}>
+              <span className="relative flex h-14 w-11 shrink-0 flex-col items-center justify-end rounded-[4px] border border-ivory-300 bg-card pb-1.5 shadow-[0_2px_0_var(--hairline)]">
+                <span aria-hidden="true" className="absolute top-0 right-0 size-3 rounded-bl-[3px] border-b border-l border-ivory-300 bg-ivory-100" />
+                <FileText className="mb-0.5 size-4 text-navy/60" strokeWidth={1.5} />
+                <span className="text-[0.5rem] font-bold tracking-wider text-danger">PDF</span>
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-navy">{file.name}</p>
-                <p className="text-xs text-muted-foreground">PDF · {formatBytes(file.size)}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">PDF · {formatBytes(file.size)}</p>
+                <ExtractionStatusLine extraction={extraction} />
               </div>
               <div className="flex flex-wrap gap-2">
                 {previewUrl && (
@@ -295,15 +300,34 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
               onDragLeave={() => setDragging(false)}
               onDrop={onDrop}
               className={cn(
-                "flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors",
-                dragging ? "border-gold bg-gold-100/50" : errors.file ? "border-destructive/50 bg-[#f8e7e4]/30" : "border-input bg-ivory/40 hover:border-gold/60 hover:bg-ivory",
+                "group relative block cursor-pointer rounded-xl border p-1.5 transition-colors",
+                dragging ? "border-gold bg-gold-50" : errors.file ? "border-destructive/40 bg-danger-soft/40" : "border-border bg-ivory-50 hover:border-gold/60",
               )}
             >
-              <span className="mb-3 flex size-12 items-center justify-center rounded-full bg-card text-gold-600 ring-1 ring-gold/30">
-                <UploadCloud className="size-5" strokeWidth={1.6} />
+              <span
+                className={cn(
+                  "flex flex-col items-center justify-center rounded-lg border border-dashed px-6 py-12 text-center transition-colors sm:py-14",
+                  dragging ? "border-gold" : "border-ivory-400 group-hover:border-gold/70",
+                )}
+              >
+                <span className="relative mb-5 flex size-20 items-center justify-center">
+                  <ArchMotif className="absolute inset-0 size-20 text-gold/60" />
+                  <span className="relative mt-5 flex size-9 items-center justify-center rounded-full bg-navy text-gold shadow-button">
+                    <UploadCloud className="size-4" strokeWidth={1.75} />
+                  </span>
+                </span>
+                <span className="font-display text-[1.375rem] leading-tight font-medium text-navy">{dragging ? "Release to upload" : "Drop your invoice PDF here"}</span>
+                <span className="mt-1.5 text-sm text-muted-foreground">
+                  or <span className="font-medium text-navy underline decoration-gold/60 underline-offset-4">browse your files</span>
+                </span>
+                <span className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[0.6875rem] tracking-[0.12em] text-muted-foreground uppercase">
+                  <span>PDF only</span>
+                  <span aria-hidden="true" className="size-1 rotate-45 bg-gold" />
+                  <span>Up to 10 MB</span>
+                  <span aria-hidden="true" className="size-1 rotate-45 bg-gold" />
+                  <span>Scans supported</span>
+                </span>
               </span>
-              <span className="text-sm font-medium text-navy">Drop your invoice PDF here, or browse</span>
-              <span className="mt-1 text-xs text-muted-foreground">PDF only · up to 10 MB · scanned invoices are supported</span>
             </label>
           )}
           <input
@@ -355,7 +379,7 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
             </Field>
           </div>
           {builders.length === 0 && (
-            <p className="mt-4 rounded-md bg-[#fbf1df] px-3 py-2 text-xs text-[#8a5a12]">
+            <p className="mt-4 rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">
               You are not currently empanelled with any active builder. Contact the platform administrator to be added.
             </p>
           )}
@@ -446,16 +470,16 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
         </FormSection>
 
         {formError && (
-          <div role="alert" className="flex items-start gap-2 rounded-lg border border-[#ecc6bf] bg-[#f8e7e4] px-4 py-3 text-sm text-[#93342a]">
+          <div role="alert" className="flex items-start gap-2 rounded-lg border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-danger">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             {formError}
           </div>
         )}
 
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-muted-foreground">By submitting you confirm this invoice is genuine and raised under your empanelment agreement.</p>
+        <div className="surface flex flex-col-reverse gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">By submitting you confirm this invoice is genuine and raised under your empanelment agreement.</p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => router.push("/partner/invoices")} disabled={busy}>
+            <Button type="button" variant="outline" size="lg" onClick={() => router.push("/partner/invoices")} disabled={busy}>
               Cancel
             </Button>
             <Button type="submit" size="lg" disabled={busy}>
@@ -468,19 +492,20 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
 
       <aside className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
         <ExtractionPanel extraction={extraction} builder={builder} partnerGstin={partnerGstin} />
+        <SubmissionSummary builder={builder} projectId={values.projectId} invoiceNumber={values.invoiceNumber} amountPaise={amountPaise} gstPaise={gstPaise} />
         <div className="surface p-5">
-          <p className="eyebrow mb-3">What happens next</p>
-          <ol className="grid gap-3 text-sm">
+          <p className="mb-4 text-[0.625rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">What happens next</p>
+          <ol className="grid gap-4 text-sm">
             {[
               ["Builder review", "The builder's accounts team approves, rejects or asks for clarification."],
               ["Early payment", "Once approved, get the discounted amount at your builder's agreed rate."],
               ["Payout", "Veefin approves and pays the net amount to your bank account (simulated)."],
             ].map(([title, body], i) => (
-              <li key={title} className="flex gap-3">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-navy font-display text-xs font-semibold text-gold">{i + 1}</span>
+              <li key={title} className="flex gap-3.5">
+                <span className="font-display text-lg leading-none font-medium text-gold-600 tabular">{`0${i + 1}`}</span>
                 <span>
                   <span className="block font-medium text-navy">{title}</span>
-                  <span className="text-xs text-muted-foreground">{body}</span>
+                  <span className="text-xs leading-relaxed text-muted-foreground">{body}</span>
                 </span>
               </li>
             ))}
@@ -494,14 +519,14 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
 function FormSection({ step, title, description, children }: { step: string; title: string; description: string; children: ReactNode }) {
   return (
     <section className="surface animate-fade-up overflow-hidden">
-      <header className="flex items-start gap-3 border-b border-border/80 px-5 py-4 sm:px-6">
-        <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-gold/50 font-display text-sm font-semibold text-gold-600">{step}</span>
-        <div>
-          <h2 className="font-display text-xl leading-tight font-semibold">{title}</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+      <header className="flex items-start gap-4 px-5 pt-6 pb-5 sm:px-7">
+        <span className="font-display text-[1.75rem] leading-none font-medium text-gold-600 tabular">{step.padStart(2, "0")}</span>
+        <div className="border-l border-hairline pl-4">
+          <h2 className="font-display text-[1.25rem] leading-tight font-medium">{title}</h2>
+          <p className="mt-1 text-[0.8125rem] text-muted-foreground">{description}</p>
         </div>
       </header>
-      <div className="px-5 py-5 sm:px-6">{children}</div>
+      <div className="border-t border-hairline px-5 py-6 sm:px-7">{children}</div>
     </section>
   );
 }
@@ -533,13 +558,13 @@ function Field({
           {required && <span className="text-destructive"> *</span>}
         </Label>
         {extracted && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-gold-100 px-2 py-0.5 text-[0.625rem] font-semibold text-gold-600 ring-1 ring-gold/30 ring-inset">
+          <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold-50 px-2 py-0.5 text-[0.625rem] font-semibold tracking-[0.04em] text-gold-700">
             <Sparkles className="size-3" />
             Extracted — please verify
           </span>
         )}
       </div>
-      <div className={cn(extracted && "rounded-lg ring-2 ring-gold/25")}>{children}</div>
+      <div className={cn("rounded-md transition-shadow", extracted && "shadow-[0_0_0_1px_var(--color-gold),0_0_0_4px_rgb(196_164_106/0.16)] [&_button]:bg-gold-50/60 [&_input]:bg-gold-50/60")}>{children}</div>
       {error ? (
         <p role="alert" className="text-xs text-destructive">
           {error}
@@ -562,7 +587,7 @@ function AmountInput({ id, value, onChange, invalid, disabled }: { id: string; v
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="0.00"
-        className="tabular h-10 bg-card pl-7"
+        className="figure h-10 bg-card pl-7"
         aria-invalid={invalid}
         disabled={disabled}
       />
@@ -573,46 +598,89 @@ function AmountInput({ id, value, onChange, invalid, disabled }: { id: string; v
 function ExtractionPanel({ extraction, builder, partnerGstin }: { extraction: Extraction; builder: UploadBuilder | null; partnerGstin: string | null }) {
   return (
     <div className="surface overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b border-border/80 px-5 py-4">
-        <div className="flex items-center gap-2">
-          <ScanText className="size-4 text-gold-600" />
-          <p className="font-display text-lg font-semibold text-navy">Smart extraction</p>
+      <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-4">
+        <div>
+          <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-700 uppercase">In-browser reading</p>
+          <p className="mt-1 flex items-center gap-2 font-display text-[1.25rem] font-medium text-navy">
+            <ScanText className="size-4 text-gold-600" />
+            Smart extraction
+          </p>
         </div>
         {extraction.status === "done" && (
-          <span className="rounded-full bg-sage px-2 py-0.5 text-[0.625rem] font-semibold text-heritage">{extraction.method === "ocr" ? "OCR · scanned" : "Text layer"}</span>
+          <span className="rounded-full border border-heritage/20 bg-heritage-50 px-2.5 py-0.5 text-[0.625rem] font-semibold text-heritage">
+            {extraction.method === "ocr" ? "OCR · scanned" : "Text layer"}
+          </span>
         )}
       </div>
-      <div className="px-5 py-4 text-sm" aria-live="polite">
+      <div className="border-t border-hairline px-5 py-5 text-sm" aria-live="polite">
         {extraction.status === "idle" && (
-          <p className="flex items-start gap-2 text-muted-foreground">
-            <CircleDashed className="mt-0.5 size-4 shrink-0" />
+          <p className="flex items-start gap-2.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
+            <CircleDashed className="mt-0.5 size-4 shrink-0 text-gold-600" />
             Choose a PDF and we&apos;ll read the invoice number, dates, parties, GSTINs and amounts for you to verify.
           </p>
         )}
         {extraction.status === "running" && (
-          <div className="grid gap-2">
-            <p className="flex items-center gap-2 font-medium text-navy">
-              <Loader2 className="size-4 animate-spin text-gold-600" />
-              {extraction.message}
-            </p>
-            <Progress value={Math.round(extraction.progress * 100)} className="h-1.5 [&>[data-slot=progress-indicator]]:bg-gold" aria-label="Extraction progress" />
+          <div className="grid gap-3">
+            <div className="flex items-end justify-between gap-3">
+              <p className="flex items-center gap-2 text-[0.8125rem] font-medium text-navy">
+                <Loader2 className="size-4 animate-spin text-gold-600" />
+                {extraction.message}
+              </p>
+              <span className="figure text-[1.5rem] leading-none font-light text-navy">
+                {Math.round(extraction.progress * 100)}
+                <span className="text-[0.6em] opacity-50">%</span>
+              </span>
+            </div>
+            <Progress
+              value={Math.round(extraction.progress * 100)}
+              className="h-1 bg-ivory-200 [&>[data-slot=progress-indicator]]:bg-linear-to-r [&>[data-slot=progress-indicator]]:from-gold-300 [&>[data-slot=progress-indicator]]:to-gold-600"
+              aria-label="Extraction progress"
+            />
             <p className="text-xs text-muted-foreground">You can keep filling in the form while this runs.</p>
           </div>
         )}
         {extraction.status === "failed" && (
-          <p className="flex items-start gap-2 text-[#8a5a12]">
+          <p className="flex items-start gap-2 text-[0.8125rem] text-warning">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             {extraction.message}
           </p>
         )}
         {extraction.status === "done" && <ExtractionSummary extraction={extraction} builder={builder} partnerGstin={partnerGstin} />}
       </div>
-      <p className="flex items-start gap-2 border-t border-border/70 bg-ivory/60 px-5 py-3 text-[0.6875rem] leading-relaxed text-muted-foreground">
+      <p className="flex items-start gap-2 border-t border-hairline bg-ivory-100 px-5 py-3 text-[0.6875rem] leading-relaxed text-muted-foreground">
         <Lock className="mt-0.5 size-3 shrink-0" />
         Processed locally in your browser. The document is not sent to any external service for extraction.
       </p>
     </div>
   );
+}
+
+function ExtractionStatusLine({ extraction }: { extraction: Extraction }) {
+  if (extraction.status === "running") {
+    return (
+      <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-gold-700">
+        <Loader2 className="size-3.5 animate-spin" />
+        Reading · {Math.round(extraction.progress * 100)}%
+      </p>
+    );
+  }
+  if (extraction.status === "done") {
+    return (
+      <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-heritage">
+        <CheckCircle2 className="size-3.5" />
+        {extraction.filled.length ? `Extracted ${extraction.filled.length} ${extraction.filled.length === 1 ? "field" : "fields"} — please verify` : "Read — enter details manually"}
+      </p>
+    );
+  }
+  if (extraction.status === "failed") {
+    return (
+      <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-warning">
+        <AlertTriangle className="size-3.5" />
+        Could not read automatically
+      </p>
+    );
+  }
+  return null;
 }
 
 function ExtractionSummary({
@@ -648,11 +716,11 @@ function ExtractionSummary({
           : "No form fields could be pre-filled. Please enter the details manually."}
       </p>
       {shown.length > 0 && (
-        <dl className="grid gap-2 rounded-md border border-border/80 bg-ivory/40 p-3 text-xs">
+        <dl className="grid gap-2.5 rounded-lg border border-hairline bg-ivory-100 p-4 text-xs">
           {shown.map(([label, value, numeric]) => (
             <div key={label} className="flex items-baseline justify-between gap-3">
               <dt className="shrink-0 text-muted-foreground">{label}</dt>
-              <dd className={cn("min-w-0 text-right font-medium break-words text-navy", numeric && "tabular")}>{value}</dd>
+              <dd className={cn("min-w-0 text-right font-medium break-words text-navy", numeric && "figure")}>{value}</dd>
             </div>
           ))}
         </dl>
@@ -665,7 +733,7 @@ function ExtractionSummary({
           </li>
         )}
         {!extraction.builderMatch && (fields.builderName || fields.builderGstin) && (
-          <li className="flex items-start gap-1.5 text-[#8a5a12]">
+          <li className="flex items-start gap-1.5 text-warning">
             <AlertTriangle className="mt-px size-3.5 shrink-0" />
             The billed builder doesn&apos;t match any builder you are empanelled with. Select it manually.
           </li>
@@ -677,24 +745,73 @@ function ExtractionSummary({
           </li>
         )}
         {fields.amountsReconcile === false && (
-          <li className="flex items-start gap-1.5 text-[#8a5a12]">
+          <li className="flex items-start gap-1.5 text-warning">
             <AlertTriangle className="mt-px size-3.5 shrink-0" />
             Taxable value and GST do not add up to the total. Check the amounts.
           </li>
         )}
         {supplierMismatch && (
-          <li className="flex items-start gap-1.5 text-[#8a5a12]">
+          <li className="flex items-start gap-1.5 text-warning">
             <AlertTriangle className="mt-px size-3.5 shrink-0" />
             Supplier GSTIN differs from your registered GSTIN ({partnerGstin}).
           </li>
         )}
         {builderGstinMismatch && (
-          <li className="flex items-start gap-1.5 text-[#8a5a12]">
+          <li className="flex items-start gap-1.5 text-warning">
             <AlertTriangle className="mt-px size-3.5 shrink-0" />
             Builder GSTIN on the invoice differs from {builder?.name}&apos;s registered GSTIN.
           </li>
         )}
       </ul>
+    </div>
+  );
+}
+
+function SubmissionSummary({
+  builder,
+  projectId,
+  invoiceNumber,
+  amountPaise,
+  gstPaise,
+}: {
+  builder: UploadBuilder | null;
+  projectId: string;
+  invoiceNumber: string;
+  amountPaise: bigint | null;
+  gstPaise: bigint | null;
+}) {
+  const project = builder?.projects.find((p) => p.id === projectId);
+  const total = amountPaise !== null && amountPaise > 0n ? amountPaise : null;
+  return (
+    <div className="surface overflow-hidden">
+      <div aria-hidden="true" className="h-[3px] bg-linear-to-r from-navy via-navy-700 to-gold" />
+      <div className="px-5 py-5">
+        <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">Submission summary</p>
+        <p className="mt-3 text-xs text-muted-foreground">Invoice total</p>
+        {total !== null ? <Money paise={total} size="xl" className="mt-1 block font-medium text-navy" /> : <p className="figure mt-1 text-[1.875rem] leading-none text-ivory-400">₹ —</p>}
+        <dl className="mt-5 grid gap-2.5 border-t border-hairline pt-4 text-[0.8125rem]">
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Invoice no.</dt>
+            <dd className="truncate text-right font-medium text-navy">{invoiceNumber.trim() || "—"}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Builder</dt>
+            <dd className="truncate text-right font-medium text-navy">{builder?.name ?? "—"}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Project</dt>
+            <dd className="truncate text-right font-medium text-navy">{project?.name ?? "—"}</dd>
+          </div>
+          {total !== null && gstPaise !== null && gstPaise < total && (
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">Taxable value</dt>
+              <dd className="text-right font-medium text-navy">
+                <Money paise={total - gstPaise} />
+              </dd>
+            </div>
+          )}
+        </dl>
+      </div>
     </div>
   );
 }
