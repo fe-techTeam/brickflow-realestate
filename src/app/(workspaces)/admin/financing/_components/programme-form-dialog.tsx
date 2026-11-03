@@ -223,7 +223,7 @@ export function ProgrammeFormDialog(props: Props) {
                   id={id("name")}
                   value={values.name}
                   onChange={(e) => set("name", e.target.value)}
-                  placeholder="e.g. Godrej Properties — Channel Partner Early Payment"
+                  placeholder="e.g. Builder name — Channel Partner Early Payment"
                   aria-invalid={Boolean(errors.name?.length)}
                   aria-describedby={describedBy("name")}
                   className={inputClass}

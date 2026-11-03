@@ -22,6 +22,7 @@ No AWS resources exist yet. Every command below is for the AWS account owner to 
 | `DATABASE_URL` | Yes | `file:/app/data/brickflow.db` | SQLite file on the persistent volume. |
 | `AUTH_SECRET` | Yes | — | Signs session tokens (HS256). At least 32 random characters: `openssl rand -base64 48`. Store in a secret manager, never in the repository. Rotating it signs everyone out. |
 | `DEMO_PASSWORD` | Yes | `BrickFlow@2026` | Shared password the seed gives every demo account. Treat it as a secret on public deployments. |
+| `DEMO_DATASET` | No | `standard` | Demo dataset to seed and offer on the sign-in page: `standard` or `chandak` (builder pitch). Takes effect on the next seed. |
 | `STORAGE_DRIVER` | No | `local` | Only `local` is implemented today. |
 | `STORAGE_DIR` | Yes | `/app/data/storage` | Uploaded and seeded invoice PDFs. Must be on the persistent volume. |
 | `APP_URL` | Yes | `https://brickflow.example.com` | Public base URL. When it starts with `https://`, session cookies are marked `Secure`. |

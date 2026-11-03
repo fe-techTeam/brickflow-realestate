@@ -135,11 +135,23 @@ Open <http://localhost:3000>. `npm run db:reset` recreates the database and rese
 | `STORAGE_DRIVER` | `local` | Document storage driver |
 | `STORAGE_DIR` | `./storage` | Where invoice PDFs are stored |
 | `DEMO_PASSWORD` | `BrickFlow@2026` | Shared password for the seeded accounts |
+| `DEMO_DATASET` | `standard` | Which demo dataset to seed and offer on the sign-in page (see below) |
 | `APP_URL` | `http://localhost:3000` | Public base URL; `https://` enables secure cookies |
+
+## Demo datasets
+
+`DEMO_DATASET` selects the data the seed creates and the accounts the sign-in page offers. Reseed after changing it.
+
+| Dataset | Contents | Use |
+| --- | --- | --- |
+| `standard` (default) | 7 organisations, 8 users, 9 invoices covering every workflow stage | Local development, automated tests (always seeded with this dataset), full walkthroughs |
+| `chandak` | BrickFlow Platform, Veefin Finance Demo, **Chandak Group** (builder; projects Chandak Treesourus and 34 Park Estate) and **Westline Realty Partners** (channel partner); 2 invoices: `WRP/2026/014` ₹5,00,000 accepted and ready for early payment at 3%, `WRP/2026/015` ₹3,00,000 awaiting approval | Builder pitch demo with simple figures |
+
+The `chandak` dataset uses relative dates, so the accepted invoice is always still eligible after a reseed. Its Documents page offers two new sample invoices (`WRP/2026/016`, `WRP/2026/017`) to upload live. Chandak dataset logins: `partner@westline-demo.test`, `accounts@chandak-demo.test`, `finance@brickflow.demo`, `admin@brickflow.demo`.
 
 ## Demo credentials
 
-All accounts share the password **`BrickFlow@2026`** (the value of `DEMO_PASSWORD` when the database was seeded). The sign-in page also offers one-click buttons for the four main accounts.
+The table below lists the `standard` dataset. All accounts share the password **`BrickFlow@2026`** (the value of `DEMO_PASSWORD` when the database was seeded). The sign-in page also offers one-click buttons for the four main accounts.
 
 | Email | Name | Organisation | Workspace |
 | --- | --- | --- | --- |

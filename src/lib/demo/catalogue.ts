@@ -1,161 +1,47 @@
 /**
- * Fictional demonstration organisations and documents. Shared by the database seed and the
- * sample-document download so both always describe the same data.
+ * Fictional demonstration datasets. Shared by the database seed, the sign-in page and the
+ * sample-document download so all of them always describe the same data.
+ *
+ * `DEMO_DATASET` selects the dataset (default `standard`, which the automated tests rely on).
  */
 import type { BrokerageInvoiceData } from "../pdf/brokerage-invoice";
+import { chandakDataset } from "./datasets/chandak";
+import { STANDARD_ORGANISATIONS, STANDARD_PROJECTS, STANDARD_SAMPLES, standardDataset } from "./datasets/standard";
+import type { DemoClock, DemoDataset, DemoInvoiceDocument, DemoOrganisation } from "./types";
 
-export interface DemoOrganisation {
-  key: string;
-  type: "PLATFORM" | "FINANCIER" | "BUILDER" | "CHANNEL_PARTNER";
-  name: string;
-  legalName: string;
-  gstin?: string;
-  pan?: string;
-  reraNumber?: string;
-  addressLine: string;
-  city: string;
-  state: string;
-  pincode: string;
-  contactName: string;
-  contactEmail: string;
-  contactPhone: string;
-  bankName?: string;
-  bankAccountNumber?: string;
-  bankIfsc?: string;
+export type { DemoClock, DemoDataset, DemoInvoiceDocument, DemoOrganisation } from "./types";
+
+export const DEMO_DATASETS = { standard: standardDataset, chandak: chandakDataset } as const satisfies Record<string, DemoDataset>;
+export type DemoDatasetKey = keyof typeof DEMO_DATASETS;
+
+export function resolveDemoDataset(key: string | undefined = process.env.DEMO_DATASET): DemoDataset {
+  if (!key) return standardDataset;
+  const dataset = (DEMO_DATASETS as Record<string, DemoDataset>)[key];
+  if (!dataset) throw new Error(`Unknown DEMO_DATASET "${key}". Expected one of: ${Object.keys(DEMO_DATASETS).join(", ")}`);
+  return dataset;
 }
 
-export const DEMO_ORGANISATIONS = {
-  platform: {
-    key: "platform",
-    type: "PLATFORM",
-    name: "BrickFlow Platform",
-    legalName: "BrickFlow Platform Operations (Demo)",
-    addressLine: "4th Floor, Demo Tower, Bandra Kurla Complex",
-    city: "Mumbai",
-    state: "Maharashtra",
-    pincode: "400051",
-    contactName: "Arjun Shah",
-    contactEmail: "admin@brickflow.demo",
-    contactPhone: "+91 22 4000 1000",
-  },
-  veefin: {
-    key: "veefin",
-    type: "FINANCIER",
-    name: "Veefin Finance Demo",
-    legalName: "Veefin Finance Demo Private Limited",
-    gstin: "27AADCV9001D1Z5",
-    pan: "AADCV9001D",
-    addressLine: "12th Floor, Demo Finance Centre, Lower Parel",
-    city: "Mumbai",
-    state: "Maharashtra",
-    pincode: "400013",
-    contactName: "Kavita Iyer",
-    contactEmail: "finance@brickflow.demo",
-    contactPhone: "+91 22 4000 2000",
-    bankName: "Demo Commercial Bank",
-    bankAccountNumber: "000912340000001",
-    bankIfsc: "DEMO0000912",
-  },
-  godrej: {
-    key: "godrej",
-    type: "BUILDER",
-    name: "Godrej Properties Demo",
-    legalName: "Godrej Properties Demo Limited",
-    gstin: "27AAACG9002E1Z3",
-    pan: "AAACG9002E",
-    reraNumber: "P51800099001",
-    addressLine: "Demo Business District, Vikhroli East",
-    city: "Mumbai",
-    state: "Maharashtra",
-    pincode: "400079",
-    contactName: "Rohan Mehta",
-    contactEmail: "accounts@godrej-demo.test",
-    contactPhone: "+91 22 4000 3000",
-  },
-  skyline: {
-    key: "skyline",
-    type: "BUILDER",
-    name: "Skyline Habitat Developers",
-    legalName: "Skyline Habitat Developers Demo LLP",
-    gstin: "29AAKFS9003F1Z1",
-    pan: "AAKFS9003F",
-    reraNumber: "PRM/KA/RERA/1251/DEMO",
-    addressLine: "88 Demo Residency Road",
-    city: "Bengaluru",
-    state: "Karnataka",
-    pincode: "560025",
-    contactName: "Meera Krishnan",
-    contactEmail: "accounts@skyline-demo.test",
-    contactPhone: "+91 80 4000 4000",
-  },
-  coastal: {
-    key: "coastal",
-    type: "BUILDER",
-    name: "Coastal Crest Builders",
-    legalName: "Coastal Crest Builders Demo Private Limited",
-    gstin: "30AAECC9004G1Z8",
-    pan: "AAECC9004G",
-    reraNumber: "PRGO0099DEMO",
-    addressLine: "Demo Seafront Avenue, Panaji",
-    city: "Panaji",
-    state: "Goa",
-    pincode: "403001",
-    contactName: "Vikram Naik",
-    contactEmail: "accounts@coastal-demo.test",
-    contactPhone: "+91 832 400 5000",
-  },
-  prestige: {
-    key: "prestige",
-    type: "CHANNEL_PARTNER",
-    name: "Prestige Realty Partners",
-    legalName: "Prestige Realty Partners LLP (Demo)",
-    gstin: "27AAPFP9005H1Z6",
-    pan: "AAPFP9005H",
-    reraNumber: "A51800099005",
-    addressLine: "Office 702, Demo Corporate Park, Andheri East",
-    city: "Mumbai",
-    state: "Maharashtra",
-    pincode: "400069",
-    contactName: "Ananya Rao",
-    contactEmail: "partner@prestige-demo.test",
-    contactPhone: "+91 98200 00005",
-    bankName: "Demo Co-operative Bank",
-    bankAccountNumber: "500100099005",
-    bankIfsc: "DEMO0000501",
-  },
-  urbannest: {
-    key: "urbannest",
-    type: "CHANNEL_PARTNER",
-    name: "UrbanNest Property Advisors",
-    legalName: "UrbanNest Property Advisors Private Limited (Demo)",
-    gstin: "27AACCU9006J1Z2",
-    pan: "AACCU9006J",
-    reraNumber: "A51700099006",
-    addressLine: "2nd Floor, Demo Square, Baner",
-    city: "Pune",
-    state: "Maharashtra",
-    pincode: "411045",
-    contactName: "Siddharth Kulkarni",
-    contactEmail: "partner@urbannest-demo.test",
-    contactPhone: "+91 98220 00006",
-    bankName: "Demo National Bank",
-    bankAccountNumber: "300200099006",
-    bankIfsc: "DEMO0000302",
-  },
-} as const satisfies Record<string, DemoOrganisation>;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const IST_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" });
 
-export type DemoOrgKey = keyof typeof DEMO_ORGANISATIONS;
+export function demoClock(now: Date = new Date()): DemoClock {
+  return {
+    now,
+    daysAgo: (days, hour = 11) => new Date(now.getTime() - days * DAY_MS + (hour - 12) * 60 * 60 * 1000),
+    isoDate: (offsetDays) => IST_DATE.format(new Date(now.getTime() + offsetDays * DAY_MS)),
+  };
+}
+
+/** Standard-dataset exports with literal keys, used by the automated tests. */
+export const DEMO_ORGANISATIONS = STANDARD_ORGANISATIONS;
+export type DemoOrgKey = keyof typeof STANDARD_ORGANISATIONS;
 export type DemoBuilderKey = "godrej" | "skyline" | "coastal";
 export type DemoCpKey = "prestige" | "urbannest";
+export const DEMO_PROJECTS = STANDARD_PROJECTS;
+export type DemoProjectKey = (typeof STANDARD_PROJECTS)[number]["key"];
+export const SAMPLE_INVOICES = STANDARD_SAMPLES;
 
-export const DEMO_PROJECTS = [
-  { key: "gfh", builder: "godrej", code: "GFH", name: "Greenfield Heights", city: "Pune", location: "Hinjewadi Phase 2", reraNumber: "P52100099011" },
-  { key: "ghz", builder: "godrej", code: "GHZ", name: "Godrej Horizon", city: "Mumbai", location: "Wadala", reraNumber: "P51800099012" },
-  { key: "rgd", builder: "skyline", code: "RGD", name: "Royal Gardens", city: "Bengaluru", location: "Sarjapur Road", reraNumber: "PRM/KA/RERA/1251/DEMO/13" },
-  { key: "sbv", builder: "coastal", code: "SBV", name: "Seabreeze Villas", city: "Goa", location: "Candolim", reraNumber: "PRGO0099DEMO14" },
-] as const;
-
-export type DemoProjectKey = (typeof DEMO_PROJECTS)[number]["key"];
+export const GST_RATE_PERCENT = 18;
 
 function party(org: DemoOrganisation) {
   return {
@@ -169,69 +55,11 @@ function party(org: DemoOrganisation) {
   };
 }
 
-export interface DemoInvoiceDocument {
-  slug: string;
-  title: string;
-  invoiceNumber: string;
-  cp: DemoCpKey;
-  builder: DemoBuilderKey;
-  project: DemoProjectKey;
-  invoiceDate: string;
-  dueDate?: string;
-  amountPaise: bigint;
-  description: string;
-  detail: string;
-}
-
-/** The three sample invoices required for the demonstration (also seeded as live invoices). */
-export const SAMPLE_INVOICES: DemoInvoiceDocument[] = [
-  {
-    slug: "gfh-2026-001",
-    title: "Greenfield Heights — Tower B brokerage (pending approval)",
-    invoiceNumber: "GFH/2026/001",
-    cp: "prestige",
-    builder: "godrej",
-    project: "gfh",
-    invoiceDate: "2026-10-20",
-    dueDate: "2026-12-19",
-    amountPaise: 5_00_000_00n,
-    description: "Brokerage on sale of residential units — Tower B",
-    detail: "Units B-1104, B-1202 and B-1503 · Agreements for sale registered Sep–Oct 2026 · Brokerage @ 2% of agreement value",
-  },
-  {
-    slug: "gfh-2026-002",
-    title: "Greenfield Heights — Tower A brokerage (accepted)",
-    invoiceNumber: "GFH/2026/002",
-    cp: "prestige",
-    builder: "godrej",
-    project: "gfh",
-    invoiceDate: "2026-10-08",
-    dueDate: "2026-12-07",
-    amountPaise: 3_50_000_00n,
-    description: "Brokerage on sale of residential units — Tower A",
-    detail: "Units A-0704 and A-0902 · Agreements for sale registered Sep 2026 · Brokerage @ 2% of agreement value",
-  },
-  {
-    slug: "gfh-2026-003",
-    title: "Greenfield Heights — Retail podium brokerage (rejected)",
-    invoiceNumber: "GFH/2026/003",
-    cp: "prestige",
-    builder: "godrej",
-    project: "gfh",
-    invoiceDate: "2026-10-01",
-    dueDate: "2026-11-30",
-    amountPaise: 2_75_000_00n,
-    description: "Brokerage on sale of retail podium unit",
-    detail: "Unit R-G07 · Agreement for sale registered Aug 2026 · Brokerage @ 2.5% of agreement value",
-  },
-];
-
-export const GST_RATE_PERCENT = 18;
-
-export function buildInvoiceDocument(input: Omit<DemoInvoiceDocument, "slug" | "title">): BrokerageInvoiceData {
-  const cp: DemoOrganisation = DEMO_ORGANISATIONS[input.cp];
-  const builder: DemoOrganisation = DEMO_ORGANISATIONS[input.builder];
-  const project = DEMO_PROJECTS.find((p) => p.key === input.project)!;
+export function buildInvoiceDocument(input: Omit<DemoInvoiceDocument, "slug" | "title">, dataset: DemoDataset = resolveDemoDataset()): BrokerageInvoiceData {
+  const cp = dataset.organisations[input.cp];
+  const builder = dataset.organisations[input.builder];
+  const project = dataset.projects.find((p) => p.key === input.project);
+  if (!cp || !builder || !project) throw new Error(`Invoice ${input.invoiceNumber} references an organisation or project missing from dataset "${dataset.key}"`);
   const sameState = cp.state === builder.state;
   return {
     invoiceNumber: input.invoiceNumber,

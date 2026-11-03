@@ -37,6 +37,7 @@ export default defineConfig({
           STORAGE_DRIVER: "local",
           STORAGE_DIR: "./storage/e2e",
           DEMO_PASSWORD: demoPassword,
+          DEMO_DATASET: "standard",
           AUTH_SECRET: "playwright-e2e-only-secret-value-of-at-least-32-chars",
           APP_URL: baseURL,
           NEXT_TELEMETRY_DISABLED: "1",

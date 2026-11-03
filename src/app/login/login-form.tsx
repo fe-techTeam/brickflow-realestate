@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { DEMO_ACCOUNTS, WORKSPACES, type WorkspaceKey } from "@/lib/workspaces";
+import { WORKSPACES, type DemoAccount, type WorkspaceKey } from "@/lib/workspaces";
 import { loginAction, type LoginState } from "@/server/actions/auth";
 
 const ICONS: Record<WorkspaceKey, LucideIcon> = {
@@ -17,11 +17,11 @@ const ICONS: Record<WorkspaceKey, LucideIcon> = {
 };
 
 /** The demo password is only ever written into the masked password field; it is never rendered as text. */
-export function LoginForm({ demoPassword }: { demoPassword?: string }) {
+export function LoginForm({ demoPassword, accounts = [] }: { demoPassword?: string; accounts?: DemoAccount[] }) {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(loginAction, {});
   const [email, setEmail] = useState(state.email ?? "");
   const [password, setPassword] = useState("");
-  const showDemo = Boolean(demoPassword);
+  const showDemo = Boolean(demoPassword) && accounts.length > 0;
 
   function selectDemo(accountEmail: string) {
     setEmail(accountEmail);
@@ -37,7 +37,7 @@ export function LoginForm({ demoPassword }: { demoPassword?: string }) {
             <p className="text-[0.6875rem] text-muted-foreground">Select one to fill its credentials</p>
           </div>
           <div className="grid grid-cols-2 gap-2.5" role="group" aria-label="Demo workspaces">
-            {DEMO_ACCOUNTS.map((account) => {
+            {accounts.map((account) => {
               const Icon = ICONS[account.workspace];
               const selected = email === account.email;
               return (
