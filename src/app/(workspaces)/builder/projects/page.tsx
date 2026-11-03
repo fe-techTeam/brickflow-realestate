@@ -67,13 +67,13 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
         />
         <Metric
           label="Approved value"
-          accent="heritage"
+          accent="leaf"
           value={<Money paise={sumPaise(projects.map((p) => p.totals.approvedValue))} compact size="xl" className="font-normal" />}
           caption="Approved amount of accepted invoices"
         />
         <Metric
           label="Financed value"
-          accent="gold"
+          accent="kota"
           value={<Money paise={sumPaise(projects.map((p) => p.totals.financedValue))} compact size="xl" className="font-normal" />}
           caption="Paid early to partners by Veefin"
         />
@@ -113,13 +113,13 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                 <Tr key={p.id}>
                   <Td>
                     <span className="flex items-center gap-3.5">
-                      <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-navy text-gold">
+                      <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-basalt text-kota">
                         <Building2 className="size-4" strokeWidth={1.5} />
                       </span>
                       <span className="min-w-0">
                         <Link
                           href={`/builder/approvals?view=all&project=${p.id}`}
-                          className="font-display text-[1.0625rem] font-semibold whitespace-nowrap text-navy decoration-gold/60 underline-offset-[5px] hover:underline"
+                          className="font-display text-[1.0625rem] font-semibold whitespace-nowrap text-basalt decoration-kota/60 underline-offset-[5px] hover:underline"
                           title={`View invoices for ${p.name}`}
                         >
                           {p.name}
@@ -129,7 +129,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                     </span>
                   </Td>
                   <Td>
-                    <p className="text-navy">{p.city}</p>
+                    <p className="text-basalt">{p.city}</p>
                     {p.location && <p className="mt-1 text-[0.75rem] text-muted-foreground">{p.location}</p>}
                     <p className="mt-1 font-mono text-[0.6875rem] tracking-tight text-muted-foreground">RERA {p.reraNumber ?? "—"}</p>
                   </Td>
@@ -137,17 +137,17 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                     <StatusBadge kind="record" status={p.status} />
                   </Td>
                   <Td align="right">
-                    <span className="font-medium text-navy">{p.totals.invoiceCount}</span>
+                    <span className="font-medium text-basalt">{p.totals.invoiceCount}</span>
                     {p.totals.openCount > 0 && <p className="mt-1 text-[0.6875rem] text-[#8a5a12]">{p.totals.openCount} open</p>}
                   </Td>
                   <Td align="right">
                     <Money paise={p.totals.invoiceValue} />
                   </Td>
                   <Td align="right">
-                    <Money paise={p.totals.approvedValue} className="font-medium text-heritage" />
+                    <Money paise={p.totals.approvedValue} className="font-medium text-leaf" />
                   </Td>
                   <Td align="right">
-                    <Money paise={p.totals.financedValue} className="text-navy" />
+                    <Money paise={p.totals.financedValue} className="text-basalt" />
                     <span className="mt-1.5 flex justify-end">
                       <ShareBar part={p.totals.financedValue} whole={p.totals.approvedValue} />
                     </span>

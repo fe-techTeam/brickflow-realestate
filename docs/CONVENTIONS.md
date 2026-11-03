@@ -41,30 +41,42 @@ Workspace roots: `/partner` (channel partner), `/builder`, `/finance` (Veefin), 
 
 ## Visual language
 
-Midnight Navy `#142B43` (navigation, primary), Heritage Green `#174D3C` (approvals, positive money), Champagne Gold `#C4A46A` (restrained accents only), Warm Ivory `#F5F2EA` (canvas), Soft Sage `#DCE8E1`, Slate `#303D4D`.
-Tailwind tokens: `bg-navy`, `text-heritage`, `text-gold`, `bg-ivory`, `bg-sage`, `text-slate-ink`, plus `surface`, `eyebrow`, `tabular`, `animate-fade-up` utilities.
+The palette is drawn from Mumbai's built environment rather than a generic finance template:
+
+| Role | Token | Value | Use |
+| --- | --- | --- | --- |
+| Basalt | `basalt-*` (`bg-basalt`, `text-basalt`) | `#222D2B` | Structure: navigation, headings, primary buttons, dark hero panels. The green-black stone of the city's heritage buildings. |
+| Kota stone | `kota-*` | `#A89A84` | Quiet detail: eyebrows, rules, linework, secondary figures on dark panels. |
+| Gulmohar | `gulmohar-*` | `#B83D24` | The single accent: the early-payment action, active navigation, focus rings, the logo waterline. At most one or two accent moments per screen. |
+| Leaf | `leaf-*` | `#275E3A` | Approved, paid, settled and other positive outcomes. |
+| Paper | `paper-*` | `#F1F2EF` | App canvas; neutrals lean slightly towards basalt instead of pure grey. |
+| Ink | `ink`, `ink-soft` | `#2A3331` | Body text. |
+| Status | `danger`, `warning`, `info` | `#A1263F`, `#8F6417`, `#2A5D8A` | Rejected (crimson, kept clearly apart from the accent), pending, informational. |
+
+Rules: do not introduce new hues for decoration; do not use gradients for colour (only for subtle depth on dark panels); charts use the ordered `CHART_SERIES` in `common/chart-theme.ts`. Invoice PDFs belong to the channel partner, so they use a neutral letterhead rather than platform colours.
+Utilities: `surface`, `surface-basalt`, `eyebrow`, `figure`, `tabular`, `kota-rule`, `animate-fade-up`.
 Headings use the display serif (`font-display`); body text uses Inter. Keep shadows subtle, radii modest, motion restrained.
 
 ## Design system building blocks
 
 Tokens, utilities and components added for the premium visual system. All existing props still work; everything below is additive.
 
-**Type and utilities.** Page titles use `display-title` (Playfair Display), brand moments `display-hero`, section headings `heading-section`; italic accents use `font-accent` / `kicker` (Cormorant Garamond). Every amount, count and rate uses `figure`, which sets Inter with tabular, lining numerals. Lines: `hairline` (border colour), `gold-rule`, `gold-rule-center`, `hairline-rule`. Surfaces: `surface`, `surface-raised`, `surface-quiet`, `surface-navy`. Gold is an accent only, never a fill for large areas.
+**Type and utilities.** Page titles use `display-title` (Playfair Display), brand moments `display-hero`, section headings `heading-section`; italic accents use `font-accent` / `kicker` (Cormorant Garamond). Every amount, count and rate uses `figure`, which sets Inter with tabular, lining numerals. Lines: `hairline` (border colour), `kota-rule`, `kota-rule-center`, `hairline-rule`. Surfaces: `surface`, `surface-raised`, `surface-quiet`, `surface-basalt`. Gulmohar is an accent only, never a fill for large areas.
 
-**Buttons.** `variant`: `default` (navy primary), `gold` (one special action per screen, e.g. *Accept offer*), `success` (approvals, financing), `outline`, `secondary`, `ghost`, `destructive`, `link`.
+**Buttons.** `variant`: `default` (basalt primary), `accent` (gulmohar; one special action per screen, e.g. *Get discounted amount*), `success` (approvals, financing), `outline`, `secondary`, `ghost`, `destructive`, `link`.
 
 | Component | Import | Notes |
 | --- | --- | --- |
 | `PageHeader` | `common/page-header` | Adds `kicker` (italic line above the title), `meta` (chips under the description) and `divider`. |
-| `StatCard` | `common/stat-card` | Adds `trend`, `footer` and `emphasis="gold" \| "navy"` for the one or two hero metrics in a row. Values render as `figure`. |
-| `HeroMetric` | `common/hero-metric` | One headline figure: `label`, `value`, `context`, `icon`, `trend`, `aside` (e.g. `KeyFigureRow`), `footer`, `variant="navy" \| "ivory"`. |
-| `KeyFigure`, `KeyFigureRow` | `common/key-figure` | Compact label/value pairs: `tone` (`navy`, `heritage`, `gold`, `danger`, `light`), `size`, `align`, `hint`. Use `KeyFigureRow onDark` inside navy panels. |
-| `Money` | `common/money` | `<Money paise={...} />` formats INR with the paise de-emphasised. `compact`, `showPaise`, `tone` (`positive`, `negative`, `gold`, `muted`, `navy`), `display` for large figures. Accepts `bigint`, number or string paise. |
+| `StatCard` | `common/stat-card` | Adds `trend`, `footer` and `emphasis="kota" \| "basalt"` for the one or two hero metrics in a row. Values render as `figure`. |
+| `HeroMetric` | `common/hero-metric` | One headline figure: `label`, `value`, `context`, `icon`, `trend`, `aside` (e.g. `KeyFigureRow`), `footer`, `variant="basalt" \| "paper"`. |
+| `KeyFigure`, `KeyFigureRow` | `common/key-figure` | Compact label/value pairs: `tone` (`basalt`, `leaf`, `kota`, `danger`, `light`), `size`, `align`, `hint`. Use `KeyFigureRow onDark` inside basalt panels. |
+| `Money` | `common/money` | `<Money paise={...} />` formats INR with the paise de-emphasised. `compact`, `showPaise`, `tone` (`positive`, `negative`, `kota`, `muted`, `basalt`), `display` for large figures. Accepts `bigint`, number or string paise. |
 | `Trend` | `common/trend` | `value`, `direction`, `sentiment`, `label`; used by `StatCard`/`HeroMetric` but usable alone. |
 | `ChartFrame` | `common/chart-frame` | Chart card: `title`, `eyebrow`, `description`, `figure`, `legend`, `actions`, `height`, `empty`, `table` (accessible data fallback), `label`, `footer`, `bare`. Also exports `ChartLegend` and `ChartTooltipCard`. |
 | Chart theme | `common/chart-theme` | `CHART_COLORS`, `CHART_SERIES`, `chartXAxisProps`, `chartYAxisProps`, `chartGridProps`, `chartTooltipProps`, `chartBarProps`, `chartLineProps`, `chartLegendProps`, `chartAreaGradientStops(color)`. Spread them onto Recharts elements so all charts match. |
-| `DataTable` | `common/data-table` | Adds `zebra` and `dense`. Rows highlight on hover with a gold edge. |
-| `DetailList`, `Timeline`, `AmountRow`, `EmptyState`, `Section` | `common/panels` | `DetailItem.emphasis` renders as a figure; `TimelineEntry.tone` adds `gold`. |
+| `DataTable` | `common/data-table` | Adds `zebra` and `dense`. Rows highlight on hover with a stone edge. |
+| `DetailList`, `Timeline`, `AmountRow`, `EmptyState`, `Section` | `common/panels` | `DetailItem.emphasis` renders as a figure; `TimelineEntry.tone` adds `kota`. |
 | `ActionDialog` | `common/action-dialog` | Shows a tone medallion from `confirmVariant`; override with `icon` or hide with `icon={null}`. |
 | `ErrorState`, `errorDigest` | `common/error-state` | Card for workspace `error.tsx`: `<ErrorState error={error} onRetry={retry} back={{ href: "/builder", label: "Back to overview" }} />`. |
 | `BreadcrumbLabel` | `shell/breadcrumbs` | Optional. Render `<BreadcrumbLabel label={invoice.number} />` on a detail page to name the last breadcrumb. Without it the shell derives a record name from the route (e.g. "Invoice", "Financing request", "Transaction"). |

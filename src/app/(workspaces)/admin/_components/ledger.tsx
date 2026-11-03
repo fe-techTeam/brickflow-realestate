@@ -11,8 +11,8 @@ const SCROLL_SHADOWS = {
   background: [
     "linear-gradient(to right, var(--color-card, #fff) 40%, transparent) left / 48px 100% no-repeat local",
     "linear-gradient(to left, var(--color-card, #fff) 40%, transparent) right / 48px 100% no-repeat local",
-    "radial-gradient(farthest-side at 0 50%, rgba(20, 43, 67, 0.14), transparent) left / 16px 100% no-repeat scroll",
-    "radial-gradient(farthest-side at 100% 50%, rgba(20, 43, 67, 0.14), transparent) right / 16px 100% no-repeat scroll",
+    "radial-gradient(farthest-side at 0 50%, rgba(34, 45, 43, 0.14), transparent) left / 16px 100% no-repeat scroll",
+    "radial-gradient(farthest-side at 100% 50%, rgba(34, 45, 43, 0.14), transparent) right / 16px 100% no-repeat scroll",
   ].join(", "),
 };
 
@@ -35,7 +35,7 @@ export function LTh({ children, align = "left", className }: { children?: ReactN
       scope="col"
       className={cn(
         cellPad,
-        "border-y border-border/90 bg-ivory/40 py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
+        "border-y border-border/90 bg-paper/40 py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
         align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left",
         className,
       )}
@@ -50,7 +50,7 @@ export function LTd({ children, align = "left", className }: { children?: ReactN
     <td
       className={cn(
         cellPad,
-        "border-b border-border/60 py-4 align-middle text-slate-ink",
+        "border-b border-border/60 py-4 align-middle text-ink",
         align === "right" && "tabular text-right",
         align === "center" && "text-center",
         className,
@@ -62,7 +62,7 @@ export function LTd({ children, align = "left", className }: { children?: ReactN
 }
 
 export function LTr({ children, className }: { children: ReactNode; className?: string }) {
-  return <tr className={cn("group/row transition-colors last:[&>td]:border-b-0 hover:bg-ivory/45", className)}>{children}</tr>;
+  return <tr className={cn("group/row transition-colors last:[&>td]:border-b-0 hover:bg-paper/45", className)}>{children}</tr>;
 }
 
 /** Sortable ledger header that toggles ?sort/&dir while preserving other params. */
@@ -93,7 +93,7 @@ export function LSortTh({
         href={`${pathname}?${params.toString()}`}
         scroll={false}
         aria-label={`Sort by ${label}`}
-        className={cn("inline-flex items-center gap-1.5 transition-colors hover:text-navy", active && "text-navy")}
+        className={cn("inline-flex items-center gap-1.5 transition-colors hover:text-basalt", active && "text-basalt")}
       >
         {label}
         <Icon className={cn("size-3", !active && "opacity-50")} />
@@ -102,7 +102,7 @@ export function LSortTh({
   );
 }
 
-/** Mono reference code in navy, e.g. programme and request references. */
+/** Mono reference code in basalt, e.g. programme and request references. */
 export function RefCode({ children, className }: { children: ReactNode; className?: string }) {
-  return <span className={cn("font-mono text-[0.75rem] font-medium tracking-tight whitespace-nowrap text-navy", className)}>{children}</span>;
+  return <span className={cn("font-mono text-[0.75rem] font-medium tracking-tight whitespace-nowrap text-basalt", className)}>{children}</span>;
 }

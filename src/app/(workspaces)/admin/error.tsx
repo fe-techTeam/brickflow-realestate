@@ -13,7 +13,7 @@ export default function AdminError({ error, retry }: { error: unknown; retry: ()
   const digest = error instanceof Error && "digest" in error ? String((error as Error & { digest?: string }).digest ?? "") : "";
 
   return (
-    <div className="mx-auto mt-10 max-w-xl animate-fade-up rounded-xl border border-border/90 bg-card px-6 py-12 text-center shadow-[0_24px_48px_-36px_rgba(20,43,67,0.45)]">
+    <div className="mx-auto mt-10 max-w-xl animate-fade-up rounded-xl border border-border/90 bg-card px-6 py-12 text-center shadow-[0_24px_48px_-36px_rgba(34, 45, 43,0.45)]">
       <span className="relative mx-auto mb-6 flex size-16 items-center justify-center">
         <span aria-hidden="true" className="absolute inset-0 rounded-full border border-danger/30" />
         <span aria-hidden="true" className="absolute inset-2 rounded-full bg-danger-soft" />

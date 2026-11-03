@@ -12,7 +12,7 @@ export default function Loading() {
       </div>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-6 xl:col-start-2 xl:row-start-1">
-          <div className="rounded-xl border border-[#e7e1d3] bg-card space-y-3 p-6">
+          <div className="rounded-xl border border-[#dfe2de] bg-card space-y-3 p-6">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-9 w-full" />
             <Skeleton className="h-9 w-full" />
@@ -21,7 +21,7 @@ export default function Loading() {
               <Skeleton className="h-9" />
             </div>
           </div>
-          <div className="rounded-xl border border-[#e7e1d3] bg-card space-y-4 p-6">
+          <div className="rounded-xl border border-[#dfe2de] bg-card space-y-4 p-6">
             <Skeleton className="h-5 w-36" />
             {Array.from({ length: 3 }, (_, i) => (
               <Skeleton key={i} className="h-10 w-full" />
@@ -29,11 +29,11 @@ export default function Loading() {
           </div>
         </div>
         <div className="space-y-6 xl:col-start-1 xl:row-start-1">
-          <div className="rounded-xl border border-[#e7e1d3] bg-card p-6">
+          <div className="rounded-xl border border-[#dfe2de] bg-card p-6">
             <Skeleton className="mb-4 h-5 w-40" />
             <Skeleton className="h-[420px] w-full" />
           </div>
-          <div className="rounded-xl border border-[#e7e1d3] bg-card grid gap-5 p-6 sm:grid-cols-2">
+          <div className="rounded-xl border border-[#dfe2de] bg-card grid gap-5 p-6 sm:grid-cols-2">
             {Array.from({ length: 8 }, (_, i) => (
               <div key={i} className="space-y-2">
                 <Skeleton className="h-3 w-24" />

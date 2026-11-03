@@ -76,15 +76,15 @@ export function ApproveDialog({ invoiceId, invoiceNumber, cpName, amountPaise }:
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="success" size="lg" className="h-12 w-full text-[0.9375rem] shadow-[0_12px_24px_-14px_rgba(23,77,60,0.9)]">
+        <Button variant="success" size="lg" className="h-12 w-full text-[0.9375rem] shadow-[0_12px_24px_-14px_rgba(39, 94, 58,0.9)]">
           <CheckCircle2 className="size-[1.125rem]" />
           Approve invoice
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-heritage uppercase">Approval</p>
-          <DialogTitle className="font-display text-[1.75rem] leading-tight font-semibold text-navy">Approve {invoiceNumber}</DialogTitle>
+          <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-leaf uppercase">Approval</p>
+          <DialogTitle className="font-display text-[1.75rem] leading-tight font-semibold text-basalt">Approve {invoiceNumber}</DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
             Confirm the amount you accept as payable to {cpName}. Once approved, the partner may take early payment from Veefin on this amount; you settle it on the
             original due date.
@@ -99,9 +99,9 @@ export function ApproveDialog({ invoiceId, invoiceNumber, cpName, amountPaise }:
             submit();
           }}
         >
-          <div className="flex items-baseline justify-between gap-4 rounded-lg border border-[#e7e1d3] bg-ivory/70 px-4 py-3.5">
+          <div className="flex items-baseline justify-between gap-4 rounded-lg border border-[#dfe2de] bg-paper/70 px-4 py-3.5">
             <span className="text-[0.75rem] text-muted-foreground">Invoice amount (incl. GST)</span>
-            <span className="tabular font-sans text-lg font-medium text-navy">{formatINR(invoicePaise)}</span>
+            <span className="tabular font-sans text-lg font-medium text-basalt">{formatINR(invoicePaise)}</span>
           </div>
 
           <div className="grid gap-2">
@@ -122,7 +122,7 @@ export function ApproveDialog({ invoiceId, invoiceNumber, cpName, amountPaise }:
                 aria-invalid={Boolean(amountError)}
                 aria-describedby="approved-amount-hint"
                 disabled={pending}
-                className="tabular h-11 font-medium text-base text-navy"
+                className="tabular h-11 font-medium text-base text-basalt"
               />
               {amount !== fullAmount && (
                 <Button type="button" variant="outline" className="h-11" onClick={() => setAmount(fullAmount)} disabled={pending}>

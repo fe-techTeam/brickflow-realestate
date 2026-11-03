@@ -29,8 +29,8 @@ const SORT_KEYS = ["request", "cp", "amount", "due", "status"] as const;
 const MATURITY: { key: string; label: string; tone: Bucket["tone"]; test: (days: number) => boolean }[] = [
   { key: "overdue", label: "Overdue", tone: "rose", test: (d) => d < 0 },
   { key: "today", label: "Due today", tone: "amber", test: (d) => d === 0 },
-  { key: "week", label: "Within 7 days", tone: "gold", test: (d) => d > 0 && d <= 7 },
-  { key: "month", label: "8–30 days", tone: "navy", test: (d) => d > 7 && d <= 30 },
+  { key: "week", label: "Within 7 days", tone: "kota", test: (d) => d > 0 && d <= 7 },
+  { key: "month", label: "8–30 days", tone: "basalt", test: (d) => d > 7 && d <= 30 },
   { key: "later", label: "Beyond 30 days", tone: "slate", test: (d) => d > 30 },
 ];
 
@@ -38,16 +38,16 @@ function DaysCell({ settlement, now }: { settlement: BuilderSettlement; now: Dat
   if (settlement.effectiveStatus === "SETTLED") {
     const days = settlement.settledAt ? calendarDaysUntil(settlement.dueDate, settlement.settledAt) : null;
     return (
-      <span className="text-[0.75rem] text-heritage">
+      <span className="text-[0.75rem] text-leaf">
         {days === null ? "Settled" : days >= 0 ? "Settled on time" : `Settled ${-days} ${days === -1 ? "day" : "days"} late`}
       </span>
     );
   }
   const days = calendarDaysUntil(settlement.dueDate, now);
   if (days === 0) return <span className="font-medium text-[#8a5a12]">Due today</span>;
-  if (days < 0) return <span className="font-medium text-[#93342a]">{-days} {days === -1 ? "day" : "days"} overdue</span>;
+  if (days < 0) return <span className="font-medium text-[#8a1f37]">{-days} {days === -1 ? "day" : "days"} overdue</span>;
   return (
-    <span className={cn("tabular", days <= 7 ? "font-medium text-[#8a5a12]" : "text-slate-ink")}>
+    <span className={cn("tabular", days <= 7 ? "font-medium text-[#8a5a12]" : "text-ink")}>
       {days} {days === 1 ? "day" : "days"} to due
     </span>
   );
@@ -91,9 +91,9 @@ export default async function SettlementsPage({ searchParams }: { searchParams: 
         lede="What you owe Veefin for invoices it paid early to your channel partners. Each settlement is the full approved invoice amount, due on the invoice's original due date."
       />
 
-      <section className={cn(CARD, "mb-6 grid animate-fade-up gap-px overflow-hidden bg-[#ebe5d8] lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]")}>
-        <div className="bg-navy px-5 py-6 text-white sm:px-7">
-          <p className="flex items-center gap-2 text-[0.625rem] font-semibold tracking-[0.18em] text-gold uppercase">
+      <section className={cn(CARD, "mb-6 grid animate-fade-up gap-px overflow-hidden bg-[#e4e7e3] lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]")}>
+        <div className="bg-basalt px-5 py-6 text-white sm:px-7">
+          <p className="flex items-center gap-2 text-[0.625rem] font-semibold tracking-[0.18em] text-kota uppercase">
             <Landmark className="size-3.5" />
             Owed to Veefin
           </p>
@@ -162,19 +162,19 @@ export default async function SettlementsPage({ searchParams }: { searchParams: 
               {rows.map((s) => (
                 <Tr key={s.id}>
                   <Td className="whitespace-nowrap">
-                    <span className="font-medium text-navy">{formatDate(s.dueDate)}</span>
+                    <span className="font-medium text-basalt">{formatDate(s.dueDate)}</span>
                   </Td>
                   <Td>
-                    <p className="font-mono text-[0.75rem] text-navy">{s.request.reference}</p>
+                    <p className="font-mono text-[0.75rem] text-basalt">{s.request.reference}</p>
                     <p className="mt-1 text-[0.75rem] text-muted-foreground">Payable to {s.request.financier.name}</p>
                   </Td>
                   <Td>
                     <RowLink href={`/builder/invoices/${s.request.invoice.id}`}>{s.request.invoice.invoiceNumber}</RowLink>
                     <p className="mt-1 text-[0.75rem] text-muted-foreground">{s.request.invoice.project.name}</p>
                   </Td>
-                  <Td className="font-medium text-navy">{s.request.cp.name}</Td>
+                  <Td className="font-medium text-basalt">{s.request.cp.name}</Td>
                   <Td align="right">
-                    <Money paise={s.amountPaise} className="font-semibold text-navy" />
+                    <Money paise={s.amountPaise} className="font-semibold text-basalt" />
                   </Td>
                   <Td className="whitespace-nowrap">
                     <DaysCell settlement={s} now={now} />

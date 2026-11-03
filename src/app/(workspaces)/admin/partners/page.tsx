@@ -41,18 +41,18 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       <SummaryStrip
         items={[
           { label: "Channel partners", value: <Count value={partners.length} size="lg" />, hint: `${partners.filter((p) => p.status === "ACTIVE").length} active` },
-          { label: "Empanelments", value: <Count value={empanelments} size="lg" />, hint: "Active CP–builder relationships", accent: "navy" },
+          { label: "Empanelments", value: <Count value={empanelments} size="lg" />, hint: "Active CP–builder relationships", accent: "basalt" },
           {
             label: "Invoiced",
             value: <Money paise={sumPaise(partners.map((p) => p.invoicePaise))} compact size="lg" />,
             hint: "Submitted to builders",
-            accent: "gold",
+            accent: "kota",
           },
           {
             label: "Received early",
-            value: <Money paise={sumPaise(partners.map((p) => p.receivedPaise))} compact size="lg" className="text-heritage" />,
+            value: <Money paise={sumPaise(partners.map((p) => p.receivedPaise))} compact size="lg" className="text-leaf" />,
             hint: "Net payouts (simulated)",
-            accent: "heritage",
+            accent: "leaf",
           },
         ]}
       />
@@ -81,9 +81,9 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                 <LTr key={p.id}>
                   <LTd>
                     <div className="flex items-center gap-3">
-                      <Monogram name={p.name} size="sm" tone={p.status === "ACTIVE" ? "ivory" : "muted"} />
+                      <Monogram name={p.name} size="sm" tone={p.status === "ACTIVE" ? "paper" : "muted"} />
                       <div>
-                        <Link href={`/admin/organisations/${p.id}`} className="font-medium text-navy hover:underline">
+                        <Link href={`/admin/organisations/${p.id}`} className="font-medium text-basalt hover:underline">
                           {p.name}
                         </Link>
                         <p className="text-xs text-muted-foreground">{p.city ?? p.legalName}</p>
@@ -101,8 +101,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                               href={`/admin/organisations/${e.builderId}`}
                               title={`${e.code} · ${e.creditPeriodDays}-day credit${e.status === "INACTIVE" ? " · inactive" : ""}`}
                               className={cn(
-                                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:border-gold/60",
-                                e.status === "ACTIVE" ? "border-border bg-ivory/60 text-navy" : "border-dashed border-border text-muted-foreground line-through",
+                                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:border-kota/60",
+                                e.status === "ACTIVE" ? "border-border bg-paper/60 text-basalt" : "border-dashed border-border text-muted-foreground line-through",
                               )}
                             >
                               {e.builderName}
@@ -114,15 +114,15 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     )}
                   </LTd>
                   <LTd align="right">
-                    <Money paise={p.invoicePaise} compact className="text-navy" />
+                    <Money paise={p.invoicePaise} compact className="text-basalt" />
                     <p className="text-xs text-muted-foreground">{plural(p.invoiceCount, "invoice")}</p>
                   </LTd>
                   <LTd align="right">
-                    <Money paise={p.financedPaise} compact className="text-navy" />
+                    <Money paise={p.financedPaise} compact className="text-basalt" />
                     <p className="text-xs text-muted-foreground">{plural(p.financedCount, "request")}</p>
                   </LTd>
                   <LTd align="right">
-                    <Money paise={p.receivedPaise} compact className="text-heritage" />
+                    <Money paise={p.receivedPaise} compact className="text-leaf" />
                   </LTd>
                   <LTd>
                     <StatusBadge kind="record" status={p.status} />

@@ -26,7 +26,7 @@ async function load(id: string) {
   }
 }
 
-const mono = (value: string | null | undefined) => (value ? <span className="font-mono text-[0.8125rem] tracking-tight text-navy">{value}</span> : "—");
+const mono = (value: string | null | undefined) => (value ? <span className="font-mono text-[0.8125rem] tracking-tight text-basalt">{value}</span> : "—");
 
 export default async function OrganisationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -51,7 +51,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
       value: activeProgramme ? <Rate bps={activeProgramme.discountRateBps} size="lg" /> : <span className="text-sm text-muted-foreground">Not configured</span>,
       hint: activeProgramme ? `${activeProgramme.code} · ${activeProgramme.financier.name}` : "No active programme",
       href: "/admin/financing",
-      accent: "gold",
+      accent: "kota",
     });
     strip.push({ label: "Projects · partners", value: <Count value={`${org.projects.length} · ${empanelments.length}`} size="lg" />, hint: "Registered projects and empanelled CPs" });
   } else if (isPartner) {
@@ -68,16 +68,16 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
   }
   strip.push({
     label: "Financed",
-    value: stats.financedPaise !== null ? <Money paise={stats.financedPaise} compact size="lg" className="text-heritage" /> : <span className="text-sm text-muted-foreground">Not applicable</span>,
+    value: stats.financedPaise !== null ? <Money paise={stats.financedPaise} compact size="lg" className="text-leaf" /> : <span className="text-sm text-muted-foreground">Not applicable</span>,
     hint: stats.financedCount !== null ? `${plural(stats.financedCount, "request")} approved by Veefin` : "Does not raise or approve invoices",
-    accent: "heritage",
+    accent: "leaf",
   });
 
   return (
     <>
       <AdminHeader
         back={{ href: "/admin/organisations", label: "All organisations" }}
-        leading={<Monogram name={org.name} size="lg" tone={org.status === "ACTIVE" ? "navy" : "muted"} className="hidden sm:inline-flex" />}
+        leading={<Monogram name={org.name} size="lg" tone={org.status === "ACTIVE" ? "basalt" : "muted"} className="hidden sm:inline-flex" />}
         eyebrow={ORG_TYPE_META[org.type].label}
         title={org.name}
         lede={org.legalName}
@@ -118,7 +118,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
               {
                 label: "Email",
                 value: org.contactEmail ? (
-                  <a className="text-navy hover:underline" href={`mailto:${org.contactEmail}`}>
+                  <a className="text-basalt hover:underline" href={`mailto:${org.contactEmail}`}>
                     {org.contactEmail}
                   </a>
                 ) : (
@@ -141,7 +141,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
           title="Financing programmes"
           description="Agreed discount terms. They are changed only in Financing configuration."
           actions={
-            <Link href="/admin/financing" className="inline-flex items-center gap-1 text-xs font-semibold text-navy hover:text-gold-600">
+            <Link href="/admin/financing" className="inline-flex items-center gap-1 text-xs font-semibold text-basalt hover:text-kota-600">
               Financing configuration
               <ArrowRight className="size-3.5" />
             </Link>
@@ -207,9 +207,9 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
                 <LTr key={m.id}>
                   <LTd>
                     <div className="flex items-center gap-3">
-                      <Monogram name={m.user.name} size="sm" tone={m.user.status === "ACTIVE" ? "ivory" : "muted"} className="rounded-full" />
+                      <Monogram name={m.user.name} size="sm" tone={m.user.status === "ACTIVE" ? "paper" : "muted"} className="rounded-full" />
                       <div>
-                        <p className="font-medium text-navy">{m.user.name}</p>
+                        <p className="font-medium text-basalt">{m.user.name}</p>
                         <p className="text-xs text-muted-foreground">{m.user.email}</p>
                       </div>
                     </div>
@@ -253,7 +253,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
                 {org.projects.map((p) => (
                   <LTr key={p.id}>
                     <LTd>
-                      <p className="font-medium text-navy">{p.name}</p>
+                      <p className="font-medium text-basalt">{p.name}</p>
                       <RefCode className="text-[0.6875rem] text-muted-foreground">{p.code}</RefCode>
                     </LTd>
                     <LTd>{p.city}</LTd>
@@ -296,7 +296,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
                     <LTd>
                       <div className="flex items-center gap-3">
                         <Monogram name={e.counterparty.name} size="sm" />
-                        <Link href={`/admin/organisations/${e.counterparty.id}`} className="font-medium text-navy hover:underline">
+                        <Link href={`/admin/organisations/${e.counterparty.id}`} className="font-medium text-basalt hover:underline">
                           {e.counterparty.name}
                         </Link>
                       </div>

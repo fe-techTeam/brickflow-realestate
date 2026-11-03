@@ -64,10 +64,10 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
           value={<Money paise={sumPaise(partners.map((p) => p.totals.invoiceValue))} compact size="xl" className="font-normal" />}
           caption="All submitted invoices"
         />
-        <Metric label="Approved value" accent="heritage" value={<Money paise={approved} compact size="xl" className="font-normal" />} caption="Approved amount of accepted invoices" />
+        <Metric label="Approved value" accent="leaf" value={<Money paise={approved} compact size="xl" className="font-normal" />} caption="Approved amount of accepted invoices" />
         <Metric
           label="Financed value"
-          accent="gold"
+          accent="kota"
           value={<Money paise={financed} compact size="xl" className="font-normal" />}
           caption={`${share.toFixed(1)}% of approved value paid early by Veefin`}
         />
@@ -109,7 +109,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                       <span className="min-w-0">
                         <Link
                           href={`/builder/approvals?view=all&q=${encodeURIComponent(p.cp.name)}`}
-                          className="font-medium text-navy decoration-gold/60 underline-offset-[5px] hover:underline"
+                          className="font-medium text-basalt decoration-kota/60 underline-offset-[5px] hover:underline"
                           title={`View invoices from ${p.cp.name}`}
                         >
                           {p.cp.name}
@@ -122,7 +122,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     </span>
                   </Td>
                   <Td>
-                    <p className="font-mono text-[0.75rem] text-slate-ink">{p.empanelmentCode}</p>
+                    <p className="font-mono text-[0.75rem] text-ink">{p.empanelmentCode}</p>
                     <p className="mt-1 text-[0.75rem] text-muted-foreground">Since {formatDate(p.empanelledAt)}</p>
                   </Td>
                   <Td align="right">
@@ -132,17 +132,17 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     <StatusBadge kind="record" status={p.status} />
                   </Td>
                   <Td align="right">
-                    <span className="font-medium text-navy">{p.totals.invoiceCount}</span>
+                    <span className="font-medium text-basalt">{p.totals.invoiceCount}</span>
                     {p.totals.openCount > 0 && <p className="mt-1 text-[0.6875rem] text-[#8a5a12]">{p.totals.openCount} open</p>}
                   </Td>
                   <Td align="right">
                     <Money paise={p.totals.invoiceValue} />
                   </Td>
                   <Td align="right">
-                    <Money paise={p.totals.approvedValue} className="font-medium text-heritage" />
+                    <Money paise={p.totals.approvedValue} className="font-medium text-leaf" />
                   </Td>
                   <Td align="right">
-                    <Money paise={p.totals.financedValue} className="text-navy" />
+                    <Money paise={p.totals.financedValue} className="text-basalt" />
                     <span className="mt-1.5 flex justify-end">
                       <ShareBar part={p.totals.financedValue} whole={p.totals.approvedValue} />
                     </span>

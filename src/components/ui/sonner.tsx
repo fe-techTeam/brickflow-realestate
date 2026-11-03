@@ -15,7 +15,7 @@ const Toaster = ({ toastOptions, ...props }: ToasterProps) => {
         info: <Info className="size-[1.125rem]" strokeWidth={1.75} />,
         warning: <TriangleAlert className="size-[1.125rem]" strokeWidth={1.75} />,
         error: <OctagonAlert className="size-[1.125rem]" strokeWidth={1.75} />,
-        loading: <Loader2 className="size-[1.125rem] animate-spin text-gold-600" strokeWidth={1.75} />,
+        loading: <Loader2 className="size-[1.125rem] animate-spin text-kota-600" strokeWidth={1.75} />,
       }}
       style={
         {

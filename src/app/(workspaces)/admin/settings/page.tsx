@@ -32,7 +32,7 @@ export default async function SettingsPage() {
             <FactList
               className="[&>div]:sm:grid-cols-1 [&>div]:sm:gap-1"
               facts={[
-                { label: "Application version", value: <span className="tabular font-mono text-[0.8125rem] text-navy">v{env.appVersion}</span> },
+                { label: "Application version", value: <span className="tabular font-mono text-[0.8125rem] text-basalt">v{env.appVersion}</span> },
                 { label: "Runtime", value: `Node.js ${env.nodeVersion} · ${env.environment}` },
                 { label: "Database", value: env.database },
                 { label: "Document storage", value: env.storageDriver === "local" ? "Local file system (local driver)" : env.storageDriver },

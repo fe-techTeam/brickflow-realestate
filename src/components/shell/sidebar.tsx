@@ -11,10 +11,10 @@ import { SidebarNav } from "./sidebar-nav";
 
 
 
-/** Faint champagne elevation drawing anchored to the bottom of the navy panels. */
+/** Faint stone elevation drawing anchored to the bottom of the basalt panels. */
 export function SidebarSkyline({ className }: { className?: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 272 180" preserveAspectRatio="xMidYMax slice" className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-44 w-full text-gold", className)} fill="none">
+    <svg aria-hidden="true" viewBox="0 0 272 180" preserveAspectRatio="xMidYMax slice" className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-44 w-full text-kota", className)} fill="none">
       <g stroke="currentColor" strokeOpacity="0.16" strokeWidth="1">
         <path d="M18 180V118h34v62M60 180V64h40v116M108 180V96h30v84M146 180V40h44v140M198 180V104h32v76M238 180V82h30v98" />
       </g>
@@ -30,19 +30,19 @@ export function OrgCard({ orgName, workspace, collapsed = false }: { orgName: st
   return (
     <div
       className={cn(
-        "relative flex items-center gap-3 rounded-xl border border-white/[0.08] bg-navy-950/35 p-2.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] backdrop-blur-sm",
+        "relative flex items-center gap-3 rounded-xl border border-white/[0.08] bg-basalt-950/35 p-2.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] backdrop-blur-sm",
         collapsed && "justify-center border-transparent bg-transparent p-0 shadow-none",
       )}
       title={collapsed ? orgName : undefined}
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-navy-700 to-navy-900 font-display text-[0.8125rem] font-semibold text-gold-300 ring-1 ring-gold/35">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-basalt-700 to-basalt-900 font-display text-[0.8125rem] font-semibold text-kota-300 ring-1 ring-kota/35">
         {initials(orgName)}
       </span>
       {!collapsed && (
         <div className="min-w-0">
           <p className="truncate text-[0.8125rem] leading-tight font-medium text-white/90">{orgName}</p>
           <p className="mt-1 flex items-center gap-1.5 text-[0.6875rem] leading-none text-white/45">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-heritage-300 shadow-[0_0_0_3px_rgb(127_174_149/0.15)]" />
+            <span aria-hidden="true" className="size-1.5 rounded-full bg-leaf-300 shadow-[0_0_0_3px_rgb(140_187_151/0.15)]" />
             {WORKSPACES[workspace].shortLabel} · Demo
           </p>
         </div>
@@ -56,8 +56,8 @@ export function SidebarBrand({ workspace, collapsed = false }: { workspace: Work
     <div className={cn("transition-[padding] duration-300", collapsed ? "px-0" : "px-1")}>
       {collapsed ? <LogoMark className="mx-auto size-9" /> : <Logo tone="light" />}
       <div className={cn("mt-5 flex items-center gap-2.5", collapsed && "justify-center")}>
-        <span aria-hidden="true" className={cn("h-px bg-gold/70", collapsed ? "w-5" : "w-5")} />
-        {!collapsed && <p className="text-[0.625rem] font-semibold tracking-[0.24em] whitespace-nowrap text-gold-300/90 uppercase">{WORKSPACES[workspace].label}</p>}
+        <span aria-hidden="true" className={cn("h-px bg-kota/70", collapsed ? "w-5" : "w-5")} />
+        {!collapsed && <p className="text-[0.625rem] font-semibold tracking-[0.24em] whitespace-nowrap text-kota-300/90 uppercase">{WORKSPACES[workspace].label}</p>}
       </div>
     </div>
   );
@@ -80,8 +80,8 @@ export function Sidebar({ workspace, orgName, defaultCollapsed = false }: { work
         collapsed ? "w-[4.75rem]" : "w-[17rem]",
       )}
     >
-      <div className="absolute inset-0 overflow-hidden bg-navy bg-[linear-gradient(180deg,#17324e_0%,#142b43_38%,#0f2337_100%)] shadow-[inset_-1px_0_0_rgb(255_255_255/0.05)]">
-        <div aria-hidden="true" className="absolute -top-24 -left-24 size-72 rounded-full bg-[radial-gradient(circle,rgb(196_164_106/0.14)_0%,rgb(196_164_106/0)_70%)]" />
+      <div className="absolute inset-0 overflow-hidden bg-basalt bg-[linear-gradient(180deg,#283431_0%,#222d2b_38%,#111816_100%)] shadow-[inset_-1px_0_0_rgb(255_255_255/0.05)]">
+        <div aria-hidden="true" className="absolute -top-24 -left-24 size-72 rounded-full bg-[radial-gradient(circle,rgb(168_154_132/0.14)_0%,rgb(168_154_132/0)_70%)]" />
         <SidebarSkyline />
       </div>
 
@@ -102,7 +102,7 @@ export function Sidebar({ workspace, orgName, defaultCollapsed = false }: { work
         onClick={toggle}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         aria-expanded={!collapsed}
-        className="absolute top-[5.25rem] -right-3 z-10 flex size-6 items-center justify-center rounded-full border border-border bg-card text-navy opacity-0 shadow-raised transition-all duration-200 group-hover/sidebar:opacity-100 hover:border-gold/60 hover:text-gold-700 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="absolute top-[5.25rem] -right-3 z-10 flex size-6 items-center justify-center rounded-full border border-border bg-card text-basalt opacity-0 shadow-raised transition-all duration-200 group-hover/sidebar:opacity-100 hover:border-kota/60 hover:text-kota-700 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         <ChevronsLeft className={cn("size-3.5 transition-transform duration-300", collapsed && "rotate-180")} />
       </button>

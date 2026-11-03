@@ -8,7 +8,7 @@ import type {
   SettlementStatus,
 } from "@/generated/prisma/enums";
 
-export type StatusTone = "neutral" | "info" | "warning" | "success" | "danger" | "gold" | "navy";
+export type StatusTone = "neutral" | "info" | "warning" | "success" | "danger" | "kota" | "basalt";
 
 export interface StatusMeta {
   label: string;
@@ -18,7 +18,7 @@ export interface StatusMeta {
 export const INVOICE_STATUS: Record<InvoiceStatus, StatusMeta> = {
   DRAFT: { label: "Draft", tone: "neutral" },
   SUBMITTED: { label: "Pending approval", tone: "info" },
-  UNDER_REVIEW: { label: "Under review", tone: "navy" },
+  UNDER_REVIEW: { label: "Under review", tone: "basalt" },
   CLARIFICATION_REQUESTED: { label: "Clarification requested", tone: "warning" },
   REJECTED: { label: "Rejected", tone: "danger" },
   ACCEPTED: { label: "Accepted", tone: "success" },
@@ -27,11 +27,11 @@ export const INVOICE_STATUS: Record<InvoiceStatus, StatusMeta> = {
 export const FINANCING_STATUS: Record<FinancingStatus, StatusMeta> = {
   NOT_REQUESTED: { label: "Not requested", tone: "neutral" },
   REQUESTED: { label: "Requested", tone: "info" },
-  OFFER_GENERATED: { label: "Offer generated", tone: "gold" },
+  OFFER_GENERATED: { label: "Offer generated", tone: "kota" },
   ACCEPTED_BY_CP: { label: "Accepted by CP", tone: "info" },
   PENDING_APPROVAL: { label: "Pending Veefin approval", tone: "warning" },
   APPROVED: { label: "Approved", tone: "success" },
-  DISBURSEMENT_INITIATED: { label: "Disbursement initiated", tone: "navy" },
+  DISBURSEMENT_INITIATED: { label: "Disbursement initiated", tone: "basalt" },
   DISBURSED: { label: "Disbursed", tone: "success" },
   REJECTED: { label: "Rejected", tone: "danger" },
 };
@@ -51,14 +51,14 @@ export const PROGRAMME_STATUS: Record<ProgrammeStatus, StatusMeta> = {
 };
 
 export const OFFER_STATUS: Record<OfferStatus, StatusMeta> = {
-  OFFERED: { label: "Open offer", tone: "gold" },
+  OFFERED: { label: "Open offer", tone: "kota" },
   ACCEPTED: { label: "Accepted", tone: "success" },
   EXPIRED: { label: "Expired", tone: "neutral" },
   SUPERSEDED: { label: "Superseded", tone: "neutral" },
 };
 
 export const DISBURSEMENT_STATUS: Record<DisbursementStatus, StatusMeta> = {
-  INITIATED: { label: "Processing (demo)", tone: "navy" },
+  INITIATED: { label: "Processing (demo)", tone: "basalt" },
   SUCCESS: { label: "Paid (demo)", tone: "success" },
   FAILED: { label: "Failed", tone: "danger" },
 };

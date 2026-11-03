@@ -73,14 +73,14 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
             label: "Pending Veefin approval",
             value: <CompactMoney paise={sumPaise(pending.map((r) => r.netPayablePaise))} size="xl" />,
             hint: `${pending.length} ${pending.length === 1 ? "request" : "requests"} · net payable`,
-            accent: "gold",
+            accent: "kota",
             href: `${PATH}?status=PENDING_APPROVAL`,
           },
           {
             label: "Received",
             value: <CompactMoney paise={sumPaise(disbursed.map((r) => r.netPayablePaise))} size="xl" />,
             hint: `${disbursed.length} disbursed`,
-            accent: "heritage",
+            accent: "leaf",
             href: "/partner/disbursements",
           },
         ]}
@@ -118,8 +118,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                   <Link href={`/partner/invoices/${r.invoice.id}`} className="flex items-start gap-3 px-5 py-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
-                        <p className="font-medium text-navy">{r.invoice.invoiceNumber}</p>
-                        <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+                        <p className="font-medium text-basalt">{r.invoice.invoiceNumber}</p>
+                        <Money paise={r.netPayablePaise} className="font-semibold text-leaf" />
                       </div>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {r.reference} · {formatBps(r.discountRateBps)} on <Money paise={r.approvedAmountPaise} />
@@ -161,7 +161,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                       <p className="mt-0.5 text-xs text-muted-foreground">{formatBps(r.discountRateBps)}</p>
                     </Td>
                     <Td align="right">
-                      <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+                      <Money paise={r.netPayablePaise} className="font-semibold text-leaf" />
                     </Td>
                     <Td>
                       <StatusMark kind="financing" status={r.status} />

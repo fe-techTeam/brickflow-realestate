@@ -19,7 +19,7 @@ export function MobileNav({ workspace, orgName }: { workspace: WorkspaceKey; org
       </SheetTrigger>
       <SheetContent
         side="left"
-        className="w-[min(20rem,86vw)] overflow-hidden border-none bg-navy bg-[linear-gradient(180deg,#17324e_0%,#142b43_38%,#0f2337_100%)] p-0 text-sidebar-foreground [&>[data-slot=sheet-close]]:text-white/70 [&>[data-slot=sheet-close]]:hover:bg-white/10 [&>[data-slot=sheet-close]]:hover:text-white"
+        className="w-[min(20rem,86vw)] overflow-hidden border-none bg-basalt bg-[linear-gradient(180deg,#283431_0%,#222d2b_38%,#111816_100%)] p-0 text-sidebar-foreground [&>[data-slot=sheet-close]]:text-white/70 [&>[data-slot=sheet-close]]:hover:bg-white/10 [&>[data-slot=sheet-close]]:hover:text-white"
       >
         <SidebarSkyline />
         <SheetHeader className="relative px-6 pt-7 pb-5">

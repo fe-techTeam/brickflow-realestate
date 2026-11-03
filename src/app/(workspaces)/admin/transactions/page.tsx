@@ -43,10 +43,10 @@ function ViewTabs({ view }: { view: "requests" | "invoices" }) {
             aria-current={active ? "page" : undefined}
             className={cn(
               "relative -mb-px inline-flex items-center gap-2 border-b-2 pt-1 pb-3.5 text-sm font-medium transition-colors",
-              active ? "border-gold text-navy" : "border-transparent text-muted-foreground hover:text-navy",
+              active ? "border-kota text-basalt" : "border-transparent text-muted-foreground hover:text-basalt",
             )}
           >
-            <t.icon className={cn("size-4", active && "text-gold-600")} strokeWidth={1.6} />
+            <t.icon className={cn("size-4", active && "text-kota-600")} strokeWidth={1.6} />
             {t.label}
           </Link>
         );
@@ -81,9 +81,9 @@ async function RequestsView({ sp }: { sp: SearchParams }) {
       <SummaryStrip
         items={[
           { label: "Requests", value: <Count value={rows.length} size="lg" />, hint: status ? FINANCING_STATUS[status].label : "All stages" },
-          { label: "Builder-approved", value: <Money paise={approved} compact size="lg" />, hint: "Gross value financed", accent: "navy" },
-          { label: "Discount", value: <Money paise={discount} compact size="lg" className="text-gold-600" />, hint: "At each agreed rate", accent: "gold" },
-          { label: "Net to partners", value: <Money paise={net} compact size="lg" className="text-heritage" />, hint: "Payable early (simulated)", accent: "heritage" },
+          { label: "Builder-approved", value: <Money paise={approved} compact size="lg" />, hint: "Gross value financed", accent: "basalt" },
+          { label: "Discount", value: <Money paise={discount} compact size="lg" className="text-kota-600" />, hint: "At each agreed rate", accent: "kota" },
+          { label: "Net to partners", value: <Money paise={net} compact size="lg" className="text-leaf" />, hint: "Payable early (simulated)", accent: "leaf" },
         ]}
       />
       <Panel
@@ -130,7 +130,7 @@ async function RequestsView({ sp }: { sp: SearchParams }) {
                       <p className="tabular text-xs text-muted-foreground">{formatDate(r.createdAt)}</p>
                     </LTd>
                     <LTd>
-                      <p className="text-navy">{r.cp.name}</p>
+                      <p className="text-basalt">{r.cp.name}</p>
                       <p className="text-xs text-muted-foreground">→ {r.builder.name}</p>
                     </LTd>
                     <LTd>
@@ -138,7 +138,7 @@ async function RequestsView({ sp }: { sp: SearchParams }) {
                       <p className="text-xs text-muted-foreground">{r.invoice.project.name}</p>
                     </LTd>
                     <LTd align="right">
-                      <Money paise={r.approvedAmountPaise} className="text-navy" />
+                      <Money paise={r.approvedAmountPaise} className="text-basalt" />
                     </LTd>
                     <LTd align="right">
                       <Rate bps={r.discountRateBps} size="sm" className="font-semibold" />
@@ -152,7 +152,7 @@ async function RequestsView({ sp }: { sp: SearchParams }) {
                       <Money paise={r.discountAmountPaise} sign="−" className="text-danger" />
                     </LTd>
                     <LTd align="right">
-                      <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+                      <Money paise={r.netPayablePaise} className="font-semibold text-leaf" />
                     </LTd>
                     <LTd>
                       <StatusBadge kind="financing" status={r.status} />
@@ -213,9 +213,9 @@ async function InvoicesView({ sp }: { sp: SearchParams }) {
       <SummaryStrip
         items={[
           { label: "Invoices", value: <Count value={rows.length} size="lg" />, hint: status ? INVOICE_STATUS[status].label : "All review stages" },
-          { label: "Gross value", value: <Money paise={gross} compact size="lg" />, hint: "As invoiced by partners", accent: "navy" },
-          { label: "Builder-approved", value: <Money paise={approvedValue} compact size="lg" className="text-heritage" />, hint: "Eligible for early payment", accent: "heritage" },
-          { label: "With builders", value: <Count value={inReview} size="lg" />, hint: `${plural(inReview, "invoice")} pending or in review`, accent: "gold" },
+          { label: "Gross value", value: <Money paise={gross} compact size="lg" />, hint: "As invoiced by partners", accent: "basalt" },
+          { label: "Builder-approved", value: <Money paise={approvedValue} compact size="lg" className="text-leaf" />, hint: "Eligible for early payment", accent: "leaf" },
+          { label: "With builders", value: <Count value={inReview} size="lg" />, hint: `${plural(inReview, "invoice")} pending or in review`, accent: "kota" },
         ]}
       />
       <Panel
@@ -259,7 +259,7 @@ async function InvoicesView({ sp }: { sp: SearchParams }) {
                       {i.reference} · {i.submittedAt ? formatDate(i.submittedAt) : "not submitted"}
                     </p>
                   </LTd>
-                  <LTd className="text-navy">{i.cp.name}</LTd>
+                  <LTd className="text-basalt">{i.cp.name}</LTd>
                   <LTd>
                     <p>{i.builder.name}</p>
                     <p className="text-xs text-muted-foreground">{i.project.name}</p>
@@ -267,10 +267,10 @@ async function InvoicesView({ sp }: { sp: SearchParams }) {
                   <LTd className="tabular text-xs whitespace-nowrap">{formatDate(i.invoiceDate)}</LTd>
                   <LTd className="tabular text-xs whitespace-nowrap">{formatDate(i.dueDate)}</LTd>
                   <LTd align="right">
-                    <Money paise={i.amountPaise} className="text-navy" />
+                    <Money paise={i.amountPaise} className="text-basalt" />
                   </LTd>
                   <LTd align="right">
-                    {i.approvedAmountPaise !== null ? <Money paise={i.approvedAmountPaise} className="text-heritage" /> : <span className="text-muted-foreground">—</span>}
+                    {i.approvedAmountPaise !== null ? <Money paise={i.approvedAmountPaise} className="text-leaf" /> : <span className="text-muted-foreground">—</span>}
                   </LTd>
                   <LTd>
                     <StatusBadge kind="invoice" status={i.status} />

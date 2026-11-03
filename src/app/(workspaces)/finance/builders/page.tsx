@@ -15,8 +15,8 @@ function Utilisation({ financed, approved }: { financed: bigint; approved: bigin
   const pct = approved > 0n ? Math.min(100, Number((financed * 1000n) / approved) / 10) : 0;
   return (
     <div className="w-full min-w-28">
-      <div className="h-1 overflow-hidden rounded-full bg-ivory-200" aria-hidden="true">
-        <span className="block h-full rounded-full bg-gradient-to-r from-heritage to-[#2f7a62]" style={{ width: `${pct}%` }} />
+      <div className="h-1 overflow-hidden rounded-full bg-paper-200" aria-hidden="true">
+        <span className="block h-full rounded-full bg-gradient-to-r from-leaf to-[#3f8752]" style={{ width: `${pct}%` }} />
       </div>
       <p className="tabular mt-1.5 text-[0.6875rem] text-muted-foreground">{pct.toFixed(0)}% of approved book financed</p>
     </div>
@@ -41,7 +41,7 @@ export default async function BuildersPage() {
         title="Builders"
         context={[
           <span key="b">
-            <strong className="font-semibold text-navy">{builders.length}</strong> developer{builders.length === 1 ? "" : "s"} on a Veefin programme
+            <strong className="font-semibold text-basalt">{builders.length}</strong> developer{builders.length === 1 ? "" : "s"} on a Veefin programme
           </span>,
           <span key="a">{active} active facilit{active === 1 ? "y" : "ies"}</span>,
         ]}
@@ -54,19 +54,19 @@ export default async function BuildersPage() {
             label: "Approved invoices",
             value: <Money paise={sumPaise(builders.map((b) => b.approvedInvoiceValue))} compact size="lg" />,
             hint: "Builder-approved CP invoices",
-            accent: "navy",
+            accent: "basalt",
           },
           {
             label: "Financed",
-            value: <Money paise={sumPaise(builders.map((b) => b.financedValue))} compact size="lg" className="text-heritage" />,
+            value: <Money paise={sumPaise(builders.map((b) => b.financedValue))} compact size="lg" className="text-leaf" />,
             hint: "Approved or disbursed requests",
-            accent: "heritage",
+            accent: "leaf",
           },
           {
             label: "Outstanding settlements",
             value: <Money paise={sumPaise(builders.map((b) => b.outstandingValue))} compact size="lg" className={overdue ? "text-danger" : undefined} />,
             hint: overdue ? `${overdue} builder${overdue === 1 ? "" : "s"} overdue` : "No builder overdue",
-            accent: overdue ? "danger" : "gold",
+            accent: overdue ? "danger" : "kota",
           },
         ]}
       />
@@ -81,9 +81,9 @@ export default async function BuildersPage() {
                 <li key={b.id}>
                   <Link href={`/finance/builders/${b.id}`} className="block px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <Monogram name={b.name} tone="heritage" size="sm" />
+                      <Monogram name={b.name} tone="leaf" size="sm" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-navy">{b.name}</p>
+                        <p className="truncate text-sm font-medium text-basalt">{b.name}</p>
                         <p className="tabular text-[0.6875rem] text-muted-foreground">
                           {b.programme.code} · {formatBps(b.programme.discountRateBps)}
                         </p>
@@ -93,11 +93,11 @@ export default async function BuildersPage() {
                     <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
                       <div>
                         <p className="text-muted-foreground">Financed</p>
-                        <Money paise={b.financedValue} className="text-heritage" />
+                        <Money paise={b.financedValue} className="text-leaf" />
                       </div>
                       <div className="text-right">
                         <p className="text-muted-foreground">Outstanding</p>
-                        <Money paise={b.outstandingValue} className="text-navy" />
+                        <Money paise={b.outstandingValue} className="text-basalt" />
                       </div>
                     </div>
                   </Link>
@@ -123,9 +123,9 @@ export default async function BuildersPage() {
                   <LTr key={b.id}>
                     <LTd className="min-w-56">
                       <div className="flex items-center gap-3">
-                        <Monogram name={b.name} tone="heritage" size="sm" />
+                        <Monogram name={b.name} tone="leaf" size="sm" />
                         <div className="min-w-0">
-                          <Link href={`/finance/builders/${b.id}`} className="font-medium text-navy underline-offset-4 hover:underline">
+                          <Link href={`/finance/builders/${b.id}`} className="font-medium text-basalt underline-offset-4 hover:underline">
                             {b.name}
                           </Link>
                           <p className="text-xs text-muted-foreground">{[b.city, b.state].filter(Boolean).join(", ")}</p>
@@ -137,8 +137,8 @@ export default async function BuildersPage() {
                     </LTd>
                     <LTd>
                       <div className="flex items-center gap-2">
-                        <span className="tabular font-medium tracking-wide whitespace-nowrap text-navy">{b.programme.code}</span>
-                        <span className="tabular rounded-md bg-gold-100 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-gold-600">{formatBps(b.programme.discountRateBps)}</span>
+                        <span className="tabular font-medium tracking-wide whitespace-nowrap text-basalt">{b.programme.code}</span>
+                        <span className="tabular rounded-md bg-kota-100 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-kota-600">{formatBps(b.programme.discountRateBps)}</span>
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         <StatusBadge kind="programme" status={b.programme.status} />
@@ -146,18 +146,18 @@ export default async function BuildersPage() {
                       </div>
                     </LTd>
                     <LTd align="right">
-                      <Money paise={b.approvedInvoiceValue} className="font-normal text-slate-ink" />
+                      <Money paise={b.approvedInvoiceValue} className="font-normal text-ink" />
                       <p className="text-[0.6875rem] text-muted-foreground">{b.approvedInvoiceCount} invoices</p>
                     </LTd>
                     <LTd>
                       <Utilisation financed={b.financedValue} approved={b.approvedInvoiceValue} />
                     </LTd>
                     <LTd align="right">
-                      <Money paise={b.financedValue} className="font-semibold text-heritage" />
+                      <Money paise={b.financedValue} className="font-semibold text-leaf" />
                       <p className="text-[0.6875rem] text-muted-foreground">{b.financedCount} requests</p>
                     </LTd>
                     <LTd align="right">
-                      <Money paise={b.outstandingValue} className={b.overdueCount ? "text-danger" : "text-navy"} />
+                      <Money paise={b.outstandingValue} className={b.overdueCount ? "text-danger" : "text-basalt"} />
                       <div className="mt-1 flex justify-end">
                         <OutstandingNote b={b} />
                       </div>

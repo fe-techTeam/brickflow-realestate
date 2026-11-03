@@ -48,12 +48,12 @@ export function InvoiceValueChart({ data }: { data: InvoiceValuePoint[] }) {
               <span aria-hidden="true" className="h-3 w-[3px] rounded-full" style={{ background: series.color }} />
               {series.label}
             </p>
-            <CompactMoney paise={series.key === "submitted" ? invoiced : approved} className="mt-2 block text-[1.25rem] font-medium text-navy" />
+            <CompactMoney paise={series.key === "submitted" ? invoiced : approved} className="mt-2 block text-[1.25rem] font-medium text-basalt" />
           </div>
         ))}
         <div className="min-w-0">
           <p className="text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Approval ratio</p>
-          <p className="mt-2 text-[1.25rem] font-medium text-navy tabular">{ratio === null ? "—" : `${ratio.toFixed(ratio % 1 ? 1 : 0)}%`}</p>
+          <p className="mt-2 text-[1.25rem] font-medium text-basalt tabular">{ratio === null ? "—" : `${ratio.toFixed(ratio % 1 ? 1 : 0)}%`}</p>
         </div>
       </div>
       <div className="h-52 w-full" role="img" aria-label="Invoice value by invoice month: invoiced versus builder-approved amounts for the last six months">

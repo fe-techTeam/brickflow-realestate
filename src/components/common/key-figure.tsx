@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { FigureValue } from "./money";
 
-type KeyFigureTone = "navy" | "heritage" | "gold" | "danger" | "light";
+type KeyFigureTone = "basalt" | "leaf" | "kota" | "danger" | "light";
 
 const VALUE_TONE: Record<KeyFigureTone, string> = {
-  navy: "text-navy",
-  heritage: "text-heritage",
-  gold: "text-gold-600",
+  basalt: "text-basalt",
+  leaf: "text-leaf",
+  kota: "text-kota-600",
   danger: "text-danger",
   light: "text-white",
 };
@@ -23,7 +23,7 @@ export function KeyFigure({
   label,
   value,
   hint,
-  tone = "navy",
+  tone = "basalt",
   size = "md",
   align = "left",
   className,

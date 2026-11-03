@@ -9,19 +9,19 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "border-navy-900 bg-navy bg-gradient-to-b from-navy-700 to-navy text-white shadow-button hover:from-navy-600 hover:to-navy-700 active:from-navy active:to-navy-900",
-        gold:
-          "border-gold-600/70 bg-gold bg-gradient-to-b from-gold-300 to-gold text-navy-900 shadow-[inset_0_1px_0_rgb(255_255_255/0.35),0_1px_2px_rgb(106_84_48/0.25),0_6px_14px_-6px_rgb(169_138_82/0.55)] hover:from-gold-200 hover:to-gold-400 active:from-gold active:to-gold-600",
+          "border-basalt-900 bg-basalt bg-gradient-to-b from-basalt-700 to-basalt text-white shadow-button hover:from-basalt-600 hover:to-basalt-700 active:from-basalt active:to-basalt-900",
+        accent:
+          "border-gulmohar-700/60 bg-gulmohar text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.16),0_1px_2px_rgb(117_39_23/0.25)] hover:bg-gulmohar-500 active:bg-gulmohar-700",
         success:
-          "border-heritage-800 bg-heritage bg-gradient-to-b from-heritage-600 to-heritage text-white shadow-button hover:from-heritage-500 hover:to-heritage-600 active:from-heritage active:to-heritage-800",
+          "border-leaf-800 bg-leaf bg-gradient-to-b from-leaf-600 to-leaf text-white shadow-button hover:from-leaf-500 hover:to-leaf-600 active:from-leaf active:to-leaf-800",
         outline:
-          "border-input bg-card text-navy shadow-xs hover:border-navy/25 hover:bg-ivory-50 hover:text-navy aria-expanded:border-navy/25 aria-expanded:bg-ivory-50",
+          "border-input bg-card text-basalt shadow-xs hover:border-basalt/25 hover:bg-paper-50 hover:text-basalt aria-expanded:border-basalt/25 aria-expanded:bg-paper-50",
         secondary:
-          "border-ivory-300/70 bg-secondary text-secondary-foreground hover:bg-ivory-300/70 aria-expanded:bg-ivory-300/70",
-        ghost: "text-slate-ink hover:bg-ivory-200/70 hover:text-navy aria-expanded:bg-ivory-200/70 aria-expanded:text-navy",
+          "border-paper-300/70 bg-secondary text-secondary-foreground hover:bg-paper-300/70 aria-expanded:bg-paper-300/70",
+        ghost: "text-ink hover:bg-paper-200/70 hover:text-basalt aria-expanded:bg-paper-200/70 aria-expanded:text-basalt",
         destructive:
           "border-danger/15 bg-danger-soft text-danger hover:border-danger/30 hover:bg-[#f3dcd6] focus-visible:ring-destructive/25",
-        link: "h-auto px-0 text-navy underline decoration-gold/60 underline-offset-4 hover:decoration-gold",
+        link: "h-auto px-0 text-basalt underline decoration-kota/60 underline-offset-4 hover:decoration-kota",
       },
       size: {
         default: "h-9 gap-2 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",

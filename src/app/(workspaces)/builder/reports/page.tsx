@@ -64,7 +64,7 @@ export default async function ReportsPage() {
         <Metric label="Median turnaround" accent="slate" value={<Figure>{formatDays(report.turnaround.medianDays)}</Figure>} caption="Half of decisions are made within this time" />
         <Metric
           label="Early-payment take-up"
-          accent="gold"
+          accent="kota"
           value={<Figure>{takeUp === null ? "—" : `${takeUp.toFixed(1)}%`}</Figure>}
           caption={
             <>
@@ -127,10 +127,10 @@ export default async function ReportsPage() {
       <Panel className="mt-6 sm:mt-8" eyebrow="Reconciliation" title="Data export" description="Download every invoice visible to your organisation for reconciliation or your ERP">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-4">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-sage text-heritage">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-leaf-100 text-leaf">
               <FileSpreadsheet className="size-5" strokeWidth={1.6} />
             </span>
-            <p className="max-w-2xl text-sm leading-relaxed text-slate-ink">
+            <p className="max-w-2xl text-sm leading-relaxed text-ink">
               CSV with one row per invoice: partner, project, dates, status, invoice / GST / approved amounts in rupees, and the early-payment and settlement position. Opens
               directly in Excel. Disbursement references are simulated.
             </p>

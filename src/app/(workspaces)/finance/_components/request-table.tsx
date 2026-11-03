@@ -24,9 +24,9 @@ export const requestSortAccessors: Record<(typeof REQUEST_SORT_KEYS)[number], (r
   status: (r) => r.status,
 };
 
-const NEXT_STEP: Partial<Record<FinancingStatus, { label: string; variant: "default" | "success" | "gold" | "outline" }>> = {
+const NEXT_STEP: Partial<Record<FinancingStatus, { label: string; variant: "default" | "success" | "accent" | "outline" }>> = {
   PENDING_APPROVAL: { label: "Review", variant: "default" },
-  APPROVED: { label: "Disburse", variant: "gold" },
+  APPROVED: { label: "Disburse", variant: "accent" },
   DISBURSEMENT_INITIATED: { label: "Confirm", variant: "default" },
 };
 
@@ -92,11 +92,11 @@ export function RequestTable({
       <ul className="-mx-5 divide-y divide-border/70 border-t border-border/70 md:hidden">
         {rows.map((r) => (
           <li key={r.id}>
-            <Link href={`/finance/requests/${r.id}`} className="block px-5 py-4 transition-colors active:bg-ivory/60">
+            <Link href={`/finance/requests/${r.id}`} className="block px-5 py-4 transition-colors active:bg-paper/60">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-navy">{showCp ? r.cp.name : r.builder.name}</p>
-                  {showCp && showBuilder && <p className="truncate text-xs text-slate-ink/80">to {r.builder.name}</p>}
+                  <p className="truncate text-sm font-medium text-basalt">{showCp ? r.cp.name : r.builder.name}</p>
+                  {showCp && showBuilder && <p className="truncate text-xs text-ink/80">to {r.builder.name}</p>}
                   <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">
                     {r.reference} · {r.invoice.invoiceNumber}
                   </p>
@@ -106,7 +106,7 @@ export function RequestTable({
               <div className="mt-3 flex items-end justify-between gap-3">
                 <div>
                   <p className="text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Net payable</p>
-                  <Money paise={r.netPayablePaise} size="md" className="text-heritage" />
+                  <Money paise={r.netPayablePaise} size="md" className="text-leaf" />
                 </div>
                 <p className="text-right text-xs text-muted-foreground">
                   <Money paise={r.approvedAmountPaise} size="xs" className="font-normal" /> at {formatBps(r.discountRateBps)}
@@ -139,33 +139,33 @@ export function RequestTable({
             <LTr key={r.id}>
               {showCp && (
                 <LTd className="min-w-44">
-                  <Link href={`/finance/requests/${r.id}`} className="font-medium text-navy underline-offset-4 hover:underline">
+                  <Link href={`/finance/requests/${r.id}`} className="font-medium text-basalt underline-offset-4 hover:underline">
                     {r.cp.name}
                   </Link>
-                  {showBuilder && <p className="text-xs text-slate-ink/80 2xl:hidden">to {r.builder.name}</p>}
+                  {showBuilder && <p className="text-xs text-ink/80 2xl:hidden">to {r.builder.name}</p>}
                   <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">{r.reference}</p>
                 </LTd>
               )}
               {showBuilder && (
                 <LTd className={cn("min-w-36", builderColumn)}>
-                  <span className="text-navy">{r.builder.name}</span>
+                  <span className="text-basalt">{r.builder.name}</span>
                   {!showCp && <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">{r.reference}</p>}
                 </LTd>
               )}
               <LTd className="min-w-36">
-                <span className="tabular text-navy">
+                <span className="tabular text-basalt">
                   <Breakable text={r.invoice.invoiceNumber} />
                 </span>
                 <p className="text-xs text-muted-foreground">{r.invoice.project.name}</p>
               </LTd>
               <LTd align="right">
-                <Money paise={r.approvedAmountPaise} className="font-normal text-slate-ink" />
+                <Money paise={r.approvedAmountPaise} className="font-normal text-ink" />
               </LTd>
-              <LTd align="right" className="text-slate-ink">
+              <LTd align="right" className="text-ink">
                 {formatBps(r.discountRateBps)}
               </LTd>
               <LTd align="right">
-                <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+                <Money paise={r.netPayablePaise} className="font-semibold text-leaf" />
               </LTd>
               <LTd className="text-xs whitespace-nowrap">{formatDate(r.createdAt)}</LTd>
               <LTd>

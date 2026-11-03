@@ -37,22 +37,22 @@ export function Money({
   );
 }
 
-/** A discount rate in Inter tabular figures; the percent sign is set lighter in champagne gold. */
+/** A discount rate in Inter tabular figures; the percent sign is set lighter in Kota stone. */
 export function Rate({ bps, size = "md", className }: { bps: number; size?: FigureSize; className?: string }) {
   return (
-    <span className={cn("figure whitespace-nowrap text-navy", SIZE[size], className)}>
+    <span className={cn("figure whitespace-nowrap text-basalt", SIZE[size], className)}>
       {formatBps(bps, { suffix: false })}
-      <span className={cn("ml-[0.06em] font-light text-gold-600", size !== "sm" && "text-[0.6em]")}>%</span>
+      <span className={cn("ml-[0.06em] font-light text-kota-600", size !== "sm" && "text-[0.6em]")}>%</span>
     </span>
   );
 }
 
 /** Plain count in Inter tabular figures. */
 export function Count({ value, size = "md", className }: { value: number | string; size?: FigureSize; className?: string }) {
-  return <span className={cn("figure text-navy", SIZE[size], className)}>{value}</span>;
+  return <span className={cn("figure text-basalt", SIZE[size], className)}>{value}</span>;
 }
 
-/** Short champagne rule used under key figures and headings. */
+/** Short stone rule used under key figures and headings. */
 export function GoldRule({ className }: { className?: string }) {
-  return <span aria-hidden="true" className={cn("gold-rule block w-12", className)} />;
+  return <span aria-hidden="true" className={cn("kota-rule block w-12", className)} />;
 }

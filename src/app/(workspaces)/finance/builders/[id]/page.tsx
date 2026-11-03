@@ -27,7 +27,7 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
         eyebrow="Builder · Obligor dossier"
         title={
           <span className="flex items-center gap-4">
-            <Monogram name={org.name} tone="heritage" size="lg" />
+            <Monogram name={org.name} tone="leaf" size="lg" />
             <span className="min-w-0">{org.name}</span>
           </span>
         }
@@ -44,21 +44,21 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
         items={[
           {
             label: "Agreed discount",
-            value: <Count value={formatBps(programme.discountRateBps)} className="text-gold-600" />,
+            value: <Count value={formatBps(programme.discountRateBps)} className="text-kota-600" />,
             hint: `${programme.code} · ${programme.status.toLowerCase()}`,
-            accent: "gold",
+            accent: "kota",
           },
           {
             label: "Approved invoices",
             value: <Money paise={metrics.approvedInvoiceValue} compact size="lg" />,
             hint: `${metrics.approvedInvoiceCount} builder-approved`,
-            accent: "navy",
+            accent: "basalt",
           },
           {
             label: "Financed",
-            value: <Money paise={metrics.financedValue} compact size="lg" className="text-heritage" />,
+            value: <Money paise={metrics.financedValue} compact size="lg" className="text-leaf" />,
             hint: `${metrics.financedCount} of ${metrics.requestCount} requests`,
-            accent: "heritage",
+            accent: "leaf",
           },
           {
             label: "Outstanding settlement",
@@ -70,7 +70,7 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
             ) : (
               "None overdue"
             ),
-            accent: metrics.overdueCount ? "danger" : "navy",
+            accent: metrics.overdueCount ? "danger" : "basalt",
           },
         ]}
       />
@@ -140,7 +140,7 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
                 {org.projects.map((p) => (
                   <LTr key={p.id}>
                     <LTd>
-                      <span className="font-medium text-navy">{p.name}</span>
+                      <span className="font-medium text-basalt">{p.name}</span>
                       <p className="tabular text-[0.6875rem] text-muted-foreground">{p.code}</p>
                     </LTd>
                     <LTd>{p.city}</LTd>
@@ -172,14 +172,14 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
                 {watchlist.map((w) => (
                   <LTr key={w.request.id}>
                     <LTd>
-                      <Link href={`/finance/requests/${w.request.id}`} className="tabular font-medium whitespace-nowrap text-navy underline-offset-4 hover:underline">
+                      <Link href={`/finance/requests/${w.request.id}`} className="tabular font-medium whitespace-nowrap text-basalt underline-offset-4 hover:underline">
                         {w.request.reference}
                       </Link>
                       <p className="text-xs text-muted-foreground">{w.request.cp.name}</p>
                     </LTd>
                     <LTd className="text-xs whitespace-nowrap">{formatDate(w.dueDate)}</LTd>
                     <LTd align="right">
-                      <Money paise={w.amountPaise} className="text-navy" />
+                      <Money paise={w.amountPaise} className="text-basalt" />
                     </LTd>
                     <LTd>
                       <StatusBadge kind="settlement" status={w.status} />

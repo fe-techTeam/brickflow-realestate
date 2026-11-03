@@ -1,31 +1,31 @@
 /**
  * Shared Recharts theme for BrickFlow charts.
  *
- * - Single-series charts use CHART_COLORS.primary (midnight navy) and may highlight one mark in gold.
+ * - Single-series charts use CHART_COLORS.primary (basalt) and may highlight one mark with the accent.
  * - Multi-series charts take CHART_SERIES in fixed order (never cycled). The order was checked for
- *   lightness band, chroma, colour-blind separation and contrast on white; slot 4 (sky) sits under 3:1
+ *   lightness band, chroma, colour-blind separation and contrast on white; slot 4 (steel) sits under 3:1
  *   on white, so charts using it must show a legend and/or a data table (ChartFrame provides both).
  * - Text never takes a series colour: ticks and labels use CHART_COLORS.ink.
  */
 export const CHART_COLORS = {
-  primary: "#142b43",
-  primarySoft: "#97abc2",
-  gold: "#c4a46a",
-  goldDeep: "#a98a52",
-  positive: "#174d3c",
-  positiveSoft: "#7fae95",
-  negative: "#9b3a2e",
+  primary: "#222d2b",
+  primarySoft: "#9aa8a3",
+  kota: "#a89a84",
+  kotaDeep: "#8c7d66",
+  positive: "#275e3a",
+  positiveSoft: "#8cbb97",
+  negative: "#a1263f",
   warning: "#c48a2c",
-  ink: "#6b7684",
-  inkStrong: "#303d4d",
-  grid: "#ece7db",
-  axis: "#e0d9c8",
-  cursor: "rgba(196, 164, 106, 0.10)",
+  ink: "#66716f",
+  inkStrong: "#2a3331",
+  grid: "#e6e8e4",
+  axis: "#d6d9d4",
+  cursor: "rgba(168, 154, 132, 0.10)",
   surface: "#ffffff",
 } as const;
 
 /** Categorical series colours, in assignment order. */
-export const CHART_SERIES = ["#2d5b91", "#b8892f", "#1c8261", "#5e9bd0", "#a65a3a"] as const;
+export const CHART_SERIES = ["#2f3d3a", "#b83d24", "#2f7144", "#6d8ea3", "#a08a62"] as const;
 
 export const CHART_FONT_FAMILY = "var(--font-inter), ui-sans-serif, system-ui, sans-serif";
 
@@ -65,9 +65,9 @@ export const chartTooltipProps = {
   cursor: { fill: CHART_COLORS.cursor, stroke: "none" },
   contentStyle: {
     background: CHART_COLORS.surface,
-    border: "1px solid #e4ded1",
+    border: "1px solid #dfe2de",
     borderRadius: 10,
-    boxShadow: "0 1px 2px rgba(20,43,67,.05), 0 8px 18px -8px rgba(20,43,67,.12), 0 28px 56px -28px rgba(20,43,67,.28)",
+    boxShadow: "0 1px 2px rgba(34, 45, 43,.05), 0 8px 18px -8px rgba(34, 45, 43,.12), 0 28px 56px -28px rgba(34, 45, 43,.28)",
     padding: "10px 12px",
     fontFamily: CHART_FONT_FAMILY,
     fontSize: 12,

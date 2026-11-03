@@ -1,12 +1,12 @@
 import { CHART_COLORS as THEME } from "@/components/common/chart-theme";
 import { formatINRCompact } from "@/lib/money";
 
-/** Builder chart hues, drawn from the shared theme and tied to meaning (heritage = approved / settled). */
+/** Builder chart hues, drawn from the shared theme and tied to meaning (leaf = approved / settled). */
 export const CHART_COLORS = {
-  navy: THEME.primary,
-  navySoft: THEME.primarySoft,
-  heritage: THEME.positive,
-  gold: THEME.goldDeep,
+  basalt: THEME.primary,
+  basaltSoft: THEME.primarySoft,
+  leaf: THEME.positive,
+  kota: THEME.kotaDeep,
   rose: THEME.negative,
 } as const;
 

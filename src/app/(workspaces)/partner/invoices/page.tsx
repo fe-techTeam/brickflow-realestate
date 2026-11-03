@@ -95,14 +95,14 @@ export default async function MyInvoicesPage({ searchParams }: { searchParams: P
             label: "Builder-approved",
             value: <CompactMoney paise={sumPaise(approved.map((i) => i.approvedAmountPaise))} size="xl" />,
             hint: `${approved.length} accepted`,
-            accent: "heritage",
+            accent: "leaf",
             href: `${PATH}?status=ACCEPTED`,
           },
           {
             label: "Ready for early payment",
             value: <CompactMoney paise={sumPaise(eligible.map((i) => i.approvedAmountPaise))} size="xl" />,
             hint: `${eligible.length} eligible`,
-            accent: "gold",
+            accent: "kota",
             href: `${PATH}?financing=eligible`,
           },
         ]}
@@ -111,7 +111,7 @@ export default async function MyInvoicesPage({ searchParams }: { searchParams: P
       <Panel
         eyebrow={filtered ? "Filtered view" : "All invoices"}
         title={`${rows.length} ${rows.length === 1 ? "invoice" : "invoices"}`}
-        description={rows.length ? <>Total value <Money paise={sumPaise(rows.map((r) => r.amountPaise))} className="font-medium text-navy" /></> : undefined}
+        description={rows.length ? <>Total value <Money paise={sumPaise(rows.map((r) => r.amountPaise))} className="font-medium text-basalt" /></> : undefined}
         bodyClassName="pb-0"
       >
         <TableToolbar>
@@ -159,8 +159,8 @@ export default async function MyInvoicesPage({ searchParams }: { searchParams: P
                     <Link href={`/partner/invoices/${invoice.id}`} className="flex items-start gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-3">
-                          <p className="font-medium text-navy">{invoice.invoiceNumber}</p>
-                          <Money paise={invoice.amountPaise} className="font-medium text-navy" />
+                          <p className="font-medium text-basalt">{invoice.invoiceNumber}</p>
+                          <Money paise={invoice.amountPaise} className="font-medium text-basalt" />
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {invoice.builder.name} · {invoice.project.name} · {formatDate(invoice.invoiceDate)}
@@ -208,16 +208,16 @@ export default async function MyInvoicesPage({ searchParams }: { searchParams: P
                         <RefCell href={`/partner/invoices/${invoice.id}`} primary={invoice.invoiceNumber} secondary={invoice.reference} code />
                       </Td>
                       <Td className="min-w-[12rem]">
-                        <p className="text-[0.8125rem] text-navy">{invoice.builder.name}</p>
+                        <p className="text-[0.8125rem] text-basalt">{invoice.builder.name}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {invoice.project.name} · {invoice.project.code}
                         </p>
                       </Td>
                       <Td className="text-[0.8125rem] whitespace-nowrap">{formatDate(invoice.invoiceDate)}</Td>
                       <Td align="right">
-                        <Money paise={invoice.amountPaise} className="font-medium text-navy" />
+                        <Money paise={invoice.amountPaise} className="font-medium text-basalt" />
                         {partial && (
-                          <p className="mt-0.5 text-xs text-heritage">
+                          <p className="mt-0.5 text-xs text-leaf">
                             Approved <Money paise={invoice.approvedAmountPaise!} />
                           </p>
                         )}
@@ -237,7 +237,7 @@ export default async function MyInvoicesPage({ searchParams }: { searchParams: P
                               size="xs"
                             />
                           )}
-                          <Button variant="ghost" size="icon-sm" asChild className="text-muted-foreground hover:text-navy">
+                          <Button variant="ghost" size="icon-sm" asChild className="text-muted-foreground hover:text-basalt">
                             <Link href={`/partner/invoices/${invoice.id}`} aria-label={`View invoice ${invoice.invoiceNumber}`}>
                               <ChevronRight />
                             </Link>

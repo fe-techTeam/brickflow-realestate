@@ -45,7 +45,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
         title="Channel partners"
         context={[
           <span key="n">
-            <strong className="font-semibold text-navy">{partners.length}</strong> partner{partners.length === 1 ? "" : "s"} empanelled with programme builders
+            <strong className="font-semibold text-basalt">{partners.length}</strong> partner{partners.length === 1 ? "" : "s"} empanelled with programme builders
           </span>,
           <span key="p">{pending} pending approval</span>,
         ]}
@@ -54,13 +54,13 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       <KeyFigures
         items={[
           { label: "Channel partners", value: <Count value={partners.length} />, hint: "Brokers on Veefin programme builders" },
-          { label: "Financing requests", value: <Count value={requestTotal} />, hint: "Raised with Veefin, all statuses", accent: "navy" },
-          { label: "Pending approval", value: <Count value={pending} />, hint: pending ? "Awaiting a credit decision" : "Queue is clear", accent: "gold", href: "/finance/requests?status=PENDING_APPROVAL" },
+          { label: "Financing requests", value: <Count value={requestTotal} />, hint: "Raised with Veefin, all statuses", accent: "basalt" },
+          { label: "Pending approval", value: <Count value={pending} />, hint: pending ? "Awaiting a credit decision" : "Queue is clear", accent: "kota", href: "/finance/requests?status=PENDING_APPROVAL" },
           {
             label: "Net disbursed",
-            value: <Money paise={sumPaise(partners.map((p) => p.disbursedValue))} compact size="lg" className="text-heritage" />,
+            value: <Money paise={sumPaise(partners.map((p) => p.disbursedValue))} compact size="lg" className="text-leaf" />,
             hint: "Simulated payouts to partners",
-            accent: "heritage",
+            accent: "leaf",
           },
         ]}
       />
@@ -89,13 +89,13 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                   <Link href={`/finance/partners/${p.id}`} className="flex items-center gap-3 px-5 py-4">
                     <Monogram name={p.name} size="sm" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-navy">{p.name}</p>
+                      <p className="truncate text-sm font-medium text-basalt">{p.name}</p>
                       <p className="truncate text-[0.6875rem] text-muted-foreground">
                         {p.city ?? "—"} · {p.requestCount} request{p.requestCount === 1 ? "" : "s"}
                         {p.pendingCount > 0 && ` · ${p.pendingCount} pending`}
                       </p>
                     </div>
-                    <Money paise={p.disbursedValue} className="text-heritage" />
+                    <Money paise={p.disbursedValue} className="text-leaf" />
                   </Link>
                 </li>
               ))}
@@ -120,7 +120,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                       <div className="flex items-center gap-3">
                         <Monogram name={p.name} size="sm" />
                         <div className="min-w-0">
-                          <Link href={`/finance/partners/${p.id}`} className="font-medium text-navy underline-offset-4 hover:underline">
+                          <Link href={`/finance/partners/${p.id}`} className="font-medium text-basalt underline-offset-4 hover:underline">
                             {p.name}
                           </Link>
                           <p className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -140,7 +140,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                             <li key={b.id}>
                               <Link
                                 href={`/finance/builders/${b.id}`}
-                                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-ivory/50 px-2.5 py-0.5 text-xs text-slate-ink transition-colors hover:border-gold/50 hover:text-navy"
+                                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-paper/50 px-2.5 py-0.5 text-xs text-ink transition-colors hover:border-kota/50 hover:text-basalt"
                               >
                                 {b.name}
                                 <span className="tabular text-[0.625rem] text-muted-foreground">{b.code}</span>
@@ -151,11 +151,11 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                       )}
                     </LTd>
                     <LTd align="right">
-                      <span className="text-navy">{p.requestCount}</span>
+                      <span className="text-basalt">{p.requestCount}</span>
                       {p.pendingCount > 0 && <p className="text-[0.6875rem] font-medium text-warning">{p.pendingCount} pending</p>}
                     </LTd>
                     <LTd align="right">
-                      <Money paise={p.disbursedValue} className="font-semibold text-heritage" />
+                      <Money paise={p.disbursedValue} className="font-semibold text-leaf" />
                       <p className="text-[0.6875rem] text-muted-foreground">{p.disbursedCount} payouts</p>
                     </LTd>
                     <LTd align="right">

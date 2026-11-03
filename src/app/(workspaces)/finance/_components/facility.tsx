@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 function Guilloche({ className }: { className?: string }) {
   return (
-    <svg aria-hidden="true" className={cn("pointer-events-none absolute text-gold/[0.12]", className)} viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="0.5">
+    <svg aria-hidden="true" className={cn("pointer-events-none absolute text-kota/[0.12]", className)} viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="0.5">
       {Array.from({ length: 12 }, (_, i) => (
         <circle key={i} cx="100" cy="100" r={18 + i * 7} />
       ))}
@@ -49,12 +49,12 @@ export function FacilityCard({
 }) {
   const rate = formatBps(rateBps, { suffix: false });
   return (
-    <div className={cn("relative overflow-hidden rounded-xl bg-navy text-white shadow-[0_24px_48px_-28px_rgba(13,30,48,0.7)]", className)}>
-      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/80 to-transparent" />
+    <div className={cn("relative overflow-hidden rounded-xl bg-basalt text-white shadow-[0_24px_48px_-28px_rgba(26, 35, 33,0.7)]", className)}>
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-kota/80 to-transparent" />
       <Guilloche className="-top-20 -right-20 size-72" />
       <div className="relative p-6 sm:p-7">
         <div className="flex items-start justify-between gap-3">
-          <p className="tabular text-[0.625rem] font-semibold tracking-[0.22em] text-gold uppercase">{code}</p>
+          <p className="tabular text-[0.625rem] font-semibold tracking-[0.22em] text-kota uppercase">{code}</p>
           <span className={cn("flex items-center gap-1.5 text-[0.625rem] font-semibold tracking-[0.18em] uppercase", STATUS_TEXT[status])}>
             <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
             {PROGRAMME_STATUS[status].label}
@@ -71,7 +71,7 @@ export function FacilityCard({
             <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-white/50 uppercase">Agreed discount</p>
             <p className="tabular mt-2 font-sans text-[3.25rem] leading-none font-extralight tracking-[-0.03em] text-white">
               {rate}
-              <span className="ml-1 align-[0.6em] text-[0.4em] font-normal text-gold">%</span>
+              <span className="ml-1 align-[0.6em] text-[0.4em] font-normal text-kota">%</span>
             </p>
           </div>
           <dl className="grid gap-2 text-right text-xs">
@@ -90,7 +90,7 @@ export function FacilityCard({
           </dl>
         </div>
       </div>
-      {footer && <div className="relative border-t border-white/10 bg-navy-900/40 px-6 py-4 text-xs text-white/65 sm:px-7">{footer}</div>}
+      {footer && <div className="relative border-t border-white/10 bg-basalt-900/40 px-6 py-4 text-xs text-white/65 sm:px-7">{footer}</div>}
     </div>
   );
 }
@@ -99,15 +99,15 @@ export function FacilityCard({
 export function PayoutCard({ bankName, accountMasked, ifsc, holder }: { bankName: string | null; accountMasked: string; ifsc: string | null; holder: string }) {
   const grouped = accountMasked.replace(/(.{4})(?=.)/g, "$1 ");
   return (
-    <div className="relative aspect-[1.7/1] max-w-md overflow-hidden rounded-xl bg-[linear-gradient(135deg,#142b43_0%,#1d3a57_55%,#174d3c_120%)] p-6 text-white shadow-[0_28px_56px_-30px_rgba(13,30,48,0.75)]">
-      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/80 to-transparent" />
+    <div className="relative aspect-[1.7/1] max-w-md overflow-hidden rounded-xl bg-[linear-gradient(135deg,#222d2b_0%,#2f3d3a_55%,#275e3a_120%)] p-6 text-white shadow-[0_28px_56px_-30px_rgba(26, 35, 33,0.75)]">
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-kota/80 to-transparent" />
       <Guilloche className="-right-24 -bottom-28 size-80" />
       <div className="relative flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-gold uppercase">Payout account</p>
+          <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-kota uppercase">Payout account</p>
           <p className="max-w-[60%] truncate text-right text-xs text-white/70">{bankName ?? "Bank not set"}</p>
         </div>
-        <span aria-hidden="true" className="block h-8 w-11 rounded-md bg-[linear-gradient(135deg,#e2cb9b,#a98a52)] opacity-90" />
+        <span aria-hidden="true" className="block h-8 w-11 rounded-md bg-[linear-gradient(135deg,#e2cb9b,#8c7d66)] opacity-90" />
         <div>
           <p className="tabular font-sans text-[1.375rem] font-light tracking-[0.18em] text-white">{grouped}</p>
           <div className="mt-3 flex items-end justify-between gap-3 text-[0.6875rem]">

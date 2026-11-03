@@ -14,7 +14,7 @@ export function PageSkeleton({ stats = 0, rows = 6, split = false }: { stats?: n
         <Bar className="h-10 w-80 max-w-full" />
         <Bar className="mt-4 h-4 w-[30rem] max-w-full" />
         <div className="relative mt-7 h-px bg-hairline">
-          <span className="absolute top-0 left-0 h-px w-20 bg-gold/60" />
+          <span className="absolute top-0 left-0 h-px w-20 bg-kota/60" />
         </div>
       </div>
       {cells > 0 && (
@@ -39,7 +39,7 @@ export function PageSkeleton({ stats = 0, rows = 6, split = false }: { stats?: n
         </div>
         {split && (
           <div className="flex flex-col gap-6">
-            <div className="surface-navy h-56" />
+            <div className="surface-basalt h-56" />
             <div className="surface p-6">
               <Bar className="mb-5 h-5 w-32" />
               <Bar className="h-16 w-full" />

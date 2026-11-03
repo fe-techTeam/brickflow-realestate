@@ -24,7 +24,7 @@ export function Th({ children, align = "left", className }: { children?: ReactNo
     <th
       scope="col"
       className={cn(
-        "border-y border-hairline bg-ivory-100 px-4 py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
+        "border-y border-hairline bg-paper-100 px-4 py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
         edge,
         align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left",
         className,
@@ -39,7 +39,7 @@ export function Td({ children, align = "left", className }: { children?: ReactNo
   return (
     <td
       className={cn(
-        "border-b border-hairline px-4 py-4 align-middle text-slate-ink",
+        "border-b border-hairline px-4 py-4 align-middle text-ink",
         edge,
         align === "right" && "text-right tabular",
         align === "center" && "text-center",
@@ -52,7 +52,7 @@ export function Td({ children, align = "left", className }: { children?: ReactNo
 }
 
 export function Tr({ children, className }: { children: ReactNode; className?: string }) {
-  return <tr className={cn("group/row transition-colors last:[&>td]:border-b-0 hover:bg-ivory-50", className)}>{children}</tr>;
+  return <tr className={cn("group/row transition-colors last:[&>td]:border-b-0 hover:bg-paper-50", className)}>{children}</tr>;
 }
 
 /** Sortable header that toggles ?sort and &dir while preserving other params. */
@@ -83,7 +83,7 @@ export function SortTh({
       <Link
         href={`${pathname}?${params.toString()}`}
         scroll={false}
-        className={cn("inline-flex items-center gap-1 transition-colors hover:text-navy", active && "text-navy")}
+        className={cn("inline-flex items-center gap-1 transition-colors hover:text-basalt", active && "text-basalt")}
         aria-label={`Sort by ${label}`}
       >
         {label}
@@ -98,11 +98,11 @@ export function RefCell({ href, primary, secondary, code }: { href?: string; pri
   return (
     <div className="min-w-0">
       {href ? (
-        <Link href={href} className="font-medium whitespace-nowrap text-navy decoration-gold/60 underline-offset-4 hover:underline">
+        <Link href={href} className="font-medium whitespace-nowrap text-basalt decoration-kota/60 underline-offset-4 hover:underline">
           {primary}
         </Link>
       ) : (
-        <p className="font-medium whitespace-nowrap text-navy">{primary}</p>
+        <p className="font-medium whitespace-nowrap text-basalt">{primary}</p>
       )}
       {secondary && <p className={cn("mt-0.5 text-xs text-muted-foreground", code && "tabular tracking-wide whitespace-nowrap")}>{secondary}</p>}
     </div>

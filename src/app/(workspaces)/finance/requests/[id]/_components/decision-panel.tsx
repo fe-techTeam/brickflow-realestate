@@ -15,21 +15,21 @@ import {
   type RequestSummary,
 } from "../../../_components/request-actions";
 
-type Tone = "warning" | "gold" | "navy" | "success" | "danger";
+type Tone = "warning" | "kota" | "basalt" | "success" | "danger";
 
 const BAR: Record<Tone, string> = {
-  warning: "from-[#c48a2c] to-gold",
-  gold: "from-gold to-[#d6bc8a]",
-  navy: "from-navy to-navy-700",
-  success: "from-heritage to-heritage-600",
-  danger: "from-danger to-[#b5473a]",
+  warning: "from-[#c48a2c] to-kota",
+  kota: "from-kota to-[#c4b9a7]",
+  basalt: "from-basalt to-basalt-700",
+  success: "from-leaf to-leaf-600",
+  danger: "from-danger to-[#b8324f]",
 };
 
 const ICON: Record<Tone, string> = {
-  warning: "bg-warning-soft text-warning ring-[#efd9ae]",
-  gold: "bg-gold-100 text-gold-600 ring-gold/30",
-  navy: "bg-navy/[0.06] text-navy ring-navy/15",
-  success: "bg-sage text-heritage ring-heritage/20",
+  warning: "bg-warning-soft text-warning ring-[#e3ddd2]",
+  kota: "bg-kota-100 text-kota-600 ring-kota/30",
+  basalt: "bg-basalt/[0.06] text-basalt ring-basalt/15",
+  success: "bg-leaf-100 text-leaf ring-leaf/20",
   danger: "bg-danger-soft text-danger ring-danger/25",
 };
 
@@ -55,7 +55,7 @@ function DecisionCard({
   return (
     <section
       aria-label="Next action"
-      className="relative animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_24px_48px_-30px_rgba(20,43,67,0.45)]"
+      className="relative animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_24px_48px_-30px_rgba(34, 45, 43,0.45)]"
     >
       <div aria-hidden="true" className={cn("h-1 bg-gradient-to-r", BAR[tone])} />
       <div className="p-6">
@@ -63,26 +63,26 @@ function DecisionCard({
           <div className="flex items-start gap-3">
             <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full ring-1", ICON[tone])}>{icon}</span>
             <div className="min-w-0">
-              <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-600 uppercase">{eyebrow}</p>
+              <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-kota-600 uppercase">{eyebrow}</p>
               <h2 className="mt-1 font-display text-[1.5rem] leading-tight font-medium">{title}</h2>
             </div>
           </div>
           {aside}
         </div>
         {figure && (
-          <div className="mt-6 rounded-lg bg-ivory/70 px-5 py-4 ring-1 ring-gold/20">
+          <div className="mt-6 rounded-lg bg-paper/70 px-5 py-4 ring-1 ring-kota/20">
             <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">{figureLabel}</p>
             <div className="mt-2">{figure}</div>
           </div>
         )}
-        <div className="mt-5 space-y-4 text-sm text-slate-ink">{children}</div>
+        <div className="mt-5 space-y-4 text-sm text-ink">{children}</div>
       </div>
     </section>
   );
 }
 
 function Note({ children }: { children: ReactNode }) {
-  return <p className="border-l-2 border-gold/60 pl-3 text-[0.8125rem] leading-relaxed text-slate-ink italic">{children}</p>;
+  return <p className="border-l-2 border-kota/60 pl-3 text-[0.8125rem] leading-relaxed text-ink italic">{children}</p>;
 }
 
 export function DecisionPanel({
@@ -109,7 +109,7 @@ export function DecisionPanel({
           eyebrow="Credit decision required"
           title="Pending Veefin approval"
           figureLabel="Net payable to channel partner"
-          figure={<Money paise={request.netPayablePaise} size="xl" className="text-heritage" />}
+          figure={<Money paise={request.netPayablePaise} size="xl" className="text-leaf" />}
         >
           <FactList
             items={[
@@ -138,7 +138,7 @@ export function DecisionPanel({
           eyebrow="Approved · ready to disburse"
           title="Cleared for payout"
           figureLabel="Amount to disburse"
-          figure={<Money paise={request.netPayablePaise} size="xl" className="text-heritage" />}
+          figure={<Money paise={request.netPayablePaise} size="xl" className="text-leaf" />}
           aside={<SimulatedTag />}
         >
           <FactList
@@ -156,12 +156,12 @@ export function DecisionPanel({
     case "DISBURSEMENT_INITIATED":
       return (
         <DecisionCard
-          tone="navy"
+          tone="basalt"
           icon={<Clock3 className="size-4" />}
           eyebrow="Disbursement in progress"
           title="Awaiting transfer confirmation"
           figureLabel="Amount in flight"
-          figure={<Money paise={request.disbursement?.amountPaise ?? request.netPayablePaise} size="xl" className="text-navy" />}
+          figure={<Money paise={request.disbursement?.amountPaise ?? request.netPayablePaise} size="xl" className="text-basalt" />}
           aside={<SimulatedTag />}
         >
           <FactList
@@ -185,12 +185,12 @@ export function DecisionPanel({
       const overdue = settlementStatus === "OVERDUE";
       return (
         <DecisionCard
-          tone={settled ? "success" : overdue ? "danger" : "navy"}
+          tone={settled ? "success" : overdue ? "danger" : "basalt"}
           icon={settled ? <CircleCheck className="size-4" /> : <Landmark className="size-4" />}
           eyebrow={settled ? "Closed · fully settled" : "Disbursed · awaiting builder"}
           title={settled ? "Settled by builder" : overdue ? "Settlement overdue" : "Settlement open"}
           figureLabel={settled ? "Settled with Veefin" : "Due from builder"}
-          figure={<Money paise={request.settlement?.amountPaise ?? request.approvedAmountPaise} size="xl" className={settled ? "text-heritage" : overdue ? "text-danger" : "text-navy"} />}
+          figure={<Money paise={request.settlement?.amountPaise ?? request.approvedAmountPaise} size="xl" className={settled ? "text-leaf" : overdue ? "text-danger" : "text-basalt"} />}
         >
           <FactList
             items={[

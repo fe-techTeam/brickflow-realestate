@@ -12,10 +12,10 @@ export function ageTone(days: number): AgeTone {
 }
 
 const TONE = {
-  fresh: { text: "text-heritage", fill: "bg-heritage", track: "bg-sage" },
-  steady: { text: "text-slate-ink", fill: "bg-navy/60", track: "bg-[#ebe7dd]" },
+  fresh: { text: "text-leaf", fill: "bg-leaf", track: "bg-leaf-100" },
+  steady: { text: "text-ink", fill: "bg-basalt/60", track: "bg-[#ebe7dd]" },
   ageing: { text: "text-[#8a5a12]", fill: "bg-[#c48a2c]", track: "bg-[#f6ead2]" },
-  late: { text: "text-[#93342a]", fill: "bg-[#b5473a]", track: "bg-[#f6e1dd]" },
+  late: { text: "text-[#8a1f37]", fill: "bg-[#b8324f]", track: "bg-[#f6e1dd]" },
 } as const;
 
 export function ageLabel(days: number): string {
@@ -48,16 +48,16 @@ export interface Bucket {
   label: string;
   count: number;
   value: bigint;
-  tone: "heritage" | "navy" | "slate" | "amber" | "rose" | "gold";
+  tone: "leaf" | "basalt" | "slate" | "amber" | "rose" | "kota";
 }
 
 const BUCKET_FILL: Record<Bucket["tone"], string> = {
-  heritage: "bg-heritage",
-  navy: "bg-navy",
-  slate: "bg-[#8a97a6]",
+  leaf: "bg-leaf",
+  basalt: "bg-basalt",
+  slate: "bg-[#8b9692]",
   amber: "bg-[#c48a2c]",
-  rose: "bg-[#b5473a]",
-  gold: "bg-gold",
+  rose: "bg-[#b8324f]",
+  kota: "bg-kota",
 };
 
 /** Proportional bar of value by bucket with a labelled key underneath (ageing, maturity). */
@@ -65,7 +65,7 @@ export function BucketBar({ buckets, format }: { buckets: Bucket[]; format: (pai
   const total = buckets.reduce((sum, b) => sum + b.value, 0n);
   return (
     <div>
-      <div className="flex h-3 w-full gap-[3px] overflow-hidden rounded-full bg-[#f1ede3]" aria-hidden="true">
+      <div className="flex h-3 w-full gap-[3px] overflow-hidden rounded-full bg-[#eceeeb]" aria-hidden="true">
         {total > 0n &&
           buckets
             .filter((b) => b.value > 0n)
@@ -78,7 +78,7 @@ export function BucketBar({ buckets, format }: { buckets: Bucket[]; format: (pai
               <span aria-hidden="true" className={cn("size-2 rounded-[2px]", BUCKET_FILL[b.tone])} />
               {b.label}
             </dt>
-            <dd className="mt-1.5 text-navy">
+            <dd className="mt-1.5 text-basalt">
               {format(b.value)}
               <span className="tabular ml-1.5 text-[0.75rem] text-muted-foreground">· {b.count}</span>
             </dd>

@@ -23,7 +23,7 @@ export default function RootError({ error, retry }: { error: unknown; retry: () 
       actions={
         <>
           <Button size="lg" onClick={() => retry()}>
-            <RotateCw className="text-gold-300" />
+            <RotateCw className="text-kota-300" />
             Try again
           </Button>
           <Button asChild size="lg" variant="outline">

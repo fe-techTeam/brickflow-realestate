@@ -21,15 +21,15 @@ function inr(paise: bigint): string {
 
 function Row({ label, value, tone = "default", hint }: { label: string; value: string; tone?: "default" | "deduct" | "total"; hint?: string }) {
   return (
-    <div className={cn("flex items-baseline justify-between gap-4", tone === "total" ? "border-t border-navy/15 pt-3.5" : "py-1.5")}>
+    <div className={cn("flex items-baseline justify-between gap-4", tone === "total" ? "border-t border-basalt/15 pt-3.5" : "py-1.5")}>
       <div>
-        <p className={cn("text-[0.8125rem] whitespace-nowrap", tone === "total" ? "font-semibold text-navy" : "text-slate-ink")}>{label}</p>
+        <p className={cn("text-[0.8125rem] whitespace-nowrap", tone === "total" ? "font-semibold text-basalt" : "text-ink")}>{label}</p>
         {hint && <p className="text-[0.6875rem] text-muted-foreground">{hint}</p>}
       </div>
       <p
         className={cn(
           "tabular font-sans whitespace-nowrap",
-          tone === "total" ? "text-[1.5rem] leading-none font-normal tracking-[-0.02em] text-heritage" : "text-sm font-medium text-navy",
+          tone === "total" ? "text-[1.5rem] leading-none font-normal tracking-[-0.02em] text-leaf" : "text-sm font-medium text-basalt",
           tone === "deduct" && "text-danger",
         )}
       >
@@ -48,23 +48,23 @@ export function RatePreview({ rate, currentBps }: { rate: string; currentBps?: n
 
   return (
     <div aria-live="polite">
-      <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-600 uppercase">Live preview</p>
+      <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-kota-600 uppercase">Live preview</p>
       <div className="mt-2 flex items-end gap-2">
-        <span className="tabular font-sans text-[3.25rem] leading-none font-light tracking-[-0.04em] text-navy">
+        <span className="tabular font-sans text-[3.25rem] leading-none font-light tracking-[-0.04em] text-basalt">
           {bps !== null ? formatBps(bps, { suffix: false }) : "—"}
         </span>
-        <span className="pb-1.5 font-sans text-xl font-light text-gold-600">%</span>
+        <span className="pb-1.5 font-sans text-xl font-light text-kota-600">%</span>
       </div>
-      <span aria-hidden="true" className="mt-4 block h-px w-14 bg-gradient-to-r from-gold to-transparent" />
+      <span aria-hidden="true" className="mt-4 block h-px w-14 bg-gradient-to-r from-kota to-transparent" />
 
       {preview ? (
         <>
-          <p className="mt-4 text-[0.8125rem] leading-relaxed text-slate-ink">
-            On <span className="tabular font-medium text-navy">{inr(SAMPLE_PAISE)}</span> approved
-            <ArrowRight className="mx-1 inline size-3 text-gold-600" aria-hidden="true" />
+          <p className="mt-4 text-[0.8125rem] leading-relaxed text-ink">
+            On <span className="tabular font-medium text-basalt">{inr(SAMPLE_PAISE)}</span> approved
+            <ArrowRight className="mx-1 inline size-3 text-kota-600" aria-hidden="true" />
             discount <span className="tabular font-medium text-danger">{inr(preview.discountAmountPaise)}</span>
-            <ArrowRight className="mx-1 inline size-3 text-gold-600" aria-hidden="true" />
-            partner receives <span className="tabular font-semibold text-heritage">{inr(preview.netPayablePaise)}</span>
+            <ArrowRight className="mx-1 inline size-3 text-kota-600" aria-hidden="true" />
+            partner receives <span className="tabular font-semibold text-leaf">{inr(preview.netPayablePaise)}</span>
           </p>
           <div className="mt-4 rounded-lg border border-border/90 bg-card px-4 py-3">
             <Row label="Approved amount" value={formatINR(SAMPLE_PAISE)} />
@@ -79,8 +79,8 @@ export function RatePreview({ rate, currentBps }: { rate: string; currentBps?: n
               <span>
                 Today {formatBps(current.discountRateBps)} · {inr(current.netPayablePaise)}
               </span>
-              <ArrowRight className="size-3 text-gold-600" aria-hidden="true" />
-              <span className="font-medium text-navy">
+              <ArrowRight className="size-3 text-kota-600" aria-hidden="true" />
+              <span className="font-medium text-basalt">
                 New {formatBps(preview.discountRateBps)} · {inr(preview.netPayablePaise)}
               </span>
             </p>

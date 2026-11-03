@@ -48,13 +48,13 @@ function Pipeline({
                 <span className="min-w-0 truncate">
                   <StatusBadge kind={kind} status={status as never} />
                 </span>
-                <span aria-hidden="true" className="h-[3px] overflow-hidden rounded-full bg-ivory-200">
+                <span aria-hidden="true" className="h-[3px] overflow-hidden rounded-full bg-paper-200">
                   <span
-                    className={cn("block h-full rounded-full transition-colors", count ? "bg-navy/70 group-hover:bg-gold" : "bg-transparent")}
+                    className={cn("block h-full rounded-full transition-colors", count ? "bg-basalt/70 group-hover:bg-kota" : "bg-transparent")}
                     style={{ width: `${(count / max) * 100}%` }}
                   />
                 </span>
-                <span className={cn("tabular text-right font-medium", count ? "text-navy" : "text-muted-foreground/60")}>{count}</span>
+                <span className={cn("tabular text-right font-medium", count ? "text-basalt" : "text-muted-foreground/60")}>{count}</span>
               </Link>
             </li>
           );
@@ -119,9 +119,9 @@ export default async function AdminDashboardPage() {
                 Audit log
               </Link>
             </Button>
-            <Button size="lg" asChild className="shadow-[0_10px_24px_-12px_rgba(20,43,67,0.6)]">
+            <Button size="lg" asChild className="shadow-[0_10px_24px_-12px_rgba(34, 45, 43,0.6)]">
               <Link href="/admin/financing">
-                <SlidersHorizontal className="size-4 text-gold" strokeWidth={1.75} />
+                <SlidersHorizontal className="size-4 text-kota" strokeWidth={1.75} />
                 Configure financing
               </Link>
             </Button>
@@ -132,11 +132,11 @@ export default async function AdminDashboardPage() {
       <div className="grid gap-6 lg:grid-cols-12">
         <section
           aria-label="Financing totals"
-          className="relative flex animate-fade-up flex-col overflow-hidden rounded-xl bg-navy px-6 py-7 text-white shadow-[0_30px_60px_-34px_rgba(13,30,48,0.85)] sm:px-8 sm:py-8 lg:col-span-7"
+          className="relative flex animate-fade-up flex-col overflow-hidden rounded-xl bg-basalt px-6 py-7 text-white shadow-[0_30px_60px_-34px_rgba(26, 35, 33,0.85)] sm:px-8 sm:py-8 lg:col-span-7"
         >
-          <span aria-hidden="true" className="pointer-events-none absolute -top-24 -right-20 size-72 rounded-full bg-gold/10 blur-3xl" />
-          <span aria-hidden="true" className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-gold/60 to-transparent" />
-          <p className="text-[0.625rem] font-semibold tracking-[0.24em] text-gold uppercase">Financed through BrickFlow</p>
+          <span aria-hidden="true" className="pointer-events-none absolute -top-24 -right-20 size-72 rounded-full bg-kota/10 blur-3xl" />
+          <span aria-hidden="true" className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-kota/60 to-transparent" />
+          <p className="text-[0.625rem] font-semibold tracking-[0.24em] text-kota uppercase">Financed through BrickFlow</p>
           <div className="mt-5 flex flex-wrap items-end gap-x-5 gap-y-2">
             <Money paise={requests.financedPaise} compact size="hero" className="text-white" />
             <p className="pb-1.5 text-sm text-white/60">{plural(requests.financedCount, "request")} approved by Veefin</p>
@@ -167,20 +167,20 @@ export default async function AdminDashboardPage() {
           </dl>
         </section>
 
-        <dl className="grid animate-fade-up grid-cols-2 overflow-hidden rounded-xl border border-border/90 bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.25)] lg:col-span-5">
+        <dl className="grid animate-fade-up grid-cols-2 overflow-hidden rounded-xl border border-border/90 bg-card shadow-[0_18px_40px_-30px_rgba(34, 45, 43,0.25)] lg:col-span-5">
           {metrics.map((m, i) => (
             <Link
               key={m.label}
               href={m.href}
               className={cn(
-                "group flex flex-col gap-5 px-5 py-6 transition-colors hover:bg-ivory/60 sm:px-6",
+                "group flex flex-col gap-5 px-5 py-6 transition-colors hover:bg-paper/60 sm:px-6",
                 i % 2 === 1 && "border-l border-border/80",
                 i >= 2 && "border-t border-border/80",
               )}
             >
               <dt className="flex items-center justify-between gap-2 text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                 {m.label}
-                <ArrowUpRight className="size-3.5 text-gold-600 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />
+                <ArrowUpRight className="size-3.5 text-kota-600 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />
               </dt>
               <div>
                 <dd>
@@ -207,9 +207,9 @@ export default async function AdminDashboardPage() {
             <ul className="divide-y divide-border/70 border-t border-border/70">
               {board.map(({ builder, programme }) => (
                 <li key={builder.id} className="flex items-center gap-4 py-4">
-                  <Monogram name={builder.name} tone={programme ? "navy" : "muted"} size="sm" />
+                  <Monogram name={builder.name} tone={programme ? "basalt" : "muted"} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <Link href={`/admin/organisations/${builder.id}`} className="block text-sm leading-snug font-medium text-navy hover:underline">
+                    <Link href={`/admin/organisations/${builder.id}`} className="block text-sm leading-snug font-medium text-basalt hover:underline">
                       {builder.name}
                     </Link>
                     <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
@@ -219,7 +219,7 @@ export default async function AdminDashboardPage() {
                   {programme ? (
                     <Rate bps={programme.discountRateBps} size="lg" />
                   ) : (
-                    <Link href="/admin/financing" className="text-xs font-medium whitespace-nowrap text-gold-600 hover:text-navy">
+                    <Link href="/admin/financing" className="text-xs font-medium whitespace-nowrap text-kota-600 hover:text-basalt">
                       Configure
                     </Link>
                   )}
@@ -233,7 +233,7 @@ export default async function AdminDashboardPage() {
                 ? `${programmes.length - activeByBuilder.size} further programme${programmes.length - activeByBuilder.size === 1 ? "" : "s"} in draft, suspended or closed.`
                 : "Every configured programme is live."}
             </p>
-            <Link href="/admin/financing" className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-navy hover:text-gold-600">
+            <Link href="/admin/financing" className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-basalt hover:text-kota-600">
               Manage rates
               <ArrowRight className="size-3.5" />
             </Link>
@@ -249,13 +249,13 @@ export default async function AdminDashboardPage() {
               <div>
                 <dt className="text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Submitted</dt>
                 <dd className="mt-1">
-                  <Money paise={invoiced12} compact size="md" className="text-navy" />
+                  <Money paise={invoiced12} compact size="md" className="text-basalt" />
                 </dd>
               </div>
               <div>
                 <dt className="text-[0.625rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Accepted early</dt>
                 <dd className="mt-1">
-                  <Money paise={financed12} compact size="md" className="text-gold-600" />
+                  <Money paise={financed12} compact size="md" className="text-kota-600" />
                 </dd>
               </div>
             </dl>
@@ -271,7 +271,7 @@ export default async function AdminDashboardPage() {
           eyebrow="Audit trail"
           title="Recent activity"
           actions={
-            <Link href="/admin/audit" className="inline-flex items-center gap-1 text-xs font-semibold text-navy hover:text-gold-600">
+            <Link href="/admin/audit" className="inline-flex items-center gap-1 text-xs font-semibold text-basalt hover:text-kota-600">
               Full audit log
               <ArrowRight className="size-3.5" />
             </Link>

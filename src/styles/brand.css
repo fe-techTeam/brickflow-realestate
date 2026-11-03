@@ -1,8 +1,8 @@
 /* BrickFlow brand-level styles that are awkward to express as utility classes. */
 
-/* Skeleton shimmer: warm ivory sweep. */
+/* Skeleton shimmer: soft paper sweep. */
 @utility skeleton-shimmer {
-  background-color: var(--color-ivory-200);
+  background-color: var(--color-paper-200);
   background-image: linear-gradient(
     100deg,
     rgb(255 255 255 / 0) 30%,
@@ -17,22 +17,22 @@
 /* Fine architectural grid used behind brand moments (login, error pages). */
 @utility blueprint-grid {
   background-image:
-    linear-gradient(rgb(196 164 106 / 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(196 164 106 / 0.08) 1px, transparent 1px);
+    linear-gradient(rgb(168 154 132 / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(168 154 132 / 0.08) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
 @utility blueprint-grid-ink {
   background-image:
-    linear-gradient(rgb(20 43 67 / 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(20 43 67 / 0.045) 1px, transparent 1px);
+    linear-gradient(rgb(34 45 43 / 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(34 45 43 / 0.045) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
 /* Sonner toasts ---------------------------------------------------------- */
 
 [data-sonner-toaster] [data-sonner-toast].bf-toast {
-  --bf-toast-accent: var(--color-navy-400);
+  --bf-toast-accent: var(--color-basalt-400);
   font-family: var(--font-sans);
   gap: 0.75rem;
   align-items: flex-start;
@@ -54,16 +54,16 @@
 }
 
 [data-sonner-toaster] [data-sonner-toast].bf-toast[data-type="success"] {
-  --bf-toast-accent: var(--color-heritage);
+  --bf-toast-accent: var(--color-leaf);
 }
 [data-sonner-toaster] [data-sonner-toast].bf-toast[data-type="error"] {
   --bf-toast-accent: var(--color-danger);
 }
 [data-sonner-toaster] [data-sonner-toast].bf-toast[data-type="warning"] {
-  --bf-toast-accent: var(--color-gold);
+  --bf-toast-accent: var(--color-warning);
 }
 [data-sonner-toaster] [data-sonner-toast].bf-toast[data-type="info"] {
-  --bf-toast-accent: var(--color-navy);
+  --bf-toast-accent: var(--color-basalt);
 }
 
 [data-sonner-toaster] [data-sonner-toast].bf-toast [data-icon] {
@@ -73,23 +73,23 @@
 }
 
 [data-sonner-toaster] [data-sonner-toast].bf-toast[data-type="success"] [data-icon] {
-  color: var(--color-heritage);
+  color: var(--color-leaf);
 }
 [data-sonner-toaster] [data-sonner-toast].bf-toast[data-type="error"] [data-icon] {
   color: var(--color-danger);
 }
 [data-sonner-toaster] [data-sonner-toast].bf-toast[data-type="warning"] [data-icon] {
-  color: var(--color-gold-600);
+  color: var(--color-warning);
 }
 [data-sonner-toaster] [data-sonner-toast].bf-toast[data-type="info"] [data-icon] {
-  color: var(--color-navy);
+  color: var(--color-basalt);
 }
 
 [data-sonner-toaster] [data-sonner-toast].bf-toast [data-title] {
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--color-navy);
+  color: var(--color-basalt);
 }
 
 [data-sonner-toaster] [data-sonner-toast].bf-toast [data-description] {
@@ -112,14 +112,14 @@
 }
 
 [data-sonner-toaster] [data-sonner-toast].bf-toast [data-close-button]:hover {
-  background: var(--color-ivory-200);
-  color: var(--color-navy);
+  background: var(--color-paper-200);
+  color: var(--color-basalt);
 }
 
 [data-sonner-toaster] [data-sonner-toast].bf-toast [data-button] {
   height: 1.75rem;
   border-radius: var(--radius-sm);
-  background: var(--color-navy);
+  background: var(--color-basalt);
   color: #fff;
   font-weight: 500;
 }
