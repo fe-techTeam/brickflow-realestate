@@ -1,0 +1,488 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  BrickFlow demo on ECS Fargate: one task behind an HTTPS Application Load Balancer, image in ECR,
+  SQLite database and uploaded PDFs on an encrypted EFS volume mounted at /app/data, secrets from
+  AWS Secrets Manager and logs in CloudWatch. SQLite allows a single writer, so the service always
+  runs exactly one task and deployments stop the old task before starting the new one.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: { default: Network }
+        Parameters: [VpcId, PublicSubnetIds, PrivateSubnetIds, AssignPublicIp]
+      - Label: { default: Domain and TLS }
+        Parameters: [DomainName, CertificateArn, HostedZoneId]
+      - Label: { default: Application }
+        Parameters: [RepositoryName, ImageTag, DesiredCount, Cpu, Memory, SeedOnStart, AuthSecretArn, DemoPasswordSecretArn, LogRetentionDays]
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC that hosts the load balancer, the task and the EFS mount targets.
+  PublicSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: At least two public subnets in different Availability Zones for the internet-facing load balancer.
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: >-
+      Exactly two subnets in different Availability Zones for the task and the EFS mount targets.
+      Private subnets need a NAT gateway or VPC endpoints (ECR api/dkr, S3, CloudWatch Logs, Secrets Manager).
+      For a low-cost demo you may pass public subnets here and set AssignPublicIp to ENABLED.
+  AssignPublicIp:
+    Type: String
+    Default: DISABLED
+    AllowedValues: [ENABLED, DISABLED]
+    Description: ENABLED only when the task subnets are public subnets without a NAT gateway.
+  DomainName:
+    Type: String
+    Description: Fully qualified host name users browse to, e.g. brickflow.example.com. Also used for APP_URL.
+    AllowedPattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+  CertificateArn:
+    Type: String
+    Description: ARN of an issued ACM certificate in this Region that covers DomainName.
+    AllowedPattern: "^arn:aws[a-z-]*:acm:[a-z0-9-]+:\\d{12}:certificate/.+$"
+  HostedZoneId:
+    Type: String
+    Default: ""
+    Description: Optional Route 53 hosted zone ID. When set, an alias record for DomainName is created pointing at the load balancer.
+  RepositoryName:
+    Type: String
+    Default: brickflow
+    AllowedPattern: "^[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*$"
+    Description: Name of the ECR repository created by this stack.
+  ImageTag:
+    Type: String
+    Default: latest
+    Description: Image tag the stack's task definition uses. The deploy workflow registers newer revisions with the commit SHA tag.
+  DesiredCount:
+    Type: Number
+    Default: 1
+    AllowedValues: [0, 1]
+    Description: Use 0 for the first deployment (before an image has been pushed), then 1. Never more than 1 with SQLite.
+  Cpu:
+    Type: String
+    Default: "512"
+    AllowedValues: ["256", "512", "1024", "2048"]
+    Description: Fargate task CPU units.
+  Memory:
+    Type: String
+    Default: "1024"
+    AllowedValues: ["512", "1024", "2048", "3072", "4096"]
+    Description: Fargate task memory (MiB). Must be a valid combination with Cpu.
+  SeedOnStart:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: When "true", the container wipes and reseeds the demo data on every start. The database is always seeded when it is empty.
+  AuthSecretArn:
+    Type: String
+    Description: Secrets Manager secret ARN holding AUTH_SECRET (plain-text value of at least 32 random characters).
+    AllowedPattern: "^arn:aws[a-z-]*:secretsmanager:[a-z0-9-]+:\\d{12}:secret:.+$"
+  DemoPasswordSecretArn:
+    Type: String
+    Description: Secrets Manager secret ARN holding DEMO_PASSWORD (plain-text shared password for the seeded demo accounts).
+    AllowedPattern: "^arn:aws[a-z-]*:secretsmanager:[a-z0-9-]+:\\d{12}:secret:.+$"
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365]
+    Description: CloudWatch Logs retention for the application log group.
+
+Conditions:
+  HasHostedZone: !Not [!Equals [!Ref HostedZoneId, ""]]
+
+Resources:
+  # ---------------------------------------------------------------- Registry and logs
+  Repository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: !Ref RepositoryName
+      # MUTABLE because the workflow also moves the "latest" tag; deployments reference immutable commit-SHA tags.
+      ImageTagMutability: MUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep the 20 most recent images",
+                "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 20 },
+                "action": { "type": "expire" }
+              }
+            ]
+          }
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${AWS::StackName}
+      RetentionInDays: !Ref LogRetentionDays
+
+  # ---------------------------------------------------------------- Security groups
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: BrickFlow load balancer - HTTPS and HTTP (redirect) from the internet
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0, Description: HTTPS }
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0, Description: HTTP redirect to HTTPS }
+      Tags:
+        - { Key: Name, Value: !Sub "${AWS::StackName}-alb" }
+
+  ServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: BrickFlow task - application port from the load balancer only
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+          Description: Application traffic from the load balancer
+      Tags:
+        - { Key: Name, Value: !Sub "${AWS::StackName}-service" }
+
+  FileSystemSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: BrickFlow EFS - NFS from the task only
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref ServiceSecurityGroup
+          Description: NFS from the BrickFlow task
+      Tags:
+        - { Key: Name, Value: !Sub "${AWS::StackName}-efs" }
+
+  # ---------------------------------------------------------------- Persistent storage
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Encrypted: true
+      PerformanceMode: generalPurpose
+      ThroughputMode: elastic
+      BackupPolicy:
+        Status: ENABLED
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_30_DAYS
+      FileSystemPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: { AWS: "*" }
+            Action: "*"
+            Condition:
+              Bool: { "aws:SecureTransport": "false" }
+      FileSystemTags:
+        - { Key: Name, Value: !Sub "${AWS::StackName}-data" }
+
+  # Exactly two task subnets are supported, one mount target each.
+  MountTargetA:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Select [0, !Ref PrivateSubnetIds]
+      SecurityGroups: [!Ref FileSystemSecurityGroup]
+
+  MountTargetB:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Select [1, !Ref PrivateSubnetIds]
+      SecurityGroups: [!Ref FileSystemSecurityGroup]
+
+  AccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref FileSystem
+      PosixUser:
+        Uid: "1001"
+        Gid: "1001"
+      RootDirectory:
+        Path: /brickflow
+        CreationInfo:
+          OwnerUid: "1001"
+          OwnerGid: "1001"
+          Permissions: "0750"
+      AccessPointTags:
+        - { Key: Name, Value: !Sub "${AWS::StackName}-data" }
+
+  # ---------------------------------------------------------------- IAM
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Pulls the BrickFlow image, writes logs and reads the two application secrets.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: read-application-secrets
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - !Ref AuthSecretArn
+                  - !Ref DemoPasswordSecretArn
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Runtime role of the BrickFlow container - EFS access through the access point only.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition:
+              ArnLike: { "aws:SourceArn": !Sub "arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:*" }
+              StringEquals: { "aws:SourceAccount": !Ref AWS::AccountId }
+      Policies:
+        - PolicyName: efs-data-volume
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - elasticfilesystem:ClientMount
+                  - elasticfilesystem:ClientWrite
+                Resource: !GetAtt FileSystem.Arn
+                Condition:
+                  StringEquals:
+                    elasticfilesystem:AccessPointArn: !GetAtt AccessPoint.Arn
+
+  # ---------------------------------------------------------------- Load balancer
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets: !Ref PublicSubnetIds
+      SecurityGroups: [!Ref LoadBalancerSecurityGroup]
+      LoadBalancerAttributes:
+        - { Key: routing.http.drop_invalid_header_fields.enabled, Value: "true" }
+        - { Key: idle_timeout.timeout_seconds, Value: "60" }
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VpcId
+      TargetType: ip
+      Protocol: HTTP
+      Port: 3000
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /api/health
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: "200"
+      TargetGroupAttributes:
+        - { Key: deregistration_delay.timeout_seconds, Value: "30" }
+
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Protocol: HTTPS
+      Port: 443
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: "443"
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: HTTP_301
+
+  DnsRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt LoadBalancer.DNSName
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+        EvaluateTargetHealth: false
+
+  # ---------------------------------------------------------------- ECS
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref AWS::StackName
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Ref AWS::StackName
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: !Ref Cpu
+      Memory: !Ref Memory
+      RuntimePlatform:
+        OperatingSystemFamily: LINUX
+        CpuArchitecture: X86_64
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      Volumes:
+        - Name: data
+          EFSVolumeConfiguration:
+            FilesystemId: !Ref FileSystem
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              AccessPointId: !Ref AccessPoint
+              IAM: ENABLED
+      ContainerDefinitions:
+        - Name: brickflow
+          Image: !Sub "${Repository.RepositoryUri}:${ImageTag}"
+          Essential: true
+          ReadonlyRootFilesystem: false
+          PortMappings:
+            - ContainerPort: 3000
+              Protocol: tcp
+          MountPoints:
+            - SourceVolume: data
+              ContainerPath: /app/data
+              ReadOnly: false
+          Environment:
+            - { Name: NODE_ENV, Value: production }
+            - { Name: PORT, Value: "3000" }
+            - { Name: HOSTNAME, Value: 0.0.0.0 }
+            - { Name: DATABASE_URL, Value: "file:/app/data/brickflow.db" }
+            - { Name: STORAGE_DRIVER, Value: local }
+            - { Name: STORAGE_DIR, Value: /app/data/storage }
+            - { Name: APP_URL, Value: !Sub "https://${DomainName}" }
+            - { Name: SEED_ON_START, Value: !Ref SeedOnStart }
+            - { Name: NEXT_TELEMETRY_DISABLED, Value: "1" }
+          Secrets:
+            - { Name: AUTH_SECRET, ValueFrom: !Ref AuthSecretArn }
+            - { Name: DEMO_PASSWORD, ValueFrom: !Ref DemoPasswordSecretArn }
+          HealthCheck:
+            Command:
+              - CMD
+              - node
+              - -e
+              - "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+          StopTimeout: 30
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: brickflow
+
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - HttpsListener
+      - MountTargetA
+      - MountTargetB
+    Properties:
+      ServiceName: !Ref AWS::StackName
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      LaunchType: FARGATE
+      PlatformVersion: LATEST
+      DesiredCount: !Ref DesiredCount
+      # SQLite has a single writer: stop the old task before starting the new one (brief downtime per deploy).
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 0
+        MaximumPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      HealthCheckGracePeriodSeconds: 90
+      EnableExecuteCommand: false
+      PropagateTags: SERVICE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: !Ref AssignPublicIp
+          Subnets: !Ref PrivateSubnetIds
+          SecurityGroups: [!Ref ServiceSecurityGroup]
+      LoadBalancers:
+        - ContainerName: brickflow
+          ContainerPort: 3000
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  LoadBalancerDnsName:
+    Description: Point DomainName at this host (CNAME or alias) when HostedZoneId is not set.
+    Value: !GetAtt LoadBalancer.DNSName
+  ApplicationUrl:
+    Description: Public URL of the application.
+    Value: !Sub https://${DomainName}
+  RepositoryName:
+    Description: Value for the ECR_REPOSITORY GitHub variable.
+    Value: !Ref Repository
+  RepositoryUri:
+    Description: ECR repository URI to push images to.
+    Value: !GetAtt Repository.RepositoryUri
+  ClusterName:
+    Description: Value for the ECS_CLUSTER GitHub variable.
+    Value: !Ref Cluster
+  ServiceName:
+    Description: Value for the ECS_SERVICE GitHub variable.
+    Value: !GetAtt Service.Name
+  ContainerName:
+    Description: Value for the CONTAINER_NAME GitHub variable.
+    Value: brickflow
+  TaskDefinitionFamily:
+    Description: Task definition family; previous revisions are used for rollback.
+    Value: !Ref AWS::StackName
+  TaskExecutionRoleArn:
+    Description: Execution role the deploy role must be allowed to pass.
+    Value: !GetAtt TaskExecutionRole.Arn
+  TaskRoleArn:
+    Description: Task role the deploy role must be allowed to pass.
+    Value: !GetAtt TaskRole.Arn
+  FileSystemId:
+    Description: EFS file system holding /app/data (SQLite database and uploaded PDFs).
+    Value: !Ref FileSystem
+  LogGroupName:
+    Description: CloudWatch Logs group for the container.
+    Value: !Ref LogGroup
