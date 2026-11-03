@@ -59,15 +59,23 @@ export function RateCard({ data }: { data: RateCardData }) {
       <header className="flex items-start gap-3.5 px-6 pt-7">
         <Monogram name={row.builderName} tone={active ? "navy" : "ivory"} />
         <div className="min-w-0 flex-1">
-          <Link href={`/admin/organisations/${data.builderId}`} className="block font-display text-[1.375rem] leading-tight font-semibold text-navy hover:underline">
-            {row.builderName}
-          </Link>
-          <p className="mt-1 text-xs text-muted-foreground">
-            with <span className="font-medium text-slate-ink">{row.financierName}</span>
-          </p>
-          <RefCode className="mt-1 block text-[0.6875rem] text-muted-foreground">{row.code}</RefCode>
+          <div className="flex items-center justify-between gap-3">
+            <RefCode className="text-[0.6875rem] text-muted-foreground">{row.code}</RefCode>
+            <StatusBadge kind="programme" status={row.status} />
+          </div>
+          <div className="mt-2 min-h-[4.75rem]">
+            <Link
+              href={`/admin/organisations/${data.builderId}`}
+              className="line-clamp-2 font-display text-[1.375rem] leading-tight font-semibold text-navy hover:underline"
+              title={row.builderName}
+            >
+              {row.builderName}
+            </Link>
+            <p className="mt-1 text-xs text-muted-foreground">
+              with <span className="font-medium text-slate-ink">{row.financierName}</span>
+            </p>
+          </div>
         </div>
-        <StatusBadge kind="programme" status={row.status} className="mt-1" />
       </header>
 
       <div className="px-6 pt-7">

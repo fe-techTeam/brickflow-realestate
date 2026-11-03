@@ -6,10 +6,20 @@ import { cn } from "@/lib/utils";
 
 type Align = "left" | "right" | "center";
 
+/** Edge shadows appear only while columns are hidden: the white covers scroll with the content, the shades stay put. */
+const SCROLL_SHADOWS = {
+  background: [
+    "linear-gradient(to right, var(--color-card, #fff) 40%, transparent) left / 48px 100% no-repeat local",
+    "linear-gradient(to left, var(--color-card, #fff) 40%, transparent) right / 48px 100% no-repeat local",
+    "radial-gradient(farthest-side at 0 50%, rgba(20, 43, 67, 0.14), transparent) left / 16px 100% no-repeat scroll",
+    "radial-gradient(farthest-side at 100% 50%, rgba(20, 43, 67, 0.14), transparent) right / 16px 100% no-repeat scroll",
+  ].join(", "),
+};
+
 /** Refined table frame: no header fill, hairline rules, generous rows; scrolls horizontally on small screens. */
 export function Ledger({ children, minWidth = 880, className }: { children: ReactNode; minWidth?: number; className?: string }) {
   return (
-    <div className={cn("-mx-5 overflow-x-auto sm:-mx-7", className)}>
+    <div className={cn("-mx-5 overflow-x-auto sm:-mx-7", className)} style={SCROLL_SHADOWS}>
       <table className="w-full border-collapse text-sm" style={{ minWidth }}>
         {children}
       </table>

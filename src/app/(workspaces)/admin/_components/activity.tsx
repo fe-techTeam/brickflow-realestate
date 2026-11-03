@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import type { OrganisationType } from "@/generated/prisma/enums";
+import { formatDate, formatDateTime } from "@/lib/format";
+import { formatBps, formatINR } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { ENTITY_LABELS, ROLE_LABELS } from "./labels";
 import { OrgTypeBadge } from "./org-type-badge";
@@ -93,6 +95,109 @@ export function ActivityTimeline({ entries, directory }: { entries: ActivityItem
   );
 }
 
+type Json = Record<string, unknown>;
+
+const isRecord = (v: unknown): v is Json => Boolean(v) && typeof v === "object" && !Array.isArray(v);
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const ACRONYMS: Record<string, string> = { id: "ID", utr: "UTR", cp: "CP", gstin: "GSTIN", pan: "PAN" };
+
+/** `discountRateBps` → "Discount rate", `invoiceId` → "Invoice ID"; the raw key stays available as a tooltip. */
+function fieldLabel(key: string): string {
+  const words = key
+    .replace(/(Bps|Paise)$/, "")
+    .replace(/([a-z\d])([A-Z])/g, "$1 $2")
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .map((w) => ACRONYMS[w.toLowerCase()] ?? w.toLowerCase());
+  const text = words.join(" ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+type ValueKind = "figure" | "code" | "text";
+
+function fieldValue(key: string, value: unknown): { text: string; kind: ValueKind } {
+  if (value === null || value === undefined || value === "") return { text: "—", kind: "text" };
+  if (typeof value === "boolean") return { text: value ? "Yes" : "No", kind: "text" };
+  if (/Bps$/.test(key) && Number.isFinite(Number(value))) return { text: formatBps(Number(value)), kind: "figure" };
+  if (/Paise$/.test(key) && /^-?\d+$/.test(String(value))) return { text: formatINR(String(value)), kind: "figure" };
+  if (typeof value === "number") return { text: String(value), kind: "figure" };
+  if (typeof value === "string" && ISO_DATE.test(value)) {
+    // Calendar dates are stored as UTC midnight; showing a time would shift them to 05:30 IST.
+    const dateOnly = value.includes("T00:00:00.000Z");
+    return { text: dateOnly ? formatDate(value) : formatDateTime(value), kind: "figure" };
+  }
+  if (typeof value === "string") return { text: value, kind: /(Id|utr)$/i.test(key) ? "code" : "text" };
+  return { text: JSON.stringify(value, null, 2), kind: "code" };
+}
+
+function Value({ field, value, className }: { field: string; value: unknown; className?: string }) {
+  const { text, kind } = fieldValue(field, value);
+  return (
+    <span
+      className={cn(
+        "text-[0.8125rem] break-words whitespace-pre-wrap text-navy",
+        kind === "figure" && "tabular font-sans font-medium",
+        kind === "code" && "font-mono text-[0.75rem]",
+        className,
+      )}
+    >
+      {text}
+    </span>
+  );
+}
+
+function FieldLabel({ field }: { field: string }) {
+  return (
+    <span title={field} className="text-[0.625rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+      {fieldLabel(field)}
+    </span>
+  );
+}
+
+/** Before/after snapshots as a three-column comparison; changed fields are marked in gold. */
+function ChangeTable({ before, after }: { before: Json; after: Json }) {
+  const fields = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+  return (
+    <table className="w-full text-[0.8125rem]">
+      <thead>
+        <tr className="text-left">
+          <th scope="col" className="pb-2 font-normal">
+            <span className="sr-only">Field</span>
+          </th>
+          <th scope="col" className="pb-2 text-[0.625rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+            Before
+          </th>
+          <th scope="col" className="pb-2 text-[0.625rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+            After
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {fields.map((field) => {
+          const changed = JSON.stringify(before[field] ?? null) !== JSON.stringify(after[field] ?? null);
+          return (
+            <tr key={field} className="border-t border-border/60">
+              <th scope="row" className="py-2 pr-4 text-left align-top font-normal">
+                <span className="flex items-center gap-2">
+                  <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", changed ? "bg-gold" : "bg-transparent")} />
+                  <FieldLabel field={field} />
+                  {changed && <span className="sr-only">(changed)</span>}
+                </span>
+              </th>
+              <td className="py-2 pr-4 align-top">
+                <Value field={field} value={before[field]} className={cn(changed && "text-muted-foreground line-through decoration-border")} />
+              </td>
+              <td className="py-2 align-top">
+                <Value field={field} value={after[field]} className={cn(changed && "font-semibold")} />
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
 function MetadataView({ raw }: { raw: string }) {
   let parsed: unknown;
   try {
@@ -100,19 +205,28 @@ function MetadataView({ raw }: { raw: string }) {
   } catch {
     parsed = undefined;
   }
-  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-    const entries = Object.entries(parsed as Record<string, unknown>);
+  if (isRecord(parsed)) {
+    const { before, after, ...rest } = parsed;
+    const diff = isRecord(before) && isRecord(after);
+    const entries = Object.entries(diff ? rest : parsed);
     return (
-      <dl className="grid gap-x-6 gap-y-2.5 rounded-lg border border-border/80 bg-ivory/50 px-4 py-3.5 sm:grid-cols-[minmax(8rem,auto)_1fr]">
-        {entries.map(([key, value]) => (
-          <div key={key} className="contents">
-            <dt className="text-[0.625rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase sm:pt-0.5">{key}</dt>
-            <dd className="font-mono text-[0.75rem] break-all whitespace-pre-wrap text-navy">
-              {typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null ? String(value) : JSON.stringify(value, null, 2)}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <div className="space-y-3.5 rounded-lg border border-border/80 bg-ivory/50 px-4 py-3.5">
+        {diff && <ChangeTable before={before} after={after} />}
+        {entries.length > 0 && (
+          <dl className={cn("grid gap-x-6 gap-y-2.5 sm:grid-cols-[minmax(9rem,auto)_1fr]", diff && "border-t border-border/60 pt-3.5")}>
+            {entries.map(([key, value]) => (
+              <div key={key} className="contents">
+                <dt className="sm:pt-0.5">
+                  <FieldLabel field={key} />
+                </dt>
+                <dd className="min-w-0">
+                  <Value field={key} value={value} />
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
     );
   }
   return (
