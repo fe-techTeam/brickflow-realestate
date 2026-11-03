@@ -37,7 +37,7 @@ export function Money({
   const large = size === "xl" || size === "hero" || size === "display";
 
   return (
-    <span className={cn("font-sans whitespace-nowrap tabular", SIZES[size], className)}>
+    <span className={cn("figure whitespace-nowrap", SIZES[size], className)}>
       {prefix}
       <span className={cn(large && "mr-[0.06em] align-[0.04em] text-[0.62em] font-medium opacity-70")}>₹</span>
       {rupees}
@@ -50,10 +50,10 @@ export function Money({
 export function CompactMoney({ paise, size = "lg", className }: { paise: PaiseLike; size?: keyof typeof SIZES; className?: string }) {
   const text = formatINRCompact(paise);
   const match = /^(-?)₹([\d,.]+)(?:\s(L|Cr))?$/.exec(text);
-  if (!match) return <span className={cn("font-sans tabular", SIZES[size], className)}>{text}</span>;
+  if (!match) return <span className={cn("figure", SIZES[size], className)}>{text}</span>;
   const [, minus, figure, unit] = match;
   return (
-    <span className={cn("font-sans whitespace-nowrap tabular", SIZES[size], className)}>
+    <span className={cn("figure whitespace-nowrap", SIZES[size], className)}>
       {minus ? "− " : ""}
       <span className="mr-[0.06em] align-[0.04em] text-[0.62em] font-medium opacity-70">₹</span>
       {figure}

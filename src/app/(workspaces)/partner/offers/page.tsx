@@ -68,13 +68,13 @@ export default async function FinancingOffersPage() {
           ) : (
             <ul className="grid gap-5 md:grid-cols-2">
               {open.map((offer) => (
-                <li key={offer.id} className="relative flex flex-col overflow-hidden rounded-[12px] border border-gold/40 bg-[linear-gradient(180deg,#fcf8ef_0%,#ffffff_55%)]">
+                <li key={offer.id} className="relative flex flex-col overflow-hidden rounded-xl border border-gold/40 bg-[linear-gradient(180deg,#fcf8ef_0%,#ffffff_55%)]">
                   <div aria-hidden="true" className="h-[3px] bg-linear-to-r from-gold/30 via-gold to-gold/30" />
                   <div className="flex flex-1 flex-col p-5 sm:p-6">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-[#8b6f3e] uppercase">{offer.reference}</p>
-                        <Link href={`/partner/invoices/${offer.invoiceId}`} className="mt-1.5 block font-display text-[1.375rem] leading-tight font-semibold text-navy hover:underline">
+                        <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-700 uppercase">{offer.reference}</p>
+                        <Link href={`/partner/invoices/${offer.invoiceId}`} className="mt-1.5 block font-display text-[1.375rem] leading-tight font-medium text-navy hover:underline">
                           {offer.invoice.invoiceNumber}
                         </Link>
                         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -89,7 +89,7 @@ export default async function FinancingOffersPage() {
                       <Money paise={offer.netPayablePaise} size="xl" className="mt-2 block font-medium text-navy" />
                     </div>
 
-                    <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-[#ece6d8] pt-4 text-[0.8125rem]">
+                    <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-hairline pt-4 text-[0.8125rem]">
                       <div>
                         <dt className="text-xs text-muted-foreground">Builder-approved</dt>
                         <dd className="mt-0.5 font-medium text-navy">
@@ -98,7 +98,7 @@ export default async function FinancingOffersPage() {
                       </div>
                       <div>
                         <dt className="text-xs text-muted-foreground">Discount · {formatBps(offer.discountRateBps)}</dt>
-                        <dd className="mt-0.5 font-medium text-[#93342a]">
+                        <dd className="mt-0.5 font-medium text-danger">
                           <Money paise={offer.discountAmountPaise} sign="minus" />
                         </dd>
                       </div>
@@ -106,7 +106,7 @@ export default async function FinancingOffersPage() {
 
                     <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-6">
                       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <CalendarClock className="size-3.5 text-[#8b6f3e]" />
+                        <CalendarClock className="size-3.5 text-gold-700" />
                         Valid until {formatDateTime(offer.validUntil)}
                       </p>
                       <OfferLauncher invoice={offerInvoice(offer.invoice)} offer={toOfferDto(offer)} label="Review & accept" variant="success" />
@@ -120,7 +120,7 @@ export default async function FinancingOffersPage() {
 
         <Panel eyebrow="Ready now" title="Eligible invoices" description="Builder-approved invoices you can discount today" bodyClassName="pb-0">
           {previews.length === 0 ? (
-            <div className="-mx-5 border-t border-[#ece6d8] sm:-mx-7">
+            <div className="-mx-5 border-t border-hairline sm:-mx-7">
               <EmptyNote
                 compact
                 icon={Sparkles}
@@ -178,7 +178,7 @@ export default async function FinancingOffersPage() {
 
         <Panel eyebrow="Record" title="Offer history" description="Accepted, expired and superseded offers" bodyClassName="pb-0">
           {history.length === 0 ? (
-            <div className="-mx-5 border-t border-[#ece6d8] sm:-mx-7">
+            <div className="-mx-5 border-t border-hairline sm:-mx-7">
               <EmptyNote compact icon={History} title="No offer history yet" description="Accepted, expired and withdrawn offers will be listed here." />
             </div>
           ) : (

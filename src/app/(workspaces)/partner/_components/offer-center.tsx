@@ -126,7 +126,6 @@ export function OfferLauncher({
       onClick={() => void launch(invoice, offer)}
       className={cn(
         "font-semibold tracking-[0.08em] uppercase",
-        variant === "gold" && "bg-linear-to-b from-[#d2b77f] to-gold text-navy shadow-[0_1px_0_rgba(255,255,255,0.35)_inset,0_8px_20px_-10px_rgba(169,138,82,0.8)] hover:from-gold hover:to-gold-600 hover:text-navy-900",
         size === "sm" && "text-[0.6875rem]",
         size === "lg" && "h-11 px-6 text-[0.75rem]",
         size === "xs" && "h-7 px-2.5 text-[0.625rem] tracking-[0.06em]",
@@ -157,7 +156,7 @@ function StepIndicator({ current, tone = "light" }: { current: 1 | 2 | 3; tone?:
                   "flex size-6 items-center justify-center rounded-full text-[0.6875rem] font-semibold tabular transition-colors",
                   done && "bg-heritage text-white",
                   active && (tone === "dark" ? "bg-gold text-navy ring-4 ring-gold/20" : "bg-navy text-gold ring-4 ring-navy/10"),
-                  !done && !active && (tone === "dark" ? "border border-white/25 text-white/50" : "border border-[#d9d2c2] text-muted-foreground"),
+                  !done && !active && (tone === "dark" ? "border border-white/25 text-white/50" : "border border-ivory-300 text-muted-foreground"),
                 )}
               >
                 {done ? <Check className="size-3.5" strokeWidth={2.5} /> : step}
@@ -173,7 +172,7 @@ function StepIndicator({ current, tone = "light" }: { current: 1 | 2 | 3; tone?:
               </span>
             </span>
             {step < STEPS.length && (
-              <span aria-hidden="true" className={cn("h-px w-6 sm:w-10", tone === "dark" ? (done ? "bg-gold/70" : "bg-white/20") : done ? "bg-heritage/50" : "bg-[#d9d2c2]")} />
+              <span aria-hidden="true" className={cn("h-px w-6 sm:w-10", tone === "dark" ? (done ? "bg-gold/70" : "bg-white/20") : done ? "bg-heritage/50" : "bg-ivory-300")} />
             )}
           </li>
         );
@@ -267,19 +266,19 @@ function OfferDialog({
     >
       <DialogContent
         className={cn(
-          "max-h-[94vh] gap-0 overflow-y-auto rounded-[14px] border-0 bg-card p-0 shadow-[0_40px_80px_-30px_rgba(13,30,48,0.55)] ring-1 ring-navy/10 sm:max-w-[58rem]",
+          "max-h-[94vh] gap-0 overflow-y-auto rounded-xl border-0 bg-card p-0 shadow-overlay ring-1 ring-navy/10 sm:max-w-[58rem]",
           "[&>[data-slot=dialog-close]]:top-4 [&>[data-slot=dialog-close]]:right-4 [&>[data-slot=dialog-close]]:text-white/70 [&>[data-slot=dialog-close]]:hover:bg-white/10 [&>[data-slot=dialog-close]]:hover:text-white",
         )}
       >
         <div className="relative overflow-hidden bg-navy px-6 pt-6 pb-5 text-white sm:px-9 sm:pt-7">
-          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(90%_160%_at_0%_0%,#21405f_0%,#142b43_50%,#0d1e30_100%)]" />
+          <div aria-hidden="true" className="surface-navy absolute inset-0 rounded-none border-0 shadow-none" />
           <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-gold/60 to-transparent" />
           <div className="relative pr-8">
             <p className="flex items-center gap-3 text-[0.625rem] font-semibold tracking-[0.22em] text-gold uppercase">
               <span aria-hidden="true" className="h-px w-6 bg-gold/70" />
               Early payment · {offer.reference}
             </p>
-            <DialogTitle className="mt-2.5 font-display text-[1.75rem] leading-tight font-semibold text-white sm:text-[2rem]">
+            <DialogTitle className="mt-2.5 font-display text-[1.75rem] leading-tight font-medium text-white sm:text-[2rem]">
               {phase.kind === "accepted" ? "Submitted to Veefin" : "Get discounted amount"}
             </DialogTitle>
             <DialogDescription className="mt-1 text-[0.8125rem] text-white/60">
@@ -313,7 +312,7 @@ function OfferDialog({
                   <StatementLine
                     label={
                       <>
-                        Agreed discount <span className="ml-1 rounded-sm bg-[#f9ebe8] px-1.5 py-px text-[0.6875rem] font-semibold text-[#93342a] tabular">{formatBps(offer.discountRateBps)}</span>
+                        Agreed discount <span className="ml-1 rounded-sm bg-danger-soft px-1.5 py-px text-[0.6875rem] font-semibold text-danger tabular">{formatBps(offer.discountRateBps)}</span>
                       </>
                     }
                     hint="Deducted upfront by the financier"
@@ -332,9 +331,9 @@ function OfferDialog({
             </div>
 
             <div className="px-6 pt-7 pb-5 sm:px-9">
-              <div className="rounded-[10px] border border-[#ece6d8] bg-[#faf8f3] px-5 py-5">
+              <div className="rounded-lg border border-hairline bg-ivory-100 px-5 py-5">
                 <p className="flex items-center gap-2 text-[0.625rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
-                  <Landmark className="size-3.5 text-[#8b6f3e]" />
+                  <Landmark className="size-3.5 text-gold-700" />
                   Terms &amp; validity
                 </p>
                 <dl className="mt-4 grid gap-x-8 gap-y-4 text-[0.8125rem] sm:grid-cols-3">
@@ -350,12 +349,12 @@ function OfferDialog({
                   </div>
                   <div className="min-w-0">
                     <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <CalendarClock className="size-3.5 text-[#8b6f3e]" />
+                      <CalendarClock className="size-3.5 text-gold-700" />
                       Valid until
                     </dt>
                     <dd className="mt-0.5 flex flex-wrap items-center gap-2 font-medium text-navy">
                       {formatDateTime(offer.validUntil)}
-                      <span className="rounded-full bg-gold-100 px-2 py-px text-[0.6875rem] font-semibold text-[#7d6235]">{daysLeft(offer.validUntil, openedAt)}</span>
+                      <span className="rounded-full bg-gold-100 px-2 py-px text-[0.6875rem] font-semibold text-gold-700">{daysLeft(offer.validUntil, openedAt)}</span>
                     </dd>
                   </div>
                   <div className="sm:col-span-3">
@@ -372,8 +371,8 @@ function OfferDialog({
               <label
                 htmlFor={`consent-${offer.id}`}
                 className={cn(
-                  "flex cursor-pointer items-start gap-3.5 rounded-[10px] border p-4 transition-colors sm:p-5",
-                  consent ? "border-heritage/35 bg-[#eef4f0]" : "border-[#e6e0d2] bg-card hover:border-gold/50 hover:bg-[#fdfbf6]",
+                  "flex cursor-pointer items-start gap-3.5 rounded-lg border p-4 transition-colors sm:p-5",
+                  consent ? "border-heritage/35 bg-heritage-50" : "border-border bg-card hover:border-gold/50 hover:bg-ivory-50",
                 )}
               >
                 <Checkbox
@@ -398,7 +397,7 @@ function OfferDialog({
               </label>
 
               {error && (
-                <div role="alert" className="mt-4 flex flex-col gap-3 rounded-[10px] border border-[#ecc6bf] bg-[#f9ebe8] p-4 text-sm text-[#93342a] sm:flex-row sm:items-center sm:justify-between">
+                <div role="alert" className="mt-4 flex flex-col gap-3 rounded-lg border border-danger/25 bg-danger-soft p-4 text-sm text-danger sm:flex-row sm:items-center sm:justify-between">
                   <p className="flex items-start gap-2">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                     {error.message}
@@ -413,7 +412,7 @@ function OfferDialog({
               )}
             </div>
 
-            <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-3 border-t border-[#ece6d8] bg-[#faf8f3]/95 px-6 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-9">
+            <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-3 border-t border-hairline bg-ivory-100/95 px-6 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-9">
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Lock className="size-3.5" />
                 Demo transaction — no real funds move.
@@ -443,10 +442,10 @@ function OfferDialog({
 
 function StatementLine({ label, hint, value, deduct, muted }: { label: ReactNode; hint?: string; value: ReactNode; deduct?: boolean; muted?: boolean }) {
   return (
-    <div className="border-b border-[#f0ebe0] py-3 last:border-b-0">
+    <div className="border-b border-hairline py-3 last:border-b-0">
       <div className="flex items-baseline justify-between gap-4">
         <span className={cn("text-sm", muted ? "text-muted-foreground" : "text-slate-ink")}>{label}</span>
-        <span className={cn("text-sm font-medium tabular", deduct ? "text-[#93342a]" : muted ? "text-muted-foreground" : "text-navy")}>{value}</span>
+        <span className={cn("text-sm font-medium tabular", deduct ? "text-danger" : muted ? "text-muted-foreground" : "text-navy")}>{value}</span>
       </div>
       {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
     </div>
@@ -456,13 +455,13 @@ function StatementLine({ label, hint, value, deduct, muted }: { label: ReactNode
 /** Focal figure: champagne-framed net receivable with the paise de-emphasised. */
 function NetReceivable({ offer, keepBps }: { offer: OfferDto; keepBps: number }) {
   return (
-    <div className="relative flex h-full overflow-hidden rounded-[12px] border border-gold/45 bg-[linear-gradient(180deg,#fcf8ef_0%,#ffffff_70%)] p-1.5 shadow-[0_24px_50px_-34px_rgba(169,138,82,0.75)]">
+    <div className="relative flex h-full overflow-hidden rounded-xl border border-gold/45 bg-[linear-gradient(180deg,#fcf8ef_0%,#ffffff_70%)] p-1.5 shadow-[0_24px_50px_-34px_rgba(169,138,82,0.75)]">
       <div className="relative flex w-full flex-col justify-center rounded-[9px] border border-gold/25 px-5 pt-7 pb-6 text-center sm:px-8">
         <Corner className="top-2 left-2" />
         <Corner className="top-2 right-2 rotate-90" />
         <Corner className="right-2 bottom-2 rotate-180" />
         <Corner className="bottom-2 left-2 -rotate-90" />
-        <p className="text-[0.625rem] font-semibold tracking-[0.24em] text-[#8b6f3e] uppercase">Net receivable</p>
+        <p className="text-[0.625rem] font-semibold tracking-[0.24em] text-gold-700 uppercase">Net receivable</p>
         <Money paise={offer.netPayablePaise} size="display" className="mt-4 block font-normal text-navy" />
         <p className="mt-3 text-xs text-muted-foreground">Paid to your registered bank account on approval</p>
         <div aria-hidden="true" className="mx-auto mt-5 flex max-w-[14rem] items-center gap-3">
@@ -527,7 +526,7 @@ function AcceptedState({
             </span>
             <div>
               <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-heritage uppercase">Request submitted</p>
-              <p className="mt-1 inline-flex items-center gap-2 rounded-full border border-[#efd9ae] bg-[#fbf3e3] px-3 py-1 text-xs font-medium text-[#8a5a12]">
+              <p className="mt-1 inline-flex items-center gap-2 rounded-full border border-warning/25 bg-warning-soft px-3 py-1 text-xs font-medium text-warning">
                 <span aria-hidden="true" className="size-1.5 animate-pulse rounded-full bg-[#c48a2c]" />
                 Pending approval
               </p>
@@ -541,16 +540,16 @@ function AcceptedState({
           <ol className="mt-7 grid gap-0">
             {next.map((step, i) => (
               <li key={step.title} className="relative flex gap-4 pb-5 last:pb-0">
-                {i < next.length - 1 && <span aria-hidden="true" className="absolute top-6 bottom-0 left-[11px] w-px bg-[#e3ddcf]" />}
+                {i < next.length - 1 && <span aria-hidden="true" className="absolute top-6 bottom-0 left-[11px] w-px bg-ivory-300" />}
                 <span
                   className={cn(
                     "relative flex size-6 shrink-0 items-center justify-center rounded-full",
                     step.state === "done" && "bg-heritage text-white",
-                    step.state === "current" && "border border-[#c48a2c] bg-[#fbf3e3]",
-                    step.state === "upcoming" && "border border-[#d9d2c2] bg-card",
+                    step.state === "current" && "border border-[#c48a2c] bg-warning-soft",
+                    step.state === "upcoming" && "border border-ivory-300 bg-card",
                   )}
                 >
-                  {step.state === "done" ? <Check className="size-3.5" strokeWidth={2.5} /> : <span className={cn("size-1.5 rounded-full", step.state === "current" ? "bg-[#c48a2c]" : "bg-[#cfc6b2]")} />}
+                  {step.state === "done" ? <Check className="size-3.5" strokeWidth={2.5} /> : <span className={cn("size-1.5 rounded-full", step.state === "current" ? "bg-[#c48a2c]" : "bg-ivory-400")} />}
                 </span>
                 <div className="pt-0.5">
                   <p className={cn("text-sm font-medium", step.state === "upcoming" ? "text-muted-foreground" : "text-navy")}>{step.title}</p>
@@ -561,12 +560,12 @@ function AcceptedState({
           </ol>
         </div>
 
-        <div className="relative overflow-hidden rounded-[12px] border border-[#e6e0d2] bg-[#faf8f3]">
+        <div className="relative overflow-hidden rounded-xl border border-border bg-ivory-100">
           <div aria-hidden="true" className="h-1 bg-linear-to-r from-gold/40 via-gold to-gold/40" />
           <div className="px-6 py-6">
             <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">Request reference</p>
             <p className="mt-1.5 text-lg font-semibold tracking-[0.04em] text-navy tabular">{reference}</p>
-            <div aria-hidden="true" className="my-5 border-t border-dashed border-[#d9d2c2]" />
+            <div aria-hidden="true" className="my-5 border-t border-dashed border-ivory-300" />
             <dl className="grid gap-3 text-[0.8125rem]">
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Invoice</dt>
@@ -578,20 +577,20 @@ function AcceptedState({
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Discount · {formatBps(offer.discountRateBps)}</dt>
-                <dd className="font-medium text-[#93342a]">
+                <dd className="font-medium text-danger">
                   <Money paise={offer.discountAmountPaise} sign="minus" />
                 </dd>
               </div>
             </dl>
-            <div className="mt-5 border-t border-[#e6e0d2] pt-4">
-              <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-[#8b6f3e] uppercase">Net receivable</p>
+            <div className="mt-5 border-t border-border pt-4">
+              <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-700 uppercase">Net receivable</p>
               <Money paise={offer.netPayablePaise} size="xl" className="mt-2 block font-medium text-heritage" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-t border-[#ece6d8] bg-[#faf8f3]/95 px-6 py-4 backdrop-blur sm:flex-row sm:justify-end sm:px-9">
+      <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-t border-hairline bg-ivory-100/95 px-6 py-4 backdrop-blur sm:flex-row sm:justify-end sm:px-9">
         <Button type="button" variant="outline" onClick={onClose} className="h-11 bg-card px-5">
           Close
         </Button>

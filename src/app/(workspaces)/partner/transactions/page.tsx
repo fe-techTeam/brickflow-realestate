@@ -94,7 +94,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
           />
         </TableToolbar>
         {rows.length === 0 ? (
-          <div className="-mx-5 border-t border-[#ece6d8] sm:-mx-7">
+          <div className="-mx-5 border-t border-hairline sm:-mx-7">
             {all.length === 0 ? (
               <EmptyNote
                 icon={Receipt}
@@ -112,7 +112,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
           </div>
         ) : (
           <>
-            <ul className="-mx-5 divide-y divide-[#f0ebe0] border-t border-[#ece6d8] md:hidden">
+            <ul className="-mx-5 divide-y divide-hairline border-t border-hairline md:hidden">
               {rows.map((r) => (
                 <li key={r.id}>
                   <Link href={`/partner/invoices/${r.invoice.id}`} className="flex items-start gap-3 px-5 py-4">
@@ -158,7 +158,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                       <Money paise={r.approvedAmountPaise} />
                     </Td>
                     <Td align="right">
-                      <Money paise={r.discountAmountPaise} sign="minus" className="text-[#93342a]" />
+                      <Money paise={r.discountAmountPaise} sign="minus" className="text-danger" />
                       <p className="mt-0.5 text-xs text-muted-foreground">{formatBps(r.discountRateBps)}</p>
                     </Td>
                     <Td align="right">

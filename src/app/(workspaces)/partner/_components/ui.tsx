@@ -1,55 +1,12 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, FlaskConical, type LucideIcon } from "lucide-react";
+import { FlaskConical, type LucideIcon } from "lucide-react";
+import { PageHeader } from "@/components/common/page-header";
 import { DISBURSEMENT_STATUS, FINANCING_STATUS, INVOICE_STATUS, OFFER_STATUS, RECORD_STATUS, SETTLEMENT_STATUS, type StatusMeta, type StatusTone } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
-/** Editorial page heading: gold eyebrow with rule, serif title, Inter context line. */
-export function PageIntro({
-  eyebrow,
-  title,
-  description,
-  actions,
-  back,
-  aside,
-  className,
-}: {
-  eyebrow?: ReactNode;
-  title: ReactNode;
-  description?: ReactNode;
-  actions?: ReactNode;
-  back?: { href: string; label: string };
-  aside?: ReactNode;
-  className?: string;
-}) {
-  return (
-    <header className={cn("mb-9 animate-fade-up", className)}>
-      {back && (
-        <Link
-          href={back.href}
-          className="mb-5 inline-flex items-center gap-1.5 text-[0.75rem] font-medium tracking-wide text-muted-foreground transition-colors hover:text-navy"
-        >
-          <ChevronLeft className="size-3.5" />
-          {back.label}
-        </Link>
-      )}
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
-          {eyebrow && (
-            <p className="mb-3 flex items-center gap-3 text-[0.6875rem] font-semibold tracking-[0.2em] text-[#8b6f3e] uppercase">
-              <span aria-hidden="true" className="h-px w-7 bg-gold" />
-              {eyebrow}
-            </p>
-          )}
-          <h1 className="text-[2.25rem] leading-[1.04] font-semibold tracking-[-0.01em] text-balance sm:text-[2.875rem]">{title}</h1>
-          {description && <p className="mt-3 max-w-2xl text-[0.9375rem] leading-relaxed text-pretty text-muted-foreground">{description}</p>}
-        </div>
-        {aside}
-        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2.5">{actions}</div>}
-      </div>
-    </header>
-  );
-}
+/** Editorial page heading; the shared PageHeader under the partner workspace's name. */
+export const PageIntro = PageHeader;
 
 /** White surface with an optional serif header. The partner workspace's primary container. */
 export function Panel({
@@ -75,15 +32,15 @@ export function Panel({
     <section
       id={id}
       className={cn(
-        "animate-fade-up overflow-hidden rounded-[12px] border border-[#e6e0d2] bg-card shadow-[0_1px_0_rgba(20,43,67,0.03),0_18px_40px_-28px_rgba(20,43,67,0.22)]",
+        "surface animate-fade-up overflow-hidden",
         className,
       )}
     >
       {(title || actions || eyebrow) && (
         <div className="flex flex-col gap-3 px-5 pt-5 pb-4 sm:flex-row sm:items-end sm:justify-between sm:px-7 sm:pt-6">
           <div className="min-w-0">
-            {eyebrow && <p className="mb-1.5 text-[0.625rem] font-semibold tracking-[0.2em] text-[#8b6f3e] uppercase">{eyebrow}</p>}
-            {title && <h2 className="font-display text-[1.5rem] leading-tight font-semibold">{title}</h2>}
+            {eyebrow && <p className="mb-1.5 text-[0.625rem] font-semibold tracking-[0.2em] text-gold-700 uppercase">{eyebrow}</p>}
+            {title && <h2 className="font-display text-[1.375rem] leading-tight font-medium">{title}</h2>}
             {description && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{description}</p>}
           </div>
           {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -115,7 +72,7 @@ export function MetricStrip({ items, className }: { items: Metric[]; className?:
   return (
     <div
       className={cn(
-        "grid animate-fade-up grid-cols-2 overflow-hidden rounded-[12px] border border-[#e6e0d2] bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.25)]",
+        "surface grid animate-fade-up grid-cols-2 overflow-hidden",
         cols,
         className,
       )}
@@ -132,7 +89,7 @@ export function MetricStrip({ items, className }: { items: Metric[]; className?:
           </>
         );
         const cell = cn(
-          "block min-w-0 border-[#ece6d8] px-5 py-5 sm:px-6 sm:py-6",
+          "block min-w-0 border-hairline px-5 py-5 sm:px-6 sm:py-6",
           i % 2 === 1 && "border-l",
           i >= 2 && "border-t lg:border-t-0",
           i > 0 && "lg:border-l",
@@ -169,11 +126,11 @@ export function LedgerLine({
     <div className={cn("py-3", className)}>
       <div className="flex items-baseline gap-3">
         <span className={cn("text-sm", tone === "strong" ? "font-semibold text-navy" : tone === "muted" ? "text-muted-foreground" : "text-slate-ink")}>{label}</span>
-        <span aria-hidden="true" className="min-w-6 flex-1 translate-y-[-3px] border-b border-dotted border-[#cfc6b2]" />
+        <span aria-hidden="true" className="min-w-6 flex-1 translate-y-[-3px] border-b border-dotted border-ivory-400" />
         <span
           className={cn(
             "text-right text-sm font-medium tabular",
-            tone === "deduct" ? "text-[#93342a]" : tone === "muted" ? "text-muted-foreground" : "text-navy",
+            tone === "deduct" ? "text-danger" : tone === "muted" ? "text-muted-foreground" : "text-navy",
             tone === "strong" && "font-semibold",
           )}
         >
@@ -210,10 +167,10 @@ const MARK_TEXT: Record<StatusTone, string> = {
   neutral: "text-muted-foreground",
   info: "text-[#25507a]",
   navy: "text-navy",
-  warning: "text-[#8a5a12]",
+  warning: "text-warning",
   success: "text-heritage",
-  danger: "text-[#93342a]",
-  gold: "text-[#8b6f3e]",
+  danger: "text-danger",
+  gold: "text-gold-700",
 };
 
 export function statusMeta<K extends keyof StatusRegistry>(kind: K, status: keyof StatusRegistry[K]): StatusMeta {
@@ -232,13 +189,13 @@ export function StatusMark<K extends keyof StatusRegistry>({ kind, status, class
 }
 
 const PILL: Record<StatusTone, string> = {
-  neutral: "border-[#ddd6c7] bg-[#f6f3ec] text-slate-ink/80",
+  neutral: "border-[#ddd6c7] bg-ivory-100 text-slate-ink/80",
   info: "border-[#c9d9ea] bg-[#eef3f8] text-[#25507a]",
   navy: "border-navy/15 bg-navy/[0.05] text-navy",
-  warning: "border-[#efd9ae] bg-[#fbf3e3] text-[#8a5a12]",
-  success: "border-heritage/20 bg-[#e8f0eb] text-heritage",
-  danger: "border-[#ecc6bf] bg-[#f9ebe8] text-[#93342a]",
-  gold: "border-gold/35 bg-gold-100/70 text-[#7d6235]",
+  warning: "border-warning/25 bg-warning-soft text-warning",
+  success: "border-heritage/20 bg-heritage-50 text-heritage",
+  danger: "border-danger/25 bg-danger-soft text-danger",
+  gold: "border-gold/35 bg-gold-100/70 text-gold-700",
 };
 
 /** Labelled status pill for page headers, e.g. "Invoice · Accepted". */
@@ -257,7 +214,7 @@ export function SimulatedTag({ className, label = "Simulated payment" }: { class
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold-100/50 px-2.5 py-0.5 text-[0.625rem] font-semibold tracking-[0.12em] whitespace-nowrap text-[#7d6235] uppercase",
+        "inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold-100/50 px-2.5 py-0.5 text-[0.625rem] font-semibold tracking-[0.12em] whitespace-nowrap text-gold-700 uppercase",
         className,
       )}
     >
@@ -321,7 +278,7 @@ export function EmptyNote({
           </span>
         )}
       </div>
-      <p className="font-display text-[1.375rem] leading-tight font-semibold text-navy">{title}</p>
+      <p className="font-display text-[1.375rem] leading-tight font-medium text-navy">{title}</p>
       {description && <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>}
       {action && <div className="mt-6">{action}</div>}
     </div>
@@ -358,11 +315,11 @@ export interface ChronicleEntry {
 }
 
 const CHRONICLE_TONE: Record<NonNullable<ChronicleEntry["tone"]>, string> = {
-  default: "border-[#d9d2c2] bg-card text-navy",
+  default: "border-ivory-300 bg-card text-navy",
   success: "border-heritage bg-heritage text-white",
   danger: "border-[#b5473a] bg-[#b5473a] text-white",
-  warning: "border-[#c48a2c] bg-[#fbf3e3] text-[#8a5a12]",
-  gold: "border-gold bg-gold-100 text-[#7d6235]",
+  warning: "border-[#c48a2c] bg-warning-soft text-warning",
+  gold: "border-gold bg-gold-100 text-gold-700",
 };
 
 /** Vertical event history with toned markers and quoted notes. */
@@ -385,7 +342,7 @@ export function Chronicle({ entries, className }: { entries: ChronicleEntry[]; c
                 {entry.at}
               </p>
               {entry.note && (
-                <blockquote className="mt-2.5 border-l-2 border-gold/50 bg-[#faf8f3] py-2 pr-3 pl-3.5 text-[0.8125rem] leading-relaxed text-slate-ink italic">{entry.note}</blockquote>
+                <blockquote className="mt-2.5 border-l-2 border-gold/50 bg-ivory-100 py-2 pr-3 pl-3.5 text-[0.8125rem] leading-relaxed text-slate-ink italic">{entry.note}</blockquote>
               )}
             </div>
           </li>

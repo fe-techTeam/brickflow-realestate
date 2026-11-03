@@ -92,7 +92,7 @@ export default async function PartnerOverviewPage() {
               description="Clarification requests and early payment opportunities will appear here."
             />
           ) : (
-            <ul className="-mx-5 divide-y divide-[#f0ebe0] border-t border-[#ece6d8] sm:-mx-7">
+            <ul className="-mx-5 divide-y divide-hairline border-t border-hairline sm:-mx-7">
               {overview.clarifications.map((invoice) => (
                 <QueueItem
                   key={invoice.id}
@@ -138,8 +138,8 @@ export default async function PartnerOverviewPage() {
               })}
             </ul>
           )}
-          <p className="-mx-5 mt-auto flex items-start gap-2.5 border-t border-[#ece6d8] bg-[#faf8f3] px-5 py-4 text-xs leading-relaxed text-muted-foreground sm:-mx-7 sm:px-7">
-            <BadgePercent className="mt-px size-3.5 shrink-0 text-[#8b6f3e]" />
+          <p className="-mx-5 mt-auto flex items-start gap-2.5 border-t border-hairline bg-ivory-100 px-5 py-4 text-xs leading-relaxed text-muted-foreground sm:-mx-7 sm:px-7">
+            <BadgePercent className="mt-px size-3.5 shrink-0 text-gold-700" />
             <span>
               Early payment is priced at the fixed rate agreed between Veefin and each builder, with no other charges.{" "}
               <Link href="/partner/offers" className="font-medium whitespace-nowrap text-navy hover:underline">
@@ -182,7 +182,7 @@ export default async function PartnerOverviewPage() {
             />
           ) : (
             <>
-              <ul className="-mx-5 divide-y divide-[#f0ebe0] border-t border-[#ece6d8] md:hidden">
+              <ul className="-mx-5 divide-y divide-hairline border-t border-hairline md:hidden">
                 {overview.recentInvoices.map((invoice) => (
                   <li key={invoice.id}>
                     <Link href={`/partner/invoices/${invoice.id}`} className="block px-5 py-4 active:bg-ivory/60">
@@ -244,10 +244,10 @@ export default async function PartnerOverviewPage() {
           {overview.recentRequests.length === 0 ? (
             <EmptyNote compact icon={BadgePercent} title="No transactions yet" description="Accepted early payment offers are tracked here through approval and payout." />
           ) : (
-            <ul className="-mx-5 divide-y divide-[#f0ebe0] border-t border-[#ece6d8] sm:-mx-7">
+            <ul className="-mx-5 divide-y divide-hairline border-t border-hairline sm:-mx-7">
               {overview.recentRequests.map((request) => (
                 <li key={request.id}>
-                  <Link href={`/partner/invoices/${request.invoice.id}`} className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-[#fbf9f4] sm:px-7">
+                  <Link href={`/partner/invoices/${request.invoice.id}`} className="group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-ivory-50 sm:px-7">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-navy">{request.invoice.invoiceNumber}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{request.reference}</p>
@@ -314,8 +314,7 @@ function PortfolioHero({ overview }: { overview: Overview }) {
   ];
 
   return (
-    <section className="relative isolate animate-fade-up overflow-hidden rounded-[14px] bg-navy text-white shadow-[0_30px_60px_-35px_rgba(13,30,48,0.7)]">
-      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(120%_140%_at_0%_0%,#1f3d5c_0%,#142b43_45%,#0d1e30_100%)]" />
+    <section className="surface-navy relative isolate animate-fade-up overflow-hidden">
       <FacadePattern className="inset-y-0 right-0 -z-10 h-full w-[70%] text-gold/[0.13]" />
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-gold/60 to-transparent" />
 
@@ -398,9 +397,9 @@ function PortfolioHero({ overview }: { overview: Overview }) {
 }
 
 const QUEUE_TONE = {
-  warning: { ring: "bg-[#fbf3e3] text-[#8a5a12] ring-[#efd9ae]", kicker: "text-[#8a5a12]" },
-  gold: { ring: "bg-gold-100/70 text-[#7d6235] ring-gold/40", kicker: "text-[#8b6f3e]" },
-  heritage: { ring: "bg-[#e8f0eb] text-heritage ring-heritage/20", kicker: "text-heritage" },
+  warning: { ring: "bg-warning-soft text-warning ring-warning/25", kicker: "text-warning" },
+  gold: { ring: "bg-gold-100/70 text-gold-700 ring-gold/40", kicker: "text-gold-700" },
+  heritage: { ring: "bg-heritage-50 text-heritage ring-heritage/20", kicker: "text-heritage" },
 } as const;
 
 function QueueItem({

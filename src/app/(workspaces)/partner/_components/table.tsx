@@ -24,7 +24,7 @@ export function Th({ children, align = "left", className }: { children?: ReactNo
     <th
       scope="col"
       className={cn(
-        "border-y border-[#ece6d8] bg-[#faf8f3] px-4 py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
+        "border-y border-hairline bg-ivory-100 px-4 py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
         edge,
         align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left",
         className,
@@ -39,7 +39,7 @@ export function Td({ children, align = "left", className }: { children?: ReactNo
   return (
     <td
       className={cn(
-        "border-b border-[#f0ebe0] px-4 py-4 align-middle text-slate-ink",
+        "border-b border-hairline px-4 py-4 align-middle text-slate-ink",
         edge,
         align === "right" && "text-right tabular",
         align === "center" && "text-center",
@@ -52,7 +52,7 @@ export function Td({ children, align = "left", className }: { children?: ReactNo
 }
 
 export function Tr({ children, className }: { children: ReactNode; className?: string }) {
-  return <tr className={cn("group/row transition-colors last:[&>td]:border-b-0 hover:bg-[#fbf9f4]", className)}>{children}</tr>;
+  return <tr className={cn("group/row transition-colors last:[&>td]:border-b-0 hover:bg-ivory-50", className)}>{children}</tr>;
 }
 
 /** Sortable header that toggles ?sort and &dir while preserving other params. */
@@ -111,5 +111,5 @@ export function RefCell({ href, primary, secondary }: { href?: string; primary: 
 
 /** Toolbar strip that sits between a panel header and its table. */
 export function TableToolbar({ children }: { children: ReactNode }) {
-  return <div className="-mx-5 border-t border-[#ece6d8] px-5 py-4 sm:-mx-7 sm:px-7">{children}</div>;
+  return <div className="-mx-5 border-t border-hairline px-5 py-4 sm:-mx-7 sm:px-7">{children}</div>;
 }

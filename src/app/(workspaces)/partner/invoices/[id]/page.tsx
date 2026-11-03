@@ -119,8 +119,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <aside className="flex min-w-0 flex-col gap-6">
           {!request &&
             (eligibility.eligible && eligibility.programme ? (
-              <section className="relative isolate animate-fade-up overflow-hidden rounded-[14px] bg-navy p-6 text-white shadow-[0_24px_50px_-30px_rgba(13,30,48,0.7)] sm:p-7">
-                <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(120%_120%_at_0%_0%,#21405f_0%,#142b43_55%,#0d1e30_100%)]" />
+              <section className="surface-navy relative isolate animate-fade-up overflow-hidden p-6 sm:p-7">
                 <FacadePattern className="inset-y-0 right-0 -z-10 h-full w-full text-gold/[0.12]" />
                 <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-gold uppercase">{openOffer ? `Open offer · ${openOffer.reference}` : "Eligible for early payment"}</p>
                 <p className="mt-4 text-xs text-white/55">Receive now</p>
@@ -149,7 +148,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             ) : (
               <Panel eyebrow="Early payment" bodyClassName="pt-1">
                 <div className="flex items-start gap-3">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f6f3ec] text-muted-foreground ring-1 ring-[#e6e0d2]">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ivory-100 text-muted-foreground ring-1 ring-border">
                     <BadgePercent className="size-4" strokeWidth={1.75} />
                   </span>
                   <div>
@@ -163,12 +162,12 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <Panel eyebrow="Source document" title="Invoice PDF" bodyClassName="pb-5">
             <ul className="grid gap-3">
               {invoice.documents.map((doc, index) => (
-                <li key={doc.id} className={cn("rounded-[10px] border p-4", index === 0 ? "border-[#e6e0d2] bg-[#faf8f3]" : "border-dashed border-[#e6e0d2]")}>
+                <li key={doc.id} className={cn("rounded-lg border p-4", index === 0 ? "border-border bg-ivory-100" : "border-dashed border-border")}>
                   <div className="flex items-start gap-3.5">
-                    <span className="relative flex h-12 w-10 shrink-0 flex-col items-center justify-end rounded-[4px] border border-[#d9d2c2] bg-card pb-1.5 shadow-[0_2px_0_#ece6d8]">
-                      <span aria-hidden="true" className="absolute top-0 right-0 size-2.5 rounded-bl-[3px] border-b border-l border-[#d9d2c2] bg-[#f6f3ec]" />
+                    <span className="relative flex h-12 w-10 shrink-0 flex-col items-center justify-end rounded-[4px] border border-ivory-300 bg-card pb-1.5 shadow-[0_2px_0_#ece6d8]">
+                      <span aria-hidden="true" className="absolute top-0 right-0 size-2.5 rounded-bl-[3px] border-b border-l border-ivory-300 bg-ivory-100" />
                       <FileText className="mb-0.5 size-3.5 text-navy/60" strokeWidth={1.5} />
-                      <span className="text-[0.5rem] font-bold tracking-wider text-[#93342a]">PDF</span>
+                      <span className="text-[0.5rem] font-bold tracking-wider text-danger">PDF</span>
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-navy" title={doc.fileName}>
@@ -216,7 +215,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
           {invoice.offers.length > 0 && (
             <Panel eyebrow="Pricing" title="Offer history" bodyClassName="pb-2">
-              <ul className="-mx-5 divide-y divide-[#f0ebe0] border-t border-[#ece6d8] sm:-mx-7">
+              <ul className="-mx-5 divide-y divide-hairline border-t border-hairline sm:-mx-7">
                 {invoice.offers.map((offer) => (
                   <li key={offer.id} className="flex items-start justify-between gap-3 px-5 py-3.5 sm:px-7">
                     <div className="min-w-0">
@@ -235,8 +234,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             </Panel>
           )}
 
-          <div className="flex gap-3 rounded-[12px] border border-dashed border-gold/40 px-5 py-4 text-xs leading-relaxed text-muted-foreground">
-            <FlaskConical className="mt-0.5 size-3.5 shrink-0 text-[#8b6f3e]" />
+          <div className="flex gap-3 rounded-xl border border-dashed border-gold/40 px-5 py-4 text-xs leading-relaxed text-muted-foreground">
+            <FlaskConical className="mt-0.5 size-3.5 shrink-0 text-gold-700" />
             <p>
               <span className="font-semibold text-navy">Demonstration environment.</span> Financing, disbursement and settlement are simulated. No real funds move and
               payment references are generated for demonstration only.
@@ -251,12 +250,12 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 function InvoiceDocument({ invoice, partial }: { invoice: InvoiceDetail; partial: boolean }) {
   const taxable = invoice.gstAmountPaise !== null ? invoice.amountPaise - invoice.gstAmountPaise : null;
   return (
-    <section className="relative animate-fade-up overflow-hidden rounded-[12px] border border-[#e6e0d2] bg-card shadow-[0_18px_40px_-28px_rgba(20,43,67,0.22)]">
+    <section className="relative animate-fade-up overflow-hidden surface">
       <div aria-hidden="true" className="h-[3px] bg-linear-to-r from-navy via-navy-700 to-gold" />
-      <div className="flex flex-col gap-6 border-b border-[#ece6d8] px-5 py-6 sm:flex-row sm:items-start sm:justify-between sm:px-8 sm:py-7">
+      <div className="flex flex-col gap-6 border-b border-hairline px-5 py-6 sm:flex-row sm:items-start sm:justify-between sm:px-8 sm:py-7">
         <div>
-          <Label className="text-[#8b6f3e]">Tax invoice · brokerage services</Label>
-          <p className="mt-2 font-display text-[1.75rem] leading-none font-semibold text-navy">{invoice.invoiceNumber}</p>
+          <Label className="text-gold-700">Tax invoice · brokerage services</Label>
+          <p className="mt-2 font-display text-[1.75rem] leading-none font-medium text-navy">{invoice.invoiceNumber}</p>
           <p className="mt-2 text-xs text-muted-foreground">
             Dated {formatDate(invoice.invoiceDate)} · Submitted {formatDateTime(invoice.submittedAt)}
           </p>
@@ -268,7 +267,7 @@ function InvoiceDocument({ invoice, partial }: { invoice: InvoiceDetail; partial
       </div>
 
       <div className="grid sm:grid-cols-2">
-        <div className="border-b border-[#ece6d8] px-5 py-6 sm:border-r sm:border-b-0 sm:px-8">
+        <div className="border-b border-hairline px-5 py-6 sm:border-r sm:border-b-0 sm:px-8">
           <Label>From</Label>
           <p className="mt-2 font-medium text-navy">{invoice.cp.legalName ?? invoice.cp.name}</p>
           <p className="mt-1 text-xs text-muted-foreground">GSTIN {invoice.cp.gstin ?? "not on file"}</p>
@@ -283,7 +282,7 @@ function InvoiceDocument({ invoice, partial }: { invoice: InvoiceDetail; partial
         </div>
       </div>
 
-      <div className="border-t border-[#ece6d8] bg-[#faf8f3] px-5 py-6 sm:px-8">
+      <div className="border-t border-hairline bg-ivory-100 px-5 py-6 sm:px-8">
         <Facts
           columns={3}
           items={[
@@ -305,7 +304,7 @@ function InvoiceDocument({ invoice, partial }: { invoice: InvoiceDetail; partial
           <div className="mt-1 border-t-[3px] border-double border-navy/20">
             <LedgerLine label="Invoice total" value={<Money paise={invoice.amountPaise} />} tone="strong" />
           </div>
-          <div className={cn("mt-2 flex items-baseline justify-between gap-3 rounded-[8px] px-3 py-2.5", invoice.approvedAmountPaise !== null ? "bg-[#e8f0eb]" : "bg-[#f6f3ec]")}>
+          <div className={cn("mt-2 flex items-baseline justify-between gap-3 rounded-[8px] px-3 py-2.5", invoice.approvedAmountPaise !== null ? "bg-heritage-50" : "bg-ivory-100")}>
             <span className={cn("text-[0.8125rem]", invoice.approvedAmountPaise !== null ? "font-medium text-heritage" : "text-muted-foreground")}>
               {partial ? "Builder-approved (partial)" : "Builder-approved"}
             </span>
@@ -361,14 +360,14 @@ function Callout({
   children: React.ReactNode;
 }) {
   const styles = {
-    danger: { bar: "bg-[#b5473a]", icon: "bg-[#f9ebe8] text-[#93342a]", title: "text-[#93342a]" },
-    warning: { bar: "bg-[#c48a2c]", icon: "bg-[#fbf3e3] text-[#8a5a12]", title: "text-[#8a5a12]" },
-    success: { bar: "bg-heritage", icon: "bg-[#e8f0eb] text-heritage", title: "text-heritage" },
+    danger: { bar: "bg-[#b5473a]", icon: "bg-danger-soft text-danger", title: "text-danger" },
+    warning: { bar: "bg-[#c48a2c]", icon: "bg-warning-soft text-warning", title: "text-warning" },
+    success: { bar: "bg-heritage", icon: "bg-heritage-50 text-heritage", title: "text-heritage" },
   }[tone];
   return (
     <div
       role={tone === "success" ? "status" : "alert"}
-      className="relative animate-fade-up overflow-hidden rounded-[12px] border border-[#e6e0d2] bg-card py-5 pr-5 pl-6 shadow-[0_18px_40px_-30px_rgba(20,43,67,0.25)] sm:pr-7 sm:pl-8"
+      className="relative animate-fade-up overflow-hidden surface py-5 pr-5 pl-6 sm:pr-7 sm:pl-8"
     >
       <span aria-hidden="true" className={cn("absolute inset-y-0 left-0 w-1", styles.bar)} />
       <div className="flex items-start gap-4">
@@ -376,9 +375,9 @@ function Callout({
           <Icon className="size-[18px]" strokeWidth={1.75} />
         </span>
         <div className="min-w-0">
-          <p className={cn("font-display text-[1.25rem] leading-tight font-semibold", styles.title)}>{title}</p>
+          <p className={cn("font-display text-[1.25rem] leading-tight font-medium", styles.title)}>{title}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">{meta}</p>
-          <p className="mt-3 font-display text-[1.0625rem] leading-relaxed text-slate-ink italic">&ldquo;{children}&rdquo;</p>
+          <p className="mt-3 font-accent text-[1.125rem] leading-relaxed text-slate-ink italic">&ldquo;{children}&rdquo;</p>
         </div>
       </div>
     </div>
@@ -415,14 +414,14 @@ function FinancingRequestPanel({ invoice, request }: { invoice: InvoiceDetail; r
             <Money paise={request.netPayablePaise} size="lg" className="font-medium text-heritage" />
           </div>
           {request.status === "REJECTED" && request.decisionNote && (
-            <div role="alert" className="mt-5 rounded-[10px] border border-[#ecc6bf] bg-[#f9ebe8] px-4 py-3 text-sm text-[#93342a]">
+            <div role="alert" className="mt-5 rounded-lg border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-danger">
               <p className="font-medium">Veefin declined this request</p>
               <p className="mt-1 text-slate-ink">{request.decisionNote}</p>
             </div>
           )}
         </div>
 
-        <div className="rounded-[10px] border border-[#e6e0d2] bg-[#faf8f3] p-5">
+        <div className="rounded-lg border border-border bg-ivory-100 p-5">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
             <Label className="text-navy">Simulated payout</Label>
             {disbursement ? <StatusMark kind="disbursement" status={disbursement.status} className="text-xs" /> : <span className="text-xs text-muted-foreground">{FINANCING_STATUS[request.status].label}</span>}
@@ -454,7 +453,7 @@ function FinancingRequestPanel({ invoice, request }: { invoice: InvoiceDetail; r
         </div>
       </div>
 
-      <div className="mt-8 border-t border-[#ece6d8] pt-6">
+      <div className="mt-8 border-t border-hairline pt-6">
         <Label>Request timeline</Label>
         <Chronicle
           className="mt-5"

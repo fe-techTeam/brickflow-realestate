@@ -48,7 +48,7 @@ export default async function OrganisationProfilePage() {
 
           <Panel eyebrow="Relationships" title="Empanelled builders" description="Builders you can raise invoices to" bodyClassName="pb-0">
             {empanelments.length === 0 ? (
-              <div className="-mx-5 border-t border-[#ece6d8] sm:-mx-7">
+              <div className="-mx-5 border-t border-hairline sm:-mx-7">
                 <EmptyNote compact icon={Building2} title="No empanelments" description="Ask the platform administrator to add your builder empanelments." />
               </div>
             ) : (
@@ -90,7 +90,7 @@ export default async function OrganisationProfilePage() {
             bodyClassName="pb-0"
           >
             {org.members.length === 0 ? (
-              <div className="-mx-5 border-t border-[#ece6d8] sm:-mx-7">
+              <div className="-mx-5 border-t border-hairline sm:-mx-7">
                 <EmptyNote compact icon={Users} title="No team members" />
               </div>
             ) : (
@@ -113,7 +113,7 @@ export default async function OrganisationProfilePage() {
                             <p className="font-medium text-navy">
                               {member.user.name}
                               {member.user.id === actor.userId && (
-                                <span className="ml-2 rounded-full bg-gold-100 px-1.5 py-px text-[0.625rem] font-semibold tracking-wide text-[#7d6235] uppercase">You</span>
+                                <span className="ml-2 rounded-full bg-gold-100 px-1.5 py-px text-[0.625rem] font-semibold tracking-wide text-gold-700 uppercase">You</span>
                               )}
                             </p>
                             <p className="mt-0.5 text-xs text-muted-foreground">{member.user.email}</p>
@@ -138,9 +138,8 @@ export default async function OrganisationProfilePage() {
 
         <aside className="flex min-w-0 flex-col gap-6">
           <section className="animate-fade-up">
-            <p className="mb-3 text-[0.625rem] font-semibold tracking-[0.2em] text-[#8b6f3e] uppercase">Payout account</p>
-            <div className="relative isolate aspect-[1.586] overflow-hidden rounded-[14px] bg-navy p-6 text-white shadow-[0_30px_50px_-30px_rgba(13,30,48,0.8)]">
-              <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(130%_120%_at_0%_0%,#2a4a6b_0%,#142b43_50%,#0d1e30_100%)]" />
+            <p className="mb-3 text-[0.625rem] font-semibold tracking-[0.2em] text-gold-700 uppercase">Payout account</p>
+            <div className="surface-navy relative isolate aspect-[1.586] overflow-hidden p-6">
               <FacadePattern className="inset-y-0 right-0 -z-10 h-full w-full text-gold/[0.14]" />
               <div className="flex h-full flex-col">
                 <div className="flex items-start justify-between">
@@ -163,7 +162,7 @@ export default async function OrganisationProfilePage() {
             <p className="mt-3 text-xs text-muted-foreground">{org.bankName ?? "Bank not on file"} · early payments are disbursed to this account</p>
           </section>
 
-          <div className="rounded-[12px] border border-[#e6e0d2] bg-card p-5 text-xs leading-relaxed text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card p-5 text-xs leading-relaxed text-muted-foreground">
             <p className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-navy">
               <ShieldCheck className="size-4 text-heritage" />
               Data protection
@@ -171,9 +170,9 @@ export default async function OrganisationProfilePage() {
             Account numbers are masked throughout BrickFlow. Full bank details are only used to route simulated payouts and are never shown to builders.
           </div>
 
-          <div role="note" className="rounded-[12px] border border-dashed border-gold/45 p-5 text-xs leading-relaxed text-muted-foreground">
+          <div role="note" className="rounded-xl border border-dashed border-gold/45 p-5 text-xs leading-relaxed text-muted-foreground">
             <p className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-navy">
-              <Info className="size-4 text-[#8b6f3e]" />
+              <Info className="size-4 text-gold-700" />
               Maintained by the administrator
             </p>
             These details are maintained by the BrickFlow platform administrator after KYC verification. To change legal details, bank account, empanelments or team

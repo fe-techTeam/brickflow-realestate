@@ -133,7 +133,7 @@ export default async function MyInvoicesPage({ searchParams }: { searchParams: P
         </TableToolbar>
 
         {rows.length === 0 ? (
-          <div className="-mx-5 border-t border-[#ece6d8] sm:-mx-7">
+          <div className="-mx-5 border-t border-hairline sm:-mx-7">
             {filtered ? (
               <EmptyNote icon={SearchX} title="No invoices match your filters" description="Try a different search term or clear the filters." />
             ) : (
@@ -151,7 +151,7 @@ export default async function MyInvoicesPage({ searchParams }: { searchParams: P
           </div>
         ) : (
           <>
-            <ul className="-mx-5 divide-y divide-[#f0ebe0] border-t border-[#ece6d8] md:hidden">
+            <ul className="-mx-5 divide-y divide-hairline border-t border-hairline md:hidden">
               {rows.map((invoice) => {
                 const canDiscount = eligibility.get(invoice.id)?.eligible;
                 return (
