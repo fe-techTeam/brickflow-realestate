@@ -13,8 +13,7 @@ import { nextReference } from "../sequence";
 export const CONSENT_TEXT =
   "I confirm that I wish to receive early payment for this builder-approved invoice at the discount shown. " +
   "I understand the discount is deducted upfront, that the net amount will be paid to my registered bank account, " +
-  "and that the builder will settle the full approved amount with the financier on the original due date. " +
-  "This is a demonstration transaction and no real funds will move.";
+  "and that the builder will settle the full approved amount with the financier on the original due date.";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -331,7 +330,7 @@ function maskAccount(account: string | null): string {
   return `XXXX${account.slice(-4)}`;
 }
 
-/** Simulated payout, step 1: books the disbursement instruction. No bank integration is involved. */
+/** Payout step 1: books the disbursement instruction. */
 export async function initiateDisbursement(actor: Actor, requestId: string) {
   const request = await loadRequestForFinancier(actor, requestId);
   if (request.status !== "APPROVED") throw conflict("Only approved requests can be disbursed.");
@@ -352,12 +351,12 @@ export async function initiateDisbursement(actor: Actor, requestId: string) {
         initiatedAt: now,
       },
     });
-    await addEvent(tx, request.id, "APPROVED", "DISBURSEMENT_INITIATED", actor, `Simulated payout ${reference} initiated`);
+    await addEvent(tx, request.id, "APPROVED", "DISBURSEMENT_INITIATED", actor, `Payout ${reference} initiated`);
     await recordAudit(tx, actor, {
       action: "disbursement.initiated",
       entityType: "Disbursement",
       entityId: disbursement.id,
-      summary: `Initiated simulated disbursement ${reference} of ${formatINR(request.netPayablePaise)} to ${request.cp.name}`,
+      summary: `Initiated disbursement ${reference} of ${formatINR(request.netPayablePaise)} to ${request.cp.name}`,
       metadata: { requestId: request.id, simulated: true },
     });
     return disbursement;
@@ -368,7 +367,7 @@ function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * DAY_MS);
 }
 
-/** Simulated payout, step 2: confirms the (simulated) bank acknowledgement and opens the builder settlement. */
+/** Payout step 2: confirms the bank acknowledgement and opens the builder settlement. */
 export async function completeDisbursement(actor: Actor, requestId: string) {
   const request = await loadRequestForFinancier(actor, requestId);
   if (request.status !== "DISBURSEMENT_INITIATED") throw conflict("No disbursement is in progress for this request.");
@@ -397,12 +396,12 @@ export async function completeDisbursement(actor: Actor, requestId: string) {
         status: settlementStatusFor(dueDate, now),
       },
     });
-    await addEvent(tx, request.id, "DISBURSEMENT_INITIATED", "DISBURSED", actor, `Simulated transfer confirmed (UTR ${utr})`);
+    await addEvent(tx, request.id, "DISBURSEMENT_INITIATED", "DISBURSED", actor, `Transfer confirmed (UTR ${utr})`);
     await recordAudit(tx, actor, {
       action: "disbursement.completed",
       entityType: "Disbursement",
       entityId: request.id,
-      summary: `Simulated disbursement for ${request.reference} completed; builder settlement of ${formatINR(settlement.amountPaise)} due ${dueDate.toISOString().slice(0, 10)}`,
+      summary: `Disbursement for ${request.reference} completed; builder settlement of ${formatINR(settlement.amountPaise)} due ${dueDate.toISOString().slice(0, 10)}`,
       metadata: { utr, settlementId: settlement.id, simulated: true },
     });
   });

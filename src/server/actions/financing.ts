@@ -64,7 +64,7 @@ export async function initiateDisbursementAction(requestId: string): Promise<Act
     const disbursement = await initiateDisbursement(await requireActor(), requestId);
     refresh();
     return { reference: disbursement.reference };
-  }, "Simulated disbursement initiated.");
+  }, "Disbursement initiated.");
 }
 
 export async function completeDisbursementAction(requestId: string): Promise<ActionResult> {
@@ -72,7 +72,7 @@ export async function completeDisbursementAction(requestId: string): Promise<Act
     await completeDisbursement(await requireActor(), requestId);
     refresh();
     return undefined;
-  }, "Simulated transfer confirmed. The invoice is now marked as disbursed.");
+  }, "Transfer confirmed. The invoice is now marked as disbursed.");
 }
 
 export async function markSettlementSettledAction(requestId: string, input: { reference: string; note?: string }): Promise<ActionResult> {

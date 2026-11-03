@@ -165,7 +165,7 @@ export default async function OrganisationProfilePage() {
               <ShieldCheck className="size-4 text-leaf" />
               Data protection
             </p>
-            Account numbers are masked throughout BrickFlow. Full bank details are only used to route simulated payouts and are never shown to builders.
+            Account numbers are masked throughout BrickFlow. Full bank details are only used to route payouts and are never shown to builders.
           </div>
 
           <div role="note" className="rounded-xl border border-dashed border-line-strong/45 p-5 text-xs leading-relaxed text-muted-foreground">

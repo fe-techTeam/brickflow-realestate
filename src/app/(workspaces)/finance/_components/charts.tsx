@@ -53,7 +53,7 @@ export function MonthlyVolumeChart({ data, height = 260 }: { data: MonthlyVolume
       height={height}
       label={`Disbursed volume by month: ${data.map((d) => `${d.label} ${formatINR(d.paise)}`).join(", ")}`}
       empty={points.every((p) => p.value === 0)}
-      emptyText="No simulated payouts in this period yet. Volume appears here once a disbursement is confirmed."
+      emptyText="No payouts in this period yet. Volume appears here once a disbursement is confirmed."
       legend={[
         { label: "Disbursed, net to channel partners", color: CHART_COLORS.primary },
         { label: "Current month", color: CHART_COLORS.kota },
@@ -74,7 +74,7 @@ export function MonthlyVolumeChart({ data, height = 260 }: { data: MonthlyVolume
               <ChartTooltipCard
                 title={point.label}
                 rows={[{ label: "Disbursed", value: inr(point.value), color: CHART_COLORS.kota }]}
-                footer={`${point.count} simulated payout${point.count === 1 ? "" : "s"}`}
+                footer={`${point.count} payout${point.count === 1 ? "" : "s"}`}
               />
             );
           }}

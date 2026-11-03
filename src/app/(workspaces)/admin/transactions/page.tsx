@@ -83,7 +83,7 @@ async function RequestsView({ sp }: { sp: SearchParams }) {
           { label: "Requests", value: <Count value={rows.length} size="lg" />, hint: status ? FINANCING_STATUS[status].label : "All stages" },
           { label: "Builder-approved", value: <Money paise={approved} compact size="lg" />, hint: "Gross value financed", accent: "basalt" },
           { label: "Discount", value: <Money paise={discount} compact size="lg" className="text-fg-muted" />, hint: "At each agreed rate", accent: "kota" },
-          { label: "Net to partners", value: <Money paise={net} compact size="lg" className="text-leaf" />, hint: "Payable early (simulated)", accent: "leaf" },
+          { label: "Net to partners", value: <Money paise={net} compact size="lg" className="text-leaf" />, hint: "Payable early", accent: "leaf" },
         ]}
       />
       <Panel

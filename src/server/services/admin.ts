@@ -309,11 +309,6 @@ export const SETTING_DEFINITIONS = {
     description: "Used for new CP–builder empanelments when no due date is given on an invoice.",
     default: "60",
   },
-  "platform.demoBanner": {
-    label: "Demo banner text",
-    description: "Displayed across all workspaces to make clear that payments are simulated.",
-    default: "Demo environment — all disbursements are simulated and no real funds move.",
-  },
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFINITIONS;
@@ -329,7 +324,6 @@ export async function getSettings(): Promise<Record<SettingKey, string>> {
 const settingValidators: Record<SettingKey, z.ZodType<string>> = {
   "platform.supportEmail": z.email("Enter a valid email"),
   "platform.defaultCreditPeriodDays": z.string().regex(/^\d{1,3}$/, "Enter a number of days").refine((v) => Number(v) >= 1 && Number(v) <= 365, "Between 1 and 365"),
-  "platform.demoBanner": z.string().trim().min(10).max(200),
 };
 
 export async function updateSettings(actor: Actor, values: Partial<Record<SettingKey, string>>) {

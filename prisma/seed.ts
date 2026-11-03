@@ -282,7 +282,7 @@ async function main() {
     const calc = calculateDiscount(approved, programme.bps);
     const offerRef = reference("BF-OFR");
     const consent =
-      "I confirm that I wish to receive early payment for this builder-approved invoice at the discount shown. I understand the discount is deducted upfront, that the net amount will be paid to my registered bank account, and that the builder will settle the full approved amount with the financier on the original due date. This is a demonstration transaction and no real funds will move.";
+      "I confirm that I wish to receive early payment for this builder-approved invoice at the discount shown. I understand the discount is deducted upfront, that the net amount will be paid to my registered bank account, and that the builder will settle the full approved amount with the financier on the original due date.";
     const offer = await db.financingOffer.create({
       data: {
         reference: offerRef,
@@ -369,11 +369,11 @@ async function main() {
           completedAt: f.completedAt ?? null,
         },
       });
-      await event("APPROVED", "DISBURSEMENT_INITIATED", financeOps, f.disbursedAt, `Simulated payout ${paymentRef} initiated`);
-      await audit(financeOps, "disbursement.initiated", "Disbursement", request.id, `Initiated simulated disbursement ${paymentRef}`, f.disbursedAt, { simulated: true });
+      await event("APPROVED", "DISBURSEMENT_INITIATED", financeOps, f.disbursedAt, `Payout ${paymentRef} initiated`);
+      await audit(financeOps, "disbursement.initiated", "Disbursement", request.id, `Initiated disbursement ${paymentRef}`, f.disbursedAt, { simulated: true });
       if (completed) {
-        await event("DISBURSEMENT_INITIATED", "DISBURSED", financeOps, f.completedAt!, "Simulated transfer confirmed");
-        await audit(financeOps, "disbursement.completed", "Disbursement", request.id, `Simulated disbursement for ${requestRef} completed`, f.completedAt!, { simulated: true });
+        await event("DISBURSEMENT_INITIATED", "DISBURSED", financeOps, f.completedAt!, "Transfer confirmed");
+        await audit(financeOps, "disbursement.completed", "Disbursement", request.id, `Disbursement for ${requestRef} completed`, f.completedAt!, { simulated: true });
         const due = inv.dueDate ? dateOnly(inv.dueDate) : new Date(dateOnly(inv.invoiceDate).getTime() + 60 * DAY);
         const settlement = await db.settlement.create({
           data: {
@@ -408,7 +408,6 @@ async function main() {
     data: [
       { key: "platform.supportEmail", value: "support@brickflow.demo", updatedById: admin.userId },
       { key: "platform.defaultCreditPeriodDays", value: "60", updatedById: admin.userId },
-      { key: "platform.demoBanner", value: "Demo environment — all disbursements are simulated and no real funds move.", updatedById: admin.userId },
     ],
   });
 

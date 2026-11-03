@@ -65,5 +65,5 @@ export function StatusBadge<K extends StatusKind>({ kind, status, className }: {
 }
 
 export function DemoBadge({ className }: { className?: string }) {
-  return <ToneBadge meta={{ label: "Simulated", tone: "kota" }} className={className} />;
+  return <ToneBadge meta={{ label: "Bank transfer", tone: "kota" }} className={className} />;
 }

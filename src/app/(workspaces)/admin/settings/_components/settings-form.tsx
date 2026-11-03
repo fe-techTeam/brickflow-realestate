@@ -22,7 +22,6 @@ export interface SettingField {
 const INPUT_PROPS: Record<SettingKey, { type: string; inputMode?: "numeric" | "email"; multiline?: boolean; maxLength?: number }> = {
   "platform.supportEmail": { type: "email", inputMode: "email", maxLength: 254 },
   "platform.defaultCreditPeriodDays": { type: "number", inputMode: "numeric" },
-  "platform.demoBanner": { type: "text", multiline: true, maxLength: 200 },
 };
 
 export function SettingsForm({ fields, initial }: { fields: SettingField[]; initial: Record<SettingKey, string> }) {

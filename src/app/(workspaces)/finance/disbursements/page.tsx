@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { requireWorkspace } from "@/server/auth/session";
 import { getBeneficiaries } from "@/server/queries/finance";
 import { effectiveSettlementStatus, listFinancingRequests, refreshSettlementStatuses } from "@/server/services/financing";
-import { EmptyNote, Masthead, Money, Panel, Seal, SimulatedTag } from "../_components/ledger";
+import { EmptyNote, Masthead, Money, Panel, Seal } from "../_components/ledger";
 import { LedgerTable, LTd, LTh, LTr } from "../_components/ledger-table";
 import { ConfirmTransferButton, InitiateDisbursementButton } from "../_components/request-actions";
 import { RequestActionLink } from "../_components/request-table";
@@ -115,7 +115,7 @@ export default async function DisbursementsPage() {
           <div className="flex items-center gap-4 rounded-xl border border-line-strong/35 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.07))] py-2 pr-5 pl-2">
             <Seal id="bf-seal-desk" className="size-16" />
             <p className="max-w-[13rem] text-xs leading-relaxed text-fg-soft">
-              Two-step payouts on a <strong className="font-semibold text-fg">demo rail</strong>. No bank is contacted and no real funds move.
+              Two-step payouts: Veefin books the instruction, then confirms the transfer.
             </p>
           </div>
         }
@@ -124,11 +124,11 @@ export default async function DisbursementsPage() {
       <div className="grid animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-32px_rgba(8, 14, 24,0.3)] max-lg:divide-y max-lg:divide-border/70 lg:grid-cols-3 lg:divide-x lg:divide-border/70 lg:overflow-visible">
         <PipelineStage index="01" label="Ready to disburse" count={ready.length} value={readyValue} caption="Approved by Veefin, awaiting a payout instruction" accent="bg-haze" />
         <PipelineStage index="02" label="In flight" count={inProgress.length} value={inProgressValue} caption="Instruction booked, awaiting transfer confirmation" accent="bg-night" />
-        <PipelineStage index="03" label="Completed" count={completed.length} value={completedValue} caption="Confirmed simulated payouts, net to channel partners" accent="bg-leaf" last />
+        <PipelineStage index="03" label="Completed" count={completed.length} value={completedValue} caption="Confirmed payouts, net to channel partners" accent="bg-leaf" last />
       </div>
 
       <div className="mt-8 space-y-6">
-        <Panel id="lane-01" eyebrow="Lane 01 · Oldest approval first" title="Ready to disburse" actions={<SimulatedTag />} bodyClassName={ready.length ? "pb-0" : undefined}>
+        <Panel id="lane-01" eyebrow="Lane 01 · Oldest approval first" title="Ready to disburse" bodyClassName={ready.length ? "pb-0" : undefined}>
           {ready.length === 0 ? (
             <EmptyNote icon={BadgeCheck} title="Nothing to disburse" description="Approved requests wait here until a payout instruction is booked." compact className="border-t border-border/70" />
           ) : (
@@ -198,7 +198,6 @@ export default async function DisbursementsPage() {
           id="lane-02"
           eyebrow="Lane 02 · Confirm to complete"
           title="In flight"
-          actions={<SimulatedTag />}
           bodyClassName={inProgress.length ? "pb-0" : undefined}
         >
           {inProgress.length === 0 ? (
@@ -282,7 +281,6 @@ export default async function DisbursementsPage() {
           id="lane-03"
           eyebrow="Lane 03 · Most recent first"
           title="Completed"
-          actions={<SimulatedTag />}
           bodyClassName={completed.length ? "pb-0" : undefined}
         >
           {completed.length === 0 ? (

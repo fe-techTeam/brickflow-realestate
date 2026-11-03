@@ -4,7 +4,7 @@ import type { SettlementStatus } from "@/generated/prisma/enums";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { FinancingRequestDetail } from "@/server/services/financing";
-import { FactList, Money, SimulatedTag } from "../../../_components/ledger";
+import { FactList, Money } from "../../../_components/ledger";
 import {
   ApproveRequestButton,
   ConfirmTransferButton,
@@ -139,7 +139,6 @@ export function DecisionPanel({
           title="Cleared for payout"
           figureLabel="Amount to disburse"
           figure={<Money paise={request.netPayablePaise} size="xl" className="text-leaf" />}
-          aside={<SimulatedTag />}
         >
           <FactList
             items={[
@@ -150,7 +149,7 @@ export function DecisionPanel({
           />
           {request.decisionNote && <Note>“{request.decisionNote}”</Note>}
           <InitiateDisbursementButton summary={disbursement} className="h-11 w-full" />
-          <p className="text-xs leading-relaxed text-muted-foreground">Simulated payout. No bank is contacted; a demo payment reference is generated.</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">Two-step payout: book the instruction, then confirm the transfer to release the settlement.</p>
         </DecisionCard>
       );
     case "DISBURSEMENT_INITIATED":
@@ -162,7 +161,6 @@ export function DecisionPanel({
           title="Awaiting transfer confirmation"
           figureLabel="Amount in flight"
           figure={<Money paise={request.disbursement?.amountPaise ?? request.netPayablePaise} size="xl" className="text-fg" />}
-          aside={<SimulatedTag />}
         >
           <FactList
             items={[
@@ -194,7 +192,7 @@ export function DecisionPanel({
         >
           <FactList
             items={[
-              { label: "Disbursed to CP (simulated)", value: <Money paise={request.disbursement?.amountPaise ?? request.netPayablePaise} /> },
+              { label: "Disbursed to CP", value: <Money paise={request.disbursement?.amountPaise ?? request.netPayablePaise} /> },
               { label: settled ? "Settled on" : "Due on", value: settled ? formatDate(request.settlement?.settledAt) : formatDate(request.settlement?.dueDate) },
             ]}
           />

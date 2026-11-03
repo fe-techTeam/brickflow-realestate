@@ -415,7 +415,7 @@ function OfferDialog({
             <div className="sticky bottom-0 z-10 flex flex-col-reverse gap-3 border-t border-hairline bg-glass-100/95 px-6 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-9">
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Lock className="size-3.5" />
-                Demo transaction — no real funds move.
+                Paid to your registered bank account.
               </p>
               <div className="flex flex-col-reverse gap-2 sm:flex-row">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy} className="h-11 bg-card px-5">
@@ -512,7 +512,7 @@ function AcceptedState({
   const next = [
     { title: "Offer accepted", body: "Your consent and the agreed terms are recorded.", state: "done" as const },
     { title: "Veefin approval", body: `${offer.terms.financier} reviews the request.`, state: "current" as const },
-    { title: "Payout", body: "The net amount is paid to your registered account (simulated).", state: "upcoming" as const },
+    { title: "Payout", body: "The net amount is paid to your registered account.", state: "upcoming" as const },
   ];
   return (
     <div className="animate-fade-up">
@@ -534,7 +534,7 @@ function AcceptedState({
           </div>
           <p className="mt-5 max-w-md text-sm leading-relaxed text-fg-soft">
             Your early payment request for invoice <span className="font-medium text-fg">{invoice.invoiceNumber}</span> has been sent to Veefin. Each step — approval
-            and the simulated payout — will appear on the invoice and under My Transactions.
+            and the payout — will appear on the invoice and under My Transactions.
           </p>
 
           <ol className="mt-7 grid gap-0">

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { FlaskConical, type LucideIcon } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { DISBURSEMENT_STATUS, FINANCING_STATUS, INVOICE_STATUS, OFFER_STATUS, RECORD_STATUS, SETTLEMENT_STATUS, type StatusMeta, type StatusTone } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -210,19 +210,6 @@ export function StatusPill<K extends keyof StatusRegistry>({ kind, status, label
   );
 }
 
-export function SimulatedTag({ className, label = "Simulated payment" }: { className?: string; label?: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-line-strong/40 bg-glass-100/50 px-2.5 py-0.5 text-[0.625rem] font-semibold tracking-[0.12em] whitespace-nowrap text-fg-muted uppercase",
-        className,
-      )}
-    >
-      <FlaskConical className="size-3" aria-hidden="true" />
-      {label}
-    </span>
-  );
-}
 
 /** Thin architectural line drawing: a colonnade beneath an arch. Decorative only. */
 export function ArchMotif({ className }: { className?: string }) {

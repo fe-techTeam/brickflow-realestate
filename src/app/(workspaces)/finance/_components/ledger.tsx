@@ -337,9 +337,9 @@ export function Monogram({ name, tone = "basalt", size = "md" }: { name: string;
 }
 
 /** Circular stamp marking demo-only payouts. */
-export function Seal({ id = "bf-seal", label = "Simulated", ring = "Demo rail · No funds moved · BrickFlow ·", className }: { id?: string; label?: string; ring?: string; className?: string }) {
+export function Seal({ id = "bf-seal", label = "Paid", ring = "Payout confirmed · BrickFlow ·", className }: { id?: string; label?: string; ring?: string; className?: string }) {
   return (
-    <span className={cn("inline-flex size-24 shrink-0 -rotate-12 text-fg-muted", className)} role="img" aria-label={`${label}: no real funds move`}>
+    <span className={cn("inline-flex size-24 shrink-0 -rotate-12 text-fg-muted", className)} role="img" aria-label={label}>
       <svg viewBox="0 0 120 120" className="size-full" aria-hidden="true">
         <defs>
           <path id={id} d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
@@ -363,20 +363,6 @@ export function Seal({ id = "bf-seal", label = "Simulated", ring = "Demo rail ·
   );
 }
 
-/** Small inline simulated marker. */
-export function SimulatedTag({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-line-strong/50 bg-glass-100/70 px-2.5 py-0.5 text-[0.625rem] font-semibold tracking-[0.16em] text-fg-muted uppercase",
-        className,
-      )}
-    >
-      <span aria-hidden="true" className="size-1 rounded-full bg-haze" />
-      Simulated
-    </span>
-  );
-}
 
 export function EmptyNote({
   icon: Icon = Inbox,

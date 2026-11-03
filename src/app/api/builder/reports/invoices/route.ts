@@ -24,7 +24,7 @@ const HEADERS = [
   "Financing request",
   "Discount rate",
   "Net paid to CP (INR)",
-  "Disbursement reference (simulated)",
+  "Disbursement reference",
   "Settlement status",
   "Settlement due date",
   "Settled on",

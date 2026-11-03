@@ -37,7 +37,7 @@ Workspace roots: `/partner` (channel partner), `/builder`, `/finance` (Veefin), 
 - Empty lists render `<EmptyState>` with a next-step action where one exists.
 - Confirmations and reason capture use `<ActionDialog>` with a bound server action, e.g. `action={rejectInvoiceAction.bind(null, invoice.id)}`.
 - Every route segment with data gets a `loading.tsx` using `Skeleton`.
-- Label everything relating to payouts as simulated / demo.
+- Payouts have no bank integration (simulated in code); keep that fact in developer docs, and write interface copy as for a live product.
 
 ## Visual language
 

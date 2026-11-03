@@ -13,7 +13,7 @@ import { effectiveSettlementStatus, listFinancingRequests } from "@/server/servi
 import { CompactMoney, Money } from "../_components/money";
 import { firstParam } from "../_components/summaries";
 import { RefCell, SortTh, Table, TableToolbar, Td, Th, Tr } from "../_components/table";
-import { EmptyNote, MetricStrip, PageIntro, Panel, SimulatedTag, StatusMark, statusMeta } from "../_components/ui";
+import { EmptyNote, MetricStrip, PageIntro, Panel, StatusMark, statusMeta } from "../_components/ui";
 
 export const metadata: Metadata = { title: "My Transactions" };
 
@@ -56,7 +56,6 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
         eyebrow="Early payment"
         title="My Transactions"
         description="Every early payment request you have made, with the agreed discount and its progress through Veefin approval and payout."
-        actions={<SimulatedTag label="Simulated payments" />}
       />
 
       <MetricStrip

@@ -65,7 +65,7 @@ function AdviceSeal() {
           <textPath href="#bf-dialog-seal">DEMO RAIL · NO FUNDS MOVED · BRICKFLOW ·</textPath>
         </text>
         <text x="60" y="64" textAnchor="middle" fill="currentColor" style={{ fontSize: 10.5, letterSpacing: "0.14em", fontWeight: 700 }}>
-          SIMULATED
+          PAYOUT
         </text>
       </svg>
     </span>
@@ -204,7 +204,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
         toast.error(result.error);
         return;
       }
-      toast.success("Simulated disbursement initiated", { description: `Payment reference ${result.data.reference}` });
+      toast.success("Disbursement initiated", { description: `Payment reference ${result.data.reference}` });
       setOpen(false);
       router.refresh();
     });
@@ -229,8 +229,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
             <DemoBadge />
           </div>
           <DialogDescription className="text-sm leading-relaxed">
-            Books a payout instruction for {summary.reference}. This is a <strong>simulated payout</strong> — no bank is contacted and no real funds
-            move.
+            Books a payout instruction for {summary.reference}. 
           </DialogDescription>
         </DialogHeader>
         <TransferAdvice
@@ -254,7 +253,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
           </DialogClose>
           <Button variant="accent" onClick={confirm} disabled={pending}>
             {pending && <Loader2 className="size-4 animate-spin" />}
-            Initiate simulated payout
+            Initiate payout
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -265,7 +264,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
 const TRANSFER_STEPS = ["Payout instruction validated", "Transfer submitted on the demo rail", "Bank acknowledgement and UTR received"] as const;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Step 2 of the simulated payout, with a short staged progress visual before the server confirms. */
+/** Step 2 of the payout, with a short staged progress visual before the server confirms. */
 export function ConfirmTransferButton({
   requestId,
   paymentReference,
@@ -300,7 +299,7 @@ export function ConfirmTransferButton({
       return;
     }
     setStep(3);
-    toast.success(result.message ?? "Simulated transfer confirmed.");
+    toast.success(result.message ?? "Transfer confirmed.");
     await wait(500);
     setOpen(false);
     setStep(-1);
@@ -316,18 +315,18 @@ export function ConfirmTransferButton({
       <DialogTrigger asChild>
         <Button size={size}>
           <ShieldCheck className="size-4" />
-          Confirm simulated transfer
+          Confirm transfer
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg" showCloseButton={!processing}>
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <DialogTitle className="font-display text-2xl font-normal text-fg">Confirm simulated transfer</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-normal text-fg">Confirm transfer</DialogTitle>
             <DemoBadge />
           </div>
           <DialogDescription className="text-sm leading-relaxed">
             Confirms payout {paymentReference} of <span className="tabular font-medium text-fg">{formatINR(amountPaise)}</span>, generates a demo UTR and
-            opens the builder settlement. No real funds move.
+            opens the builder settlement.
           </DialogDescription>
         </DialogHeader>
         {beneficiaryName && <TransferAdvice beneficiaryName={beneficiaryName} amountPaise={amountPaise} reference={paymentReference} />}

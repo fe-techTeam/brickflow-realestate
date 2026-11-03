@@ -64,8 +64,7 @@ export default async function LoginPage() {
           </ol>
 
           <p className="mt-10 flex items-center gap-2 text-[0.6875rem] tracking-[0.02em] text-white/40">
-            <ShieldCheck className="size-3.5 text-fg-muted/70" strokeWidth={1.75} />
-            Demonstration environment. All organisations are fictional and every payment is simulated.
+            <ShieldCheck className="size-3.5 text-fg-muted/70" strokeWidth={1.75} /> Secure, auditable approvals for every invoice.
           </p>
         </div>
       </aside>
@@ -96,7 +95,7 @@ export default async function LoginPage() {
         </div>
 
         <footer className="relative flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t hairline px-5 py-5 text-[0.6875rem] text-muted-foreground">
-          <span>© BrickFlow demonstration build</span>
+          <span>© BrickFlow</span>
           <span aria-hidden="true" className="h-3 w-px bg-border" />
           <span>Real Estate Receivables, Made Liquid</span>
         </footer>

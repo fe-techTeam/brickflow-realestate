@@ -43,7 +43,7 @@ export function OrgCard({ orgName, workspace, collapsed = false }: { orgName: st
           <p className="truncate text-[0.8125rem] leading-tight font-medium text-white/90">{orgName}</p>
           <p className="mt-1 flex items-center gap-1.5 text-[0.6875rem] leading-none text-white/45">
             <span aria-hidden="true" className="size-1.5 rounded-full bg-leaf-300 shadow-[0_0_0_3px_rgb(140_187_151/0.15)]" />
-            {WORKSPACES[workspace].shortLabel} · Demo
+            {WORKSPACES[workspace].shortLabel}
           </p>
         </div>
       )}

@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "BrickFlow — Real Estate Receivables, Made Liquid", template: "%s · BrickFlow" },
-  description: "Channel partner invoice approval and early-payment financing for real estate builders. Demonstration build.",
+  description: "Channel partner invoice approval and early-payment financing for real estate builders.",
   robots: { index: false, follow: false },
 };
 

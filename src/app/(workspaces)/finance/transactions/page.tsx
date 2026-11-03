@@ -94,7 +94,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
           {
             label: "Net disbursed",
             value: <Money paise={sumPaise(disbursed.map((r) => r.request.disbursement?.amountPaise ?? r.request.netPayablePaise))} compact size="lg" className="text-leaf" />,
-            hint: `${disbursed.length} simulated payout${disbursed.length === 1 ? "" : "s"}`,
+            hint: `${disbursed.length} payout${disbursed.length === 1 ? "" : "s"}`,
             accent: "leaf",
           },
           {

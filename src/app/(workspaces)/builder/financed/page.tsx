@@ -67,7 +67,7 @@ export default async function FinancedInvoicesPage({ searchParams }: { searchPar
           label="Net paid to partners"
           accent="basalt"
           value={<Money paise={sumPaise(disbursed.map((r) => r.netPayablePaise))} compact size="xl" className="font-normal" />}
-          caption={`${plural(disbursed.length, "simulated disbursement")} completed`}
+          caption={`${plural(disbursed.length, "disbursement")} completed`}
         />
         <Metric
           label="Partner discount"

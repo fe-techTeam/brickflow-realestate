@@ -8,7 +8,6 @@ import {
   Download,
   Eye,
   FileText,
-  FlaskConical,
   MessageSquareWarning,
   RotateCcw,
   Send,
@@ -30,7 +29,7 @@ import { getInvoiceDetail, type InvoiceDetail } from "@/server/services/invoices
 import { Money } from "../../_components/money";
 import { OfferLauncher } from "../../_components/offer-center";
 import { offerInvoice } from "../../_components/summaries";
-import { Chronicle, type ChronicleEntry, FacadePattern, Facts, Label, LedgerLine, PageIntro, Panel, SimulatedTag, StatusMark, StatusPill } from "../../_components/ui";
+import { Chronicle, type ChronicleEntry, FacadePattern, Facts, Label, LedgerLine, PageIntro, Panel, StatusMark, StatusPill } from "../../_components/ui";
 import { ClarificationResponse } from "./_components/clarification-response";
 
 export const metadata: Metadata = { title: "Invoice" };
@@ -233,14 +232,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               </ul>
             </Panel>
           )}
-
-          <div className="flex gap-3 rounded-xl border border-dashed border-line-strong/40 px-5 py-4 text-xs leading-relaxed text-muted-foreground">
-            <FlaskConical className="mt-0.5 size-3.5 shrink-0 text-fg-muted" />
-            <p>
-              <span className="font-semibold text-fg">Demonstration environment.</span> Financing, disbursement and settlement are simulated. No real funds move and
-              payment references are generated for demonstration only.
-            </p>
-          </div>
         </aside>
       </div>
     </>
@@ -396,7 +387,6 @@ function FinancingRequestPanel({ invoice, request }: { invoice: InvoiceDetail; r
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill kind="financing" status={request.status} />
-          <SimulatedTag />
         </div>
       }
     >
@@ -423,7 +413,7 @@ function FinancingRequestPanel({ invoice, request }: { invoice: InvoiceDetail; r
 
         <div className="rounded-lg border border-border bg-glass-100 p-5">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-            <Label className="text-fg">Simulated payout</Label>
+            <Label className="text-fg">Payout</Label>
             {disbursement ? <StatusMark kind="disbursement" status={disbursement.status} className="text-xs" /> : <span className="text-xs text-muted-foreground">{FINANCING_STATUS[request.status].label}</span>}
           </div>
           <Facts
@@ -435,7 +425,7 @@ function FinancingRequestPanel({ invoice, request }: { invoice: InvoiceDetail; r
                 label: "Payment reference",
                 value: disbursement?.reference ?? (request.status === "REJECTED" ? "Not applicable" : "Issued when Veefin initiates the payout"),
               },
-              { label: "UTR (simulated)", value: disbursement?.utr ?? "Pending" },
+              { label: "UTR", value: disbursement?.utr ?? "Pending" },
               { label: "Beneficiary account", value: disbursement ? `${disbursement.beneficiaryAccount} · ${disbursement.beneficiaryIfsc}` : "Registered bank account" },
               {
                 label: "Builder settlement",
