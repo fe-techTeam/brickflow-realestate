@@ -152,7 +152,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     </LTd>
                     <LTd align="right">
                       <span className="text-navy">{p.requestCount}</span>
-                      {p.pendingCount > 0 && <p className="text-[0.6875rem] font-medium text-[#8a5a12]">{p.pendingCount} pending</p>}
+                      {p.pendingCount > 0 && <p className="text-[0.6875rem] font-medium text-warning">{p.pendingCount} pending</p>}
                     </LTd>
                     <LTd align="right">
                       <Money paise={p.disbursedValue} className="font-semibold text-heritage" />

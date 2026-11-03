@@ -64,7 +64,7 @@ export default async function BuildersPage() {
           },
           {
             label: "Outstanding settlements",
-            value: <Money paise={sumPaise(builders.map((b) => b.outstandingValue))} compact size="lg" className={overdue ? "text-[#93342a]" : undefined} />,
+            value: <Money paise={sumPaise(builders.map((b) => b.outstandingValue))} compact size="lg" className={overdue ? "text-danger" : undefined} />,
             hint: overdue ? `${overdue} builder${overdue === 1 ? "" : "s"} overdue` : "No builder overdue",
             accent: overdue ? "danger" : "gold",
           },
@@ -158,7 +158,7 @@ export default async function BuildersPage() {
                       <p className="text-[0.6875rem] text-muted-foreground">{b.financedCount} requests</p>
                     </LTd>
                     <LTd align="right">
-                      <Money paise={b.outstandingValue} className={b.overdueCount ? "text-[#93342a]" : "text-navy"} />
+                      <Money paise={b.outstandingValue} className={b.overdueCount ? "text-danger" : "text-navy"} />
                       <div className="mt-1 flex justify-end">
                         <OutstandingNote b={b} />
                       </div>

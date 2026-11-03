@@ -30,7 +30,7 @@ const DOT: Record<(typeof FINANCIER_REQUEST_STATUSES)[number], string> = {
   APPROVED: "bg-heritage",
   DISBURSEMENT_INITIATED: "bg-navy",
   DISBURSED: "bg-heritage",
-  REJECTED: "bg-[#b5473a]",
+  REJECTED: "bg-danger",
 };
 
 function tabHref(searchParams: Record<string, string | string[] | undefined>, status: string | null) {
@@ -91,7 +91,7 @@ export default async function FinancingRequestsPage({ searchParams }: { searchPa
       />
 
       <nav aria-label="Filter by status" className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <ul className="grid min-w-[760px] animate-fade-up grid-cols-6 overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-32px_rgba(20,43,67,0.3)]">
+        <ul className="grid min-w-[760px] animate-fade-up grid-cols-6 overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-32px_rgba(20,43,67,0.3)]">
           {tabs.map((tab, i) => {
             const active = (filters.status ?? null) === tab.value;
             return (

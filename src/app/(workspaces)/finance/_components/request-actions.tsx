@@ -34,7 +34,7 @@ type Size = "default" | "sm";
 
 function SummaryRows({ rows }: { rows: { label: string; value: ReactNode; strong?: boolean }[] }) {
   return (
-    <dl className="overflow-hidden rounded-lg border border-[#e6dfd0] bg-ivory/50">
+    <dl className="overflow-hidden rounded-lg border border-border bg-ivory/50">
       {rows.map((row) => (
         <div
           key={row.label}
@@ -89,7 +89,7 @@ function TransferAdvice({
   reference?: string;
 }) {
   return (
-    <div className="relative rounded-xl border border-[#e6dfd0] bg-[linear-gradient(180deg,#fffdf8,#f8f4ea)] p-5">
+    <div className="relative rounded-xl border border-border bg-[linear-gradient(180deg,#fffdf8,#f8f4ea)] p-5">
       <AdviceSeal />
       <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-600 uppercase">Payment advice{reference ? ` · ${reference}` : ""}</p>
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 text-xs">

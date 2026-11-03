@@ -49,7 +49,7 @@ export function Money({
     const match = text.match(/^(-?)₹([\d,]+(?:\.\d+)?)(?:\s(L|Cr))?$/);
     const [, neg = "", body = text, unit] = match ?? [];
     return (
-      <span className={cn("tabular font-sans whitespace-nowrap", MONEY_SIZE[size], className)} aria-label={text.replace("₹", "Rs ")}>
+      <span className={cn("figure whitespace-nowrap", MONEY_SIZE[size], className)} aria-label={text.replace("₹", "Rs ")}>
         {sign ?? (neg ? "−" : "")}
         {symbol}
         {body}
@@ -62,7 +62,7 @@ export function Money({
   const negative = text.startsWith("-");
   const [rupees, fraction] = text.replace("-", "").split(".");
   return (
-    <span className={cn("tabular font-sans whitespace-nowrap", MONEY_SIZE[size], className)} aria-label={`Rs ${text}`}>
+    <span className={cn("figure whitespace-nowrap", MONEY_SIZE[size], className)} aria-label={`Rs ${text}`}>
       {sign ?? (negative ? "−" : "")}
       {symbol}
       {rupees}
@@ -158,7 +158,7 @@ export function Panel({
     <Tag
       id={id}
       className={cn(
-        "animate-fade-up overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_1px_0_rgba(20,43,67,0.03),0_18px_40px_-28px_rgba(20,43,67,0.28)]",
+        "animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_0_rgba(20,43,67,0.03),0_18px_40px_-28px_rgba(20,43,67,0.28)]",
         id && "scroll-mt-24",
         className,
       )}
@@ -205,7 +205,7 @@ const ACCENT: Record<NonNullable<KeyFigure["accent"]>, string> = {
   navy: "bg-navy",
   heritage: "bg-heritage",
   gold: "bg-gold",
-  danger: "bg-[#b5473a]",
+  danger: "bg-danger",
 };
 
 export function KeyFigures({ items, className }: { items: KeyFigure[]; className?: string }) {
@@ -213,7 +213,7 @@ export function KeyFigures({ items, className }: { items: KeyFigure[]; className
   return (
     <div
       className={cn(
-        "grid animate-fade-up overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]",
+        "grid animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]",
         "divide-y divide-border/70 sm:divide-y-0",
         cols,
         className,
@@ -254,7 +254,7 @@ export function KeyFigures({ items, className }: { items: KeyFigure[]; className
 /** Large count value in Inter for key figure strips. */
 export function Count({ value, unit, className }: { value: number | string; unit?: string; className?: string }) {
   return (
-    <span className={cn("tabular font-sans text-[1.625rem] leading-none font-normal tracking-[-0.015em] text-navy", className)}>
+    <span className={cn("figure text-[1.625rem] leading-none font-normal tracking-[-0.015em] text-navy", className)}>
       {value}
       {unit && <span className="ml-1.5 text-xs font-medium tracking-normal text-muted-foreground">{unit}</span>}
     </span>
@@ -284,7 +284,7 @@ export function StatementRow({
         {index && <span className="tabular w-5 shrink-0 text-[0.6875rem] font-medium text-gold-600">{index}</span>}
         <span className={cn("text-sm", tone === "muted" ? "text-muted-foreground" : "text-slate-ink")}>{label}</span>
         <span aria-hidden="true" className="min-w-6 flex-1 -translate-y-1 border-b border-dotted border-navy/20" />
-        <span className={cn("text-right text-navy", tone === "deduct" && "text-[#93342a]")}>{value}</span>
+        <span className={cn("text-right text-navy", tone === "deduct" && "text-danger")}>{value}</span>
       </div>
       {hint && <p className={cn("mt-1 text-xs leading-relaxed text-muted-foreground", index && "pl-8")}>{hint}</p>}
     </div>
@@ -425,7 +425,7 @@ export interface CaseEvent {
 const NODE: Record<NonNullable<CaseEvent["tone"]>, string> = {
   default: "border-navy/60 bg-card",
   success: "border-heritage bg-heritage",
-  danger: "border-[#b5473a] bg-[#b5473a]",
+  danger: "border-danger bg-danger",
   warning: "border-[#c48a2c] bg-card",
   gold: "border-gold bg-gold",
   pending: "border-dashed border-navy/40 bg-card",

@@ -87,12 +87,12 @@ function Dossier({
   facts: { label: string; value: ReactNode }[];
 }) {
   return (
-    <article className="animate-fade-up overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]">
+    <article className="animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]">
       <header className="flex items-center gap-4 border-b border-border/70 bg-[linear-gradient(180deg,#fbf9f3,#ffffff)] px-6 py-5">
         <Monogram name={name} tone={tone} size="lg" />
         <div className="min-w-0">
           <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-gold-600 uppercase">{role}</p>
-          <Link href={href} className="mt-0.5 block truncate font-display text-[1.375rem] leading-tight font-medium text-navy underline-offset-4 hover:underline">
+          <Link href={href} className="mt-0.5 block font-display text-[1.25rem] text-balance sm:truncate sm:text-[1.375rem] leading-tight font-medium text-navy underline-offset-4 hover:underline">
             {name}
           </Link>
           <p className="truncate text-xs text-muted-foreground">{caption}</p>
@@ -135,7 +135,7 @@ function TransferStages({ status, initiatedAt, completedAt }: { status: "INITIAT
               stage.state === "done" && "bg-heritage text-white ring-heritage",
               stage.state === "active" && "bg-navy text-gold ring-navy",
               stage.state === "pending" && "bg-card text-muted-foreground ring-border",
-              stage.state === "failed" && "bg-[#b5473a] text-white ring-[#b5473a]",
+              stage.state === "failed" && "bg-danger text-white ring-danger",
             )}
           >
             {stage.state === "active" && <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-gold/40" />}
@@ -156,7 +156,7 @@ function TransferStages({ status, initiatedAt, completedAt }: { status: "INITIAT
 function DisbursementAdvice({ request, nameOf }: { request: FinancingRequestDetail; nameOf: (id: string | null | undefined) => string }) {
   const d = request.disbursement!;
   return (
-    <section aria-label="Disbursement" className="relative animate-fade-up overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]">
+    <section aria-label="Disbursement" className="relative animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]">
       <header className="relative flex flex-col gap-3 overflow-hidden bg-navy px-6 py-5 text-white sm:flex-row sm:items-center sm:justify-between sm:px-7">
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
         <div>
@@ -245,7 +245,7 @@ function SettlementCard({ request, status, now, nameOf }: { request: FinancingRe
       <div className="grid gap-6 border-t border-border/70 pt-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <div>
           <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Settlement amount</p>
-          <Money paise={s.amountPaise} size="xl" className={cn("mt-2 block", settled ? "text-heritage" : status === "OVERDUE" ? "text-[#93342a]" : "text-navy")} />
+          <Money paise={s.amountPaise} size="xl" className={cn("mt-2 block", settled ? "text-heritage" : status === "OVERDUE" ? "text-danger" : "text-navy")} />
         </div>
         <div className="sm:text-right">
           <StatusBadge kind="settlement" status={status} />
@@ -256,13 +256,13 @@ function SettlementCard({ request, status, now, nameOf }: { request: FinancingRe
       <div className="mt-6">
         <div className="relative h-1.5 rounded-full bg-ivory-200" role="presentation">
           <span
-            className={cn("absolute inset-y-0 left-0 rounded-full", settled ? "bg-heritage" : status === "OVERDUE" ? "bg-[#b5473a]" : "bg-gradient-to-r from-navy to-gold")}
+            className={cn("absolute inset-y-0 left-0 rounded-full", settled ? "bg-heritage" : status === "OVERDUE" ? "bg-danger" : "bg-gradient-to-r from-navy to-gold")}
             style={{ width: `${progress}%` }}
           />
         </div>
         <div className="mt-2 flex justify-between gap-3 text-[0.6875rem] text-muted-foreground">
           <span>Disbursed {formatDate(start)}</span>
-          <span className={cn("font-medium", status === "OVERDUE" ? "text-[#93342a]" : settled ? "text-heritage" : "text-navy")}>{dueText}</span>
+          <span className={cn("font-medium", status === "OVERDUE" ? "text-danger" : settled ? "text-heritage" : "text-navy")}>{dueText}</span>
           <span>Due {formatDate(s.dueDate)}</span>
         </div>
       </div>
@@ -366,7 +366,7 @@ export default async function RequestReviewPage({ params }: Params) {
         }
       />
 
-      <div className="mb-8 grid animate-fade-up grid-cols-2 divide-border/70 overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-32px_rgba(20,43,67,0.3)] max-sm:divide-y sm:grid-cols-5 sm:divide-x">
+      <div className="mb-8 grid animate-fade-up grid-cols-2 divide-border/70 overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-32px_rgba(20,43,67,0.3)] max-sm:divide-y sm:grid-cols-5 sm:divide-x">
         <CaseFact label="Invoice">
           <span className="tabular">{invoice.invoiceNumber}</span>
         </CaseFact>
@@ -494,7 +494,7 @@ export default async function RequestReviewPage({ params }: Params) {
                 {invoice.documents.map((doc) => (
                   <li key={doc.id} className="flex flex-col gap-3 rounded-lg border border-border/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-[4px] border border-[#e6dfd0] bg-ivory text-[0.5625rem] font-bold tracking-wider text-[#93342a]">
+                      <span className="flex h-11 w-9 shrink-0 items-center justify-center rounded-[4px] border border-border bg-ivory text-[0.5625rem] font-bold tracking-wider text-danger">
                         PDF
                       </span>
                       <div className="min-w-0">
@@ -658,7 +658,7 @@ export default async function RequestReviewPage({ params }: Params) {
               {comments.length > 0 ? (
                 <ul className="mt-6 space-y-4">
                   {comments.map((c) => (
-                    <li key={c.id} className="relative rounded-lg bg-card px-4 py-4 shadow-[0_10px_24px_-20px_rgba(20,43,67,0.5)] ring-1 ring-[#e6dfd0]">
+                    <li key={c.id} className="relative rounded-lg bg-card px-4 py-4 shadow-[0_10px_24px_-20px_rgba(20,43,67,0.5)] ring-1 ring-border">
                       <span aria-hidden="true" className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-gold" />
                       <div className="flex items-center gap-2.5">
                         <Monogram name={c.authorName} size="sm" tone="ivory" />

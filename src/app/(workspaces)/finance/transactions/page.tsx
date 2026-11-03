@@ -200,7 +200,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                       <LTd align="right">
                         <Money paise={r.approvedAmountPaise} className="font-normal text-slate-ink" />
                         <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
-                          <Money paise={r.discountAmountPaise} sign="−" size="xs" className="font-normal text-[#93342a]" /> at {formatBps(r.discountRateBps)}
+                          <Money paise={r.discountAmountPaise} sign="−" size="xs" className="font-normal text-danger" /> at {formatBps(r.discountRateBps)}
                         </p>
                       </LTd>
                       <LTd align="right">

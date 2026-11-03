@@ -62,7 +62,7 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
           },
           {
             label: "Outstanding settlement",
-            value: <Money paise={metrics.outstandingValue} compact size="lg" className={metrics.overdueCount ? "text-[#93342a]" : undefined} />,
+            value: <Money paise={metrics.outstandingValue} compact size="lg" className={metrics.overdueCount ? "text-danger" : undefined} />,
             hint: metrics.overdueCount ? (
               <>
                 <Money paise={metrics.overdueValue} size="xs" /> overdue

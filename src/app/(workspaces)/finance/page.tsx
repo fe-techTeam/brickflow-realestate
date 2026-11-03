@@ -107,7 +107,7 @@ function Watchlist({ items }: { items: WatchlistItem[] }) {
             <div
               className={cn(
                 "flex w-12 shrink-0 flex-col items-center justify-center rounded-lg border py-1.5",
-                overdue ? "border-[#ecc6bf] bg-[#f8e7e4]/60 text-[#93342a]" : "border-gold/35 bg-ivory/70 text-navy",
+                overdue ? "border-danger/25 bg-danger-soft/60 text-danger" : "border-gold/35 bg-ivory/70 text-navy",
               )}
             >
               <span className="tabular font-display text-xl leading-none font-semibold">{dueDay.format(item.dueDate)}</span>
@@ -123,7 +123,7 @@ function Watchlist({ items }: { items: WatchlistItem[] }) {
               <p className="tabular mt-0.5 text-[0.6875rem] tracking-wide text-muted-foreground">{item.request.reference}</p>
               <div className="mt-1.5 flex items-baseline justify-between gap-3">
                 <Money paise={item.amountPaise} className="text-navy" />
-                <p className={overdue ? "text-xs font-medium text-[#93342a]" : "text-xs text-muted-foreground"}>
+                <p className={overdue ? "text-xs font-medium text-danger" : "text-xs text-muted-foreground"}>
                   {overdue
                     ? `${Math.abs(item.daysToDue)} day${item.daysToDue === -1 ? "" : "s"} overdue`
                     : item.daysToDue === 0
@@ -194,7 +194,7 @@ export default async function FinanceOverviewPage() {
 
       <section
         aria-label="Portfolio position"
-        className="relative animate-fade-up overflow-hidden rounded-2xl bg-navy text-white shadow-[0_30px_60px_-30px_rgba(13,30,48,0.65)]"
+        className="surface-navy relative animate-fade-up overflow-hidden shadow-[0_30px_60px_-30px_rgba(13,30,48,0.65)]"
       >
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
@@ -215,13 +215,13 @@ export default async function FinanceOverviewPage() {
             </p>
             <div className="mt-6 max-w-md">
               <div className="flex h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
-                <span className="bg-[#9fb1c2]" style={{ width: `${outstandingShare}%` }} />
+                <span className="bg-navy-300" style={{ width: `${outstandingShare}%` }} />
                 <span className="bg-gold" style={{ width: `${exposure > 0n ? 100 - outstandingShare : 0}%` }} />
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-4 text-xs">
                 <div>
                   <dt className="flex items-center gap-1.5 text-white/50">
-                    <span aria-hidden="true" className="size-1.5 rounded-full bg-[#9fb1c2]" />
+                    <span aria-hidden="true" className="size-1.5 rounded-full bg-navy-300" />
                     Outstanding settlements
                   </dt>
                   <dd className="mt-1">

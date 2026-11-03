@@ -22,15 +22,15 @@ const BAR: Record<Tone, string> = {
   gold: "from-gold to-[#d6bc8a]",
   navy: "from-navy to-navy-700",
   success: "from-heritage to-heritage-600",
-  danger: "from-[#93342a] to-[#b5473a]",
+  danger: "from-danger to-[#b5473a]",
 };
 
 const ICON: Record<Tone, string> = {
-  warning: "bg-[#fbf1df] text-[#8a5a12] ring-[#efd9ae]",
+  warning: "bg-warning-soft text-warning ring-[#efd9ae]",
   gold: "bg-gold-100 text-gold-600 ring-gold/30",
   navy: "bg-navy/[0.06] text-navy ring-navy/15",
   success: "bg-sage text-heritage ring-heritage/20",
-  danger: "bg-[#f8e7e4] text-[#93342a] ring-[#ecc6bf]",
+  danger: "bg-danger-soft text-danger ring-danger/25",
 };
 
 function DecisionCard({
@@ -55,7 +55,7 @@ function DecisionCard({
   return (
     <section
       aria-label="Next action"
-      className="relative animate-fade-up overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_24px_48px_-30px_rgba(20,43,67,0.45)]"
+      className="relative animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_24px_48px_-30px_rgba(20,43,67,0.45)]"
     >
       <div aria-hidden="true" className={cn("h-1 bg-gradient-to-r", BAR[tone])} />
       <div className="p-6">
@@ -190,7 +190,7 @@ export function DecisionPanel({
           eyebrow={settled ? "Closed · fully settled" : "Disbursed · awaiting builder"}
           title={settled ? "Settled by builder" : overdue ? "Settlement overdue" : "Settlement open"}
           figureLabel={settled ? "Settled with Veefin" : "Due from builder"}
-          figure={<Money paise={request.settlement?.amountPaise ?? request.approvedAmountPaise} size="xl" className={settled ? "text-heritage" : overdue ? "text-[#93342a]" : "text-navy"} />}
+          figure={<Money paise={request.settlement?.amountPaise ?? request.approvedAmountPaise} size="xl" className={settled ? "text-heritage" : overdue ? "text-danger" : "text-navy"} />}
         >
           <FactList
             items={[

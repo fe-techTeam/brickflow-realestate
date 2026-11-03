@@ -99,7 +99,7 @@ export function FacilityCard({
 export function PayoutCard({ bankName, accountMasked, ifsc, holder }: { bankName: string | null; accountMasked: string; ifsc: string | null; holder: string }) {
   const grouped = accountMasked.replace(/(.{4})(?=.)/g, "$1 ");
   return (
-    <div className="relative aspect-[1.7/1] max-w-md overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#142b43_0%,#1d3a57_55%,#174d3c_120%)] p-6 text-white shadow-[0_28px_56px_-30px_rgba(13,30,48,0.75)]">
+    <div className="relative aspect-[1.7/1] max-w-md overflow-hidden rounded-xl bg-[linear-gradient(135deg,#142b43_0%,#1d3a57_55%,#174d3c_120%)] p-6 text-white shadow-[0_28px_56px_-30px_rgba(13,30,48,0.75)]">
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/80 to-transparent" />
       <Guilloche className="-right-24 -bottom-28 size-80" />
       <div className="relative flex h-full flex-col justify-between">

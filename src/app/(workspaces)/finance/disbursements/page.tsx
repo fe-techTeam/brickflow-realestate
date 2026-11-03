@@ -63,7 +63,7 @@ function PipelineStage({
       {!last && (
         <span
           aria-hidden="true"
-          className="absolute top-1/2 -right-3.5 z-10 hidden size-7 -translate-y-1/2 items-center justify-center rounded-full border border-[#e6dfd0] bg-card text-gold-600 lg:flex"
+          className="absolute top-1/2 -right-3.5 z-10 hidden size-7 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-gold-600 lg:flex"
         >
           <ChevronRight className="size-3.5" />
         </span>
@@ -121,7 +121,7 @@ export default async function DisbursementsPage() {
         }
       />
 
-      <div className="grid animate-fade-up overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-32px_rgba(20,43,67,0.3)] max-lg:divide-y max-lg:divide-border/70 lg:grid-cols-3 lg:divide-x lg:divide-border/70 lg:overflow-visible">
+      <div className="grid animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-32px_rgba(20,43,67,0.3)] max-lg:divide-y max-lg:divide-border/70 lg:grid-cols-3 lg:divide-x lg:divide-border/70 lg:overflow-visible">
         <PipelineStage index="01" label="Ready to disburse" count={ready.length} value={readyValue} caption="Approved by Veefin, awaiting a payout instruction" accent="bg-gold" />
         <PipelineStage index="02" label="In flight" count={inProgress.length} value={inProgressValue} caption="Instruction booked, awaiting transfer confirmation" accent="bg-navy" />
         <PipelineStage index="03" label="Completed" count={completed.length} value={completedValue} caption="Confirmed simulated payouts, net to channel partners" accent="bg-heritage" last />

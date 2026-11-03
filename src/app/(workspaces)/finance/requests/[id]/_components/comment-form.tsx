@@ -50,7 +50,7 @@ export function InternalCommentForm({ requestId }: { requestId: string }) {
         disabled={pending}
         aria-invalid={Boolean(error)}
         aria-describedby="internal-comment-hint"
-        className="min-h-24 resize-y border-[#e6dfd0] bg-card text-[0.875rem] leading-relaxed shadow-none focus-visible:border-gold"
+        className="min-h-24 resize-y border-border bg-card text-[0.875rem] leading-relaxed shadow-none focus-visible:border-gold"
       />
       <div className="flex items-center justify-between gap-3">
         <p id="internal-comment-hint" className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">

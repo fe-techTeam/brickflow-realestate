@@ -41,7 +41,7 @@ export default async function ProgrammesPage() {
       </aside>
 
       {programmes.length === 0 ? (
-        <div className="rounded-xl border border-[#e6dfd0] bg-card">
+        <div className="rounded-xl border border-border bg-card">
           <EmptyNote icon={BadgePercent} title="No programmes configured" description="Programmes appear here once the Super Admin sets one up for a builder." />
         </div>
       ) : (
@@ -49,7 +49,7 @@ export default async function ProgrammesPage() {
           {programmes.map((p) => (
             <article
               key={p.id}
-              className="animate-fade-up overflow-hidden rounded-xl border border-[#e6dfd0] bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]"
+              className="animate-fade-up overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_-30px_rgba(20,43,67,0.3)]"
             >
               <FacilityCard
                 className="rounded-none shadow-none"
