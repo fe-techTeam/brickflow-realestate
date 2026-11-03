@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { RotateCw } from "lucide-react";
 import { StatusScreen } from "@/components/brand/status-screen";
 import { Button } from "@/components/ui/button";
@@ -30,9 +31,8 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
                 <RotateCw className="text-gold-300" />
                 Try again
               </Button>
-              {/* Full page load: the root layout failed, so client-side navigation cannot be relied on. */}
-              <Button size="lg" variant="outline" onClick={() => window.location.assign("/")}>
-                Return to your workspace
+              <Button asChild size="lg" variant="outline">
+                <Link href="/">Return to your workspace</Link>
               </Button>
             </>
           }
