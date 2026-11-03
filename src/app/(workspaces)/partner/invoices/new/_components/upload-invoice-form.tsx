@@ -499,7 +499,7 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
             {[
               ["Builder review", "The builder's accounts team approves, rejects or asks for clarification."],
               ["Early payment", "Once approved, get the discounted amount at your builder's agreed rate."],
-              ["Payout", "Veefin approves and pays the net amount to your bank account (simulated)."],
+              ["Payout", "Veefin approves and pays the net amount to your bank account."],
             ].map(([title, body], i) => (
               <li key={title} className="flex gap-3.5">
                 <span className="font-display text-lg leading-none font-normal text-fg-muted tabular">{`0${i + 1}`}</span>

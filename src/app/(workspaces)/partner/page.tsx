@@ -236,7 +236,7 @@ export default async function PartnerOverviewPage() {
 
         <Panel
           className="xl:col-span-4"
-          eyebrow="Early payment · simulated"
+          eyebrow="Early payment"
           title="Recent transactions"
           bodyClassName="pb-5"
         >

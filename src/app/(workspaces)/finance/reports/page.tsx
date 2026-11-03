@@ -5,7 +5,7 @@ import { formatBps, formatINR, formatINRCompact } from "@/lib/money";
 import { requireWorkspace } from "@/server/auth/session";
 import { getFinanceReports } from "@/server/queries/finance";
 import { BuilderValueChart, ExposureChart, MonthlyVolumeChart, SettlementAgeingChart } from "../_components/charts";
-import { KeyFigures, Masthead, Money, Panel, SimulatedTag } from "../_components/ledger";
+import { KeyFigures, Masthead, Money, Panel } from "../_components/ledger";
 
 export const metadata: Metadata = { title: "Reports · Veefin Finance" };
 
@@ -27,7 +27,7 @@ export default async function ReportsPage() {
             <strong className="tabular font-semibold text-fg">{formatINRCompact(report.outstandingValue)}</strong> outstanding
           </span>,
           <span key="n" className="text-muted-foreground">
-            Amounts in Indian rupees · payouts simulated
+            Amounts in Indian rupees
           </span>,
         ]}
         actions={
@@ -45,7 +45,7 @@ export default async function ReportsPage() {
           {
             label: "Total disbursed",
             value: <Money paise={report.disbursedValue} compact size="lg" className="text-leaf" />,
-            hint: `${report.disbursedCount} simulated payout${report.disbursedCount === 1 ? "" : "s"}`,
+            hint: `${report.disbursedCount} payout${report.disbursedCount === 1 ? "" : "s"}`,
             accent: "leaf",
           },
           {
@@ -73,7 +73,6 @@ export default async function ReportsPage() {
               Net paid to channel partners · <span className="tabular font-medium text-fg">{formatINR(monthlyTotal)}</span>
             </>
           }
-          actions={<SimulatedTag />}
         >
           <MonthlyVolumeChart data={report.monthly} />
         </Panel>

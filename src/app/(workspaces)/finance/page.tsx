@@ -9,7 +9,7 @@ import { requireWorkspace } from "@/server/auth/session";
 import { getFinanceOverview, type WatchlistItem } from "@/server/queries/finance";
 import type { FinancingRequestListItem } from "@/server/services/financing";
 import { MonthlyVolumeChart } from "./_components/charts";
-import { EmptyNote, LaneHeading, Masthead, Money, Monogram, Panel, SimulatedTag } from "./_components/ledger";
+import { EmptyNote, LaneHeading, Masthead, Money, Monogram, Panel } from "./_components/ledger";
 import { RequestActionLink } from "./_components/request-table";
 
 export const metadata: Metadata = { title: "Overview · Veefin Finance" };
@@ -242,7 +242,7 @@ export default async function FinanceOverviewPage() {
           <div className="flex min-w-0 flex-col justify-between gap-8 lg:border-l lg:border-white/10 lg:pl-10">
             <div className="grid divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
               <HeroFigure label="Financed" paise={o.financedValue} hint={`${o.financedCount} approved or disbursed`} accent="bg-[#5fd3ab]" />
-              <HeroFigure label="Disbursed" paise={o.disbursedValue} hint={`${o.disbursedCount} simulated payout${o.disbursedCount === 1 ? "" : "s"}`} accent="bg-[#5fd3ab]" />
+              <HeroFigure label="Disbursed" paise={o.disbursedValue} hint={`${o.disbursedCount} payout${o.disbursedCount === 1 ? "" : "s"}`} accent="bg-[#5fd3ab]" />
               <HeroFigure
                 label="Pending"
                 paise={o.pendingNetValue}
@@ -308,7 +308,7 @@ export default async function FinanceOverviewPage() {
               title="Payouts in progress"
               items={[...o.queue.inProgress].reverse()}
               since={(r) => r.disbursement?.initiatedAt}
-              empty="No simulated payouts are awaiting confirmation."
+              empty="No payouts are awaiting confirmation."
               href="/finance/disbursements"
               now={now}
             />
@@ -340,7 +340,6 @@ export default async function FinanceOverviewPage() {
               Net paid to channel partners · <span className="tabular font-medium text-fg">{formatINR(monthlyTotal)}</span> in total
             </>
           }
-          actions={<SimulatedTag />}
         >
           <MonthlyVolumeChart data={o.monthly} height={240} />
         </Panel>

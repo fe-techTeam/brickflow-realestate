@@ -47,7 +47,7 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
           {
             label: "Net disbursed",
             value: <Money paise={metrics.disbursedValue} compact size="lg" className="text-leaf" />,
-            hint: `${metrics.disbursedCount} simulated payout${metrics.disbursedCount === 1 ? "" : "s"}`,
+            hint: `${metrics.disbursedCount} payout${metrics.disbursedCount === 1 ? "" : "s"}`,
             accent: "leaf",
           },
           { label: "Discount earned", value: <Money paise={metrics.discountValue} compact size="lg" />, hint: "On disbursed requests", accent: "basalt" },

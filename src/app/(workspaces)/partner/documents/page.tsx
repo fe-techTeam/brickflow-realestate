@@ -42,7 +42,7 @@ export default async function DocumentsPage() {
 
   return (
     <>
-      <PageIntro eyebrow="Account" title="Documents" description="Sample invoices for the demonstration, and every invoice PDF your organisation has uploaded." />
+      <PageIntro eyebrow="Account" title="Documents" description="Sample invoices to try the upload flow, and every invoice PDF your organisation has uploaded." />
 
       <div className="flex flex-col gap-6">
         <Panel eyebrow="Try the upload flow" title="Sample documents" description="Fictional GST brokerage invoices for extraction and submission">

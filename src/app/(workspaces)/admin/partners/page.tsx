@@ -51,7 +51,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
           {
             label: "Received early",
             value: <Money paise={sumPaise(partners.map((p) => p.receivedPaise))} compact size="lg" className="text-leaf" />,
-            hint: "Net payouts (simulated)",
+            hint: "Net payouts",
             accent: "leaf",
           },
         ]}

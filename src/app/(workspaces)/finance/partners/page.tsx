@@ -59,7 +59,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
           {
             label: "Net disbursed",
             value: <Money paise={sumPaise(partners.map((p) => p.disbursedValue))} compact size="lg" className="text-leaf" />,
-            hint: "Simulated payouts to partners",
+            hint: "Payouts to partners",
             accent: "leaf",
           },
         ]}

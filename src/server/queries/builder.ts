@@ -27,7 +27,7 @@ function visibleInvoices(actor: Actor) {
 
 /**
  * Amount still owed to Veefin for one request: the open settlement amount, or the approved amount when the
- * request is approved but the simulated disbursement has not completed yet. Zero once settled or not approved.
+ * request is approved but the disbursement has not completed yet. Zero once settled or not approved.
  */
 function pendingSettlementAmount(request: {
   status: FinancingStatus;

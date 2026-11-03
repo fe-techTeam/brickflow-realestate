@@ -132,7 +132,7 @@ export default async function ReportsPage() {
             </span>
             <p className="max-w-2xl text-sm leading-relaxed text-fg-soft">
               CSV with one row per invoice: partner, project, dates, status, invoice / GST / approved amounts in rupees, and the early-payment and settlement position. Opens
-              directly in Excel. Disbursement references are simulated.
+              directly in Excel.
             </p>
           </div>
           <Button variant="outline" asChild>

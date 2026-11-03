@@ -83,7 +83,7 @@ export function StatusScreen({
       </main>
 
       <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-5 pb-7 text-[0.6875rem] text-muted-foreground sm:px-10">
-        <span>Demonstration environment. All organisations are fictional and every payment is simulated.</span>
+        <span>BrickFlow · Real Estate Receivables, Made Liquid</span>
         <span className="font-accent text-[0.8125rem] text-fg-muted italic">Real Estate Receivables, Made Liquid</span>
       </footer>
     </div>

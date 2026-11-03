@@ -144,7 +144,7 @@ export default async function AdminDashboardPage() {
           <GoldRule className="mt-6 mb-8 w-16" />
           <dl className="mt-auto grid grid-cols-2 gap-6 border-t border-white/10 pt-6 sm:grid-cols-3">
             <div>
-              <dt className="text-[0.6875rem] text-white/55">Paid out early (simulated)</dt>
+              <dt className="text-[0.6875rem] text-white/55">Paid out early</dt>
               <dd className="mt-1.5">
                 <Money paise={dashboard.disbursed.amountPaise} compact size="md" className="text-white" />
               </dd>

@@ -185,7 +185,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Panel eyebrow="Payout" title="Disbursement" description="Simulated payout to the channel partner. No real funds move." actions={<DemoBadge />}>
+        <Panel eyebrow="Payout" title="Disbursement" description="Payout to the channel partner." actions={<DemoBadge />}>
           {disbursement ? (
             <FactList
               facts={[
@@ -202,7 +202,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
               ]}
             />
           ) : (
-            <Empty icon={Banknote} title="Not disbursed yet" description="Veefin initiates the simulated payout after approving the request." className="py-10" />
+            <Empty icon={Banknote} title="Not disbursed yet" description="Veefin initiates the payout after approving the request." className="py-10" />
           )}
         </Panel>
 

@@ -281,7 +281,7 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
   text(page, "Authorised Signatory", signX, footerTop - 116, fonts.bold, 8.5, HEAD);
 
   page.drawRectangle({ x: 0, y: 0, width, height: 30, color: SHADE });
-  text(page, "This is a computer-generated invoice for demonstration purposes. All entities and identifiers are fictional.", margin, 12, fonts.italic, 7, MUTED);
+  text(page, "This is a computer-generated invoice.", margin, 12, fonts.italic, 7, MUTED);
   rightText(page, "Page 1 of 1", width - margin, 12, fonts.regular, 7, MUTED);
 
   return doc.save();

@@ -36,7 +36,7 @@ export default async function SettingsPage() {
                 { label: "Runtime", value: `Node.js ${env.nodeVersion} · ${env.environment}` },
                 { label: "Database", value: env.database },
                 { label: "Document storage", value: env.storageDriver === "local" ? "Local file system (local driver)" : env.storageDriver },
-                { label: "Disbursements", value: "Simulated: no bank integration, no real funds move" },
+                { label: "Disbursements", value: "Two-step payout: initiate, then confirm transfer" },
                 { label: "Discount pricing", value: "Fixed rate per builder programme, set in Financing configuration" },
               ]}
             />

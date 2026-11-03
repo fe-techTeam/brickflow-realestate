@@ -18,7 +18,7 @@ import {
   refreshSettlementStatuses,
   type FinancingRequestDetail,
 } from "@/server/services/financing";
-import { CaseTimeline, EmptyNote, FactList, Masthead, Money, Monogram, Panel, Rule, Seal, SimulatedTag, StatementRow, type CaseEvent } from "../../_components/ledger";
+import { CaseTimeline, EmptyNote, FactList, Masthead, Money, Monogram, Panel, Rule, Seal, StatementRow, type CaseEvent } from "../../_components/ledger";
 import { orNotFound } from "../../_lib/records";
 import { toDisbursementSummary, toRequestSummary } from "../../_lib/summaries";
 import { InternalCommentForm } from "./_components/comment-form";
@@ -49,7 +49,7 @@ const EVENT_TONE: Partial<Record<FinancingStatus, CaseEvent["tone"]>> = {
 };
 
 const UPCOMING: Partial<Record<FinancingStatus, string[]>> = {
-  PENDING_APPROVAL: ["Credit decision by Veefin", "Simulated payout to channel partner", "Settlement by builder"],
+  PENDING_APPROVAL: ["Credit decision by Veefin", "Payout to channel partner", "Settlement by builder"],
   APPROVED: ["Payout instruction initiated", "Transfer confirmed", "Settlement by builder"],
   DISBURSEMENT_INITIATED: ["Transfer confirmed", "Settlement by builder"],
 };
@@ -175,7 +175,7 @@ function DisbursementAdvice({ request, nameOf }: { request: FinancingRequestDeta
           <div className="min-w-0">
             <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Remitter</p>
             <p className="mt-1.5 text-sm font-medium text-fg">{request.financier.name}</p>
-            <p className="text-xs text-muted-foreground">Disbursement pool · demo rail</p>
+            <p className="text-xs text-muted-foreground">Disbursement pool</p>
           </div>
           <ArrowRight className="hidden size-4 self-center text-fg-muted sm:block" aria-hidden="true" />
           <div className="min-w-0">
@@ -194,7 +194,6 @@ function DisbursementAdvice({ request, nameOf }: { request: FinancingRequestDeta
           </div>
           <div className="flex items-center gap-2 sm:pb-1">
             <StatusBadge kind="disbursement" status={d.status} />
-            <SimulatedTag />
           </div>
         </div>
 
@@ -212,7 +211,7 @@ function DisbursementAdvice({ request, nameOf }: { request: FinancingRequestDeta
           <FactList
             items={[
               { label: "Completed by", value: d.completedAt ? nameOf(d.completedById) : "—" },
-              { label: "Mode", value: "Demo rail · no real funds moved" },
+              { label: "Mode", value: "Bank transfer" },
             ]}
           />
         </div>
