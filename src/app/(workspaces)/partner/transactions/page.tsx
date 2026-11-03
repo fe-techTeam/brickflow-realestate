@@ -1,20 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle2, Clock3, HandCoins, Receipt, SearchX, Wallet } from "lucide-react";
+import { ChevronRight, Receipt, SearchX } from "lucide-react";
 import type { FinancingStatus } from "@/generated/prisma/enums";
-import { DataTable, readSort, SortTh, sortRows, Th, Td, Tr } from "@/components/common/data-table";
+import { readSort, sortRows } from "@/components/common/data-table";
 import { ListToolbar } from "@/components/common/list-toolbar";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
-import { StatCard, StatGrid } from "@/components/common/stat-card";
-import { DemoBadge, StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { formatBps, formatINR, formatINRCompact, sumPaise } from "@/lib/money";
+import { formatBps, sumPaise } from "@/lib/money";
 import { FINANCING_STATUS } from "@/lib/status";
 import { requireWorkspace } from "@/server/auth/session";
 import { effectiveSettlementStatus, listFinancingRequests } from "@/server/services/financing";
+import { CompactMoney, Money } from "../_components/money";
 import { firstParam } from "../_components/summaries";
+import { RefCell, SortTh, Table, TableToolbar, Td, Th, Tr } from "../_components/table";
+import { EmptyNote, MetricStrip, PageIntro, Panel, SimulatedTag, StatusMark, statusMeta } from "../_components/ui";
 
 export const metadata: Metadata = { title: "My Transactions" };
 
@@ -53,108 +52,135 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
 
   return (
     <>
-      <PageHeader
+      <PageIntro
         eyebrow="Early payment"
         title="My Transactions"
         description="Every early payment request you have made, with the agreed discount and its progress through Veefin approval and payout."
-        actions={<DemoBadge />}
+        actions={<SimulatedTag label="Simulated payments" />}
       />
 
-      <StatGrid className="mb-8 xl:grid-cols-4 2xl:grid-cols-4">
-        <StatCard label="Financing requests" value={all.length} hint={`${live.length} active or completed`} icon={Receipt} />
-        <StatCard label="Approved amount financed" value={formatINRCompact(sumPaise(live.map((r) => r.approvedAmountPaise)))} hint="Excludes rejected requests" icon={HandCoins} />
-        <StatCard label="Pending Veefin approval" value={pending.length} hint={`${formatINRCompact(sumPaise(pending.map((r) => r.netPayablePaise)))} net payable`} icon={Clock3} tone="gold" />
-        <StatCard
-          label="Received (simulated)"
-          value={formatINRCompact(sumPaise(disbursed.map((r) => r.netPayablePaise)))}
-          hint={`${disbursed.length} disbursed`}
-          icon={Wallet}
-          tone="heritage"
-          href="/partner/disbursements"
-        />
-      </StatGrid>
+      <MetricStrip
+        className="mb-8"
+        items={[
+          { label: "Financing requests", value: <span className="text-[1.875rem] leading-none font-normal tabular">{all.length}</span>, hint: `${live.length} active or completed` },
+          {
+            label: "Approved amount financed",
+            value: <CompactMoney paise={sumPaise(live.map((r) => r.approvedAmountPaise))} size="xl" />,
+            hint: "Excludes rejected requests",
+            accent: "slate",
+          },
+          {
+            label: "Pending Veefin approval",
+            value: <CompactMoney paise={sumPaise(pending.map((r) => r.netPayablePaise))} size="xl" />,
+            hint: `${pending.length} ${pending.length === 1 ? "request" : "requests"} · net payable`,
+            accent: "gold",
+            href: `${PATH}?status=PENDING_APPROVAL`,
+          },
+          {
+            label: "Received",
+            value: <CompactMoney paise={sumPaise(disbursed.map((r) => r.netPayablePaise))} size="xl" />,
+            hint: `${disbursed.length} disbursed`,
+            accent: "heritage",
+            href: "/partner/disbursements",
+          },
+        ]}
+      />
 
-      <Section title={`${rows.length} ${rows.length === 1 ? "request" : "requests"}`} bodyClassName="py-0">
-        <div className="border-b border-border/70 py-4">
+      <Panel eyebrow={status || search ? "Filtered view" : "All requests"} title={`${rows.length} ${rows.length === 1 ? "request" : "requests"}`} bodyClassName="pb-0">
+        <TableToolbar>
           <ListToolbar
             searchPlaceholder="Search request reference, invoice or builder"
             filters={[{ param: "status", label: "Statuses", options: STATUS_FILTERS.map((s) => ({ value: s, label: FINANCING_STATUS[s].label })) }]}
           />
-        </div>
+        </TableToolbar>
         {rows.length === 0 ? (
-          all.length === 0 ? (
-            <EmptyState
-              icon={CheckCircle2}
-              title="No financing requests yet"
-              description="Accept an early payment offer on an approved invoice and it will be tracked here."
-              action={
-                <Button size="sm" asChild>
-                  <Link href="/partner/offers">View financing offers</Link>
-                </Button>
-              }
-            />
-          ) : (
-            <EmptyState icon={SearchX} title="No requests match your filters" description="Try a different search term or clear the filters." />
-          )
+          <div className="-mx-5 border-t border-hairline sm:-mx-7">
+            {all.length === 0 ? (
+              <EmptyNote
+                icon={Receipt}
+                title="No financing requests yet"
+                description="Accept an early payment offer on an approved invoice and it will be tracked here."
+                action={
+                  <Button size="sm" asChild>
+                    <Link href="/partner/offers">View financing offers</Link>
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyNote icon={SearchX} title="No requests match your filters" description="Try a different search term or clear the filters." />
+            )}
+          </div>
         ) : (
-          <DataTable minWidth={1280}>
-            <thead>
-              <tr>
-                <SortTh label="Reference" sortKey="reference" sort={sort} searchParams={params} pathname={PATH} />
-                <SortTh label="Invoice" sortKey="invoice" sort={sort} searchParams={params} pathname={PATH} />
-                <SortTh label="Builder" sortKey="builder" sort={sort} searchParams={params} pathname={PATH} />
-                <SortTh label="Approved amount" sortKey="approved" sort={sort} searchParams={params} pathname={PATH} align="right" />
-                <Th align="right">Discount</Th>
-                <Th align="right">Discount amount</Th>
-                <SortTh label="Net payable" sortKey="net" sort={sort} searchParams={params} pathname={PATH} align="right" />
-                <SortTh label="Status" sortKey="status" sort={sort} searchParams={params} pathname={PATH} />
-                <SortTh label="Accepted" sortKey="accepted" sort={sort} searchParams={params} pathname={PATH} />
-                <Th>Settlement</Th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            <ul className="-mx-5 divide-y divide-hairline border-t border-hairline md:hidden">
               {rows.map((r) => (
-                <Tr key={r.id}>
-                  <Td className="whitespace-nowrap">
-                    <Link href={`/partner/invoices/${r.invoice.id}`} className="font-medium text-navy hover:underline">
-                      {r.reference}
-                    </Link>
-                  </Td>
-                  <Td>
-                    <Link href={`/partner/invoices/${r.invoice.id}`} className="text-navy hover:underline">
-                      {r.invoice.invoiceNumber}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">{r.invoice.project.name}</p>
-                  </Td>
-                  <Td>{r.builder.name}</Td>
-                  <Td align="right">{formatINR(r.approvedAmountPaise)}</Td>
-                  <Td align="right">{formatBps(r.discountRateBps)}</Td>
-                  <Td align="right" className="text-[#93342a]">
-                    − {formatINR(r.discountAmountPaise)}
-                  </Td>
-                  <Td align="right" className="font-semibold text-heritage">
-                    {formatINR(r.netPayablePaise)}
-                  </Td>
-                  <Td>
-                    <StatusBadge kind="financing" status={r.status} />
-                  </Td>
-                  <Td className="whitespace-nowrap">{formatDateTime(r.acceptedAt)}</Td>
-                  <Td>
-                    {r.settlement ? (
-                      <>
-                        <StatusBadge kind="settlement" status={effectiveSettlementStatus(r.settlement)} />
-                        <p className="mt-1 text-xs text-muted-foreground">Due {formatDate(r.settlement.dueDate)}</p>
-                      </>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">{r.status === "REJECTED" ? "Not applicable" : "After disbursement"}</span>
-                    )}
-                  </Td>
-                </Tr>
+                <li key={r.id}>
+                  <Link href={`/partner/invoices/${r.invoice.id}`} className="flex items-start gap-3 px-5 py-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="font-medium text-navy">{r.invoice.invoiceNumber}</p>
+                        <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {r.reference} · {formatBps(r.discountRateBps)} on <Money paise={r.approvedAmountPaise} />
+                      </p>
+                      <StatusMark kind="financing" status={r.status} className="mt-2.5 text-xs" />
+                    </div>
+                    <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
+                  </Link>
+                </li>
               ))}
-            </tbody>
-          </DataTable>
+            </ul>
+
+            <Table minWidth={1000} className="hidden md:block">
+              <thead>
+                <tr>
+                  <SortTh label="Request" sortKey="reference" sort={sort} searchParams={params} pathname={PATH} />
+                  <SortTh label="Invoice" sortKey="invoice" sort={sort} searchParams={params} pathname={PATH} />
+                  <SortTh label="Approved" sortKey="approved" sort={sort} searchParams={params} pathname={PATH} align="right" />
+                  <Th align="right">Discount</Th>
+                  <SortTh label="Net payable" sortKey="net" sort={sort} searchParams={params} pathname={PATH} align="right" />
+                  <SortTh label="Status" sortKey="status" sort={sort} searchParams={params} pathname={PATH} />
+                  <SortTh label="Accepted" sortKey="accepted" sort={sort} searchParams={params} pathname={PATH} />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <Tr key={r.id}>
+                    <Td>
+                      <RefCell href={`/partner/invoices/${r.invoice.id}`} primary={r.reference} secondary={r.builder.name} />
+                    </Td>
+                    <Td>
+                      <RefCell href={`/partner/invoices/${r.invoice.id}`} primary={r.invoice.invoiceNumber} secondary={r.invoice.project.name} />
+                    </Td>
+                    <Td align="right">
+                      <Money paise={r.approvedAmountPaise} />
+                    </Td>
+                    <Td align="right">
+                      <Money paise={r.discountAmountPaise} sign="minus" className="text-danger" />
+                      <p className="mt-0.5 text-xs text-muted-foreground">{formatBps(r.discountRateBps)}</p>
+                    </Td>
+                    <Td align="right">
+                      <Money paise={r.netPayablePaise} className="font-semibold text-heritage" />
+                    </Td>
+                    <Td>
+                      <StatusMark kind="financing" status={r.status} />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {r.settlement
+                          ? `Settlement ${statusMeta("settlement", effectiveSettlementStatus(r.settlement)).label.toLowerCase()} · ${formatDate(r.settlement.dueDate)}`
+                          : r.status === "REJECTED"
+                            ? "No settlement"
+                            : "Settles after disbursement"}
+                      </p>
+                    </Td>
+                    <Td className="text-[0.8125rem] whitespace-nowrap">{formatDateTime(r.acceptedAt)}</Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+          </>
         )}
-      </Section>
+      </Panel>
     </>
   );
 }
