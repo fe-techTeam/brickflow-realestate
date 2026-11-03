@@ -89,9 +89,9 @@ export async function getBuilderOverview(actor: Actor) {
   let pendingValue = 0n;
   let approvedCount = 0;
   let approvedValue = 0n;
-  const byProject = new Map<string, { name: string; code: string; approved: bigint; awaiting: bigint }>();
+  const byProject = new Map<string, { id: string; name: string; code: string; approved: bigint; awaiting: bigint }>();
   for (const invoice of invoices) {
-    const project = byProject.get(invoice.project.id) ?? { name: invoice.project.name, code: invoice.project.code, approved: 0n, awaiting: 0n };
+    const project = byProject.get(invoice.project.id) ?? { id: invoice.project.id, name: invoice.project.name, code: invoice.project.code, approved: 0n, awaiting: 0n };
     if (AWAITING_DECISION.includes(invoice.status)) {
       pendingCount += 1;
       pendingValue += invoice.amountPaise;
@@ -109,6 +109,7 @@ export async function getBuilderOverview(actor: Actor) {
   let financedValue = 0n;
   let pendingSettlementValue = 0n;
   let pendingSettlementCount = 0;
+  let nextSettlement: { dueDate: Date; amountPaise: bigint } | null = null;
   for (const request of requests) {
     if (request.status !== "REJECTED") {
       financedCount += 1;
@@ -118,6 +119,10 @@ export async function getBuilderOverview(actor: Actor) {
     if (owed > 0n) {
       pendingSettlementCount += 1;
       pendingSettlementValue += owed;
+    }
+    const s = request.settlement;
+    if (s && effectiveSettlementStatus(s) !== "SETTLED" && (!nextSettlement || s.dueDate < nextSettlement.dueDate)) {
+      nextSettlement = { dueDate: s.dueDate, amountPaise: s.amountPaise };
     }
   }
 
@@ -134,6 +139,7 @@ export async function getBuilderOverview(actor: Actor) {
       pendingSettlementCount,
       pendingSettlementValue,
     },
+    nextSettlement,
     inbox,
     events,
     byProject: [...byProject.values()].sort((a, b) => a.name.localeCompare(b.name)),

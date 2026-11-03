@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Loader2, MessageSquareWarning, XCircle } from "lucide-react";
+import { Eye, Loader2, MessageSquareText, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ActionDialog } from "@/components/common/action-dialog";
 import { Button } from "@/components/ui/button";
@@ -41,19 +41,13 @@ export function ReviewActions({
   }
 
   return (
-    <div className="grid gap-2.5">
-      {status === "SUBMITTED" && (
-        <Button variant="outline" className="w-full" onClick={markUnderReview} disabled={pending}>
-          {pending ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
-          Mark under review
-        </Button>
-      )}
+    <div className="grid gap-3">
       <ApproveDialog invoiceId={invoiceId} invoiceNumber={invoiceNumber} cpName={cpName} amountPaise={amountPaise} />
-      <div className="grid gap-2.5 [&_button]:w-full">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 [&_button]:h-10 [&_button]:w-full">
         <ActionDialog
           trigger="Request clarification"
-          triggerVariant="secondary"
-          triggerIcon={<MessageSquareWarning className="size-4" />}
+          triggerVariant="outline"
+          triggerIcon={<MessageSquareText className="size-4 text-[#8a5a12]" />}
           title="Request clarification"
           description={
             <>
@@ -72,7 +66,7 @@ export function ReviewActions({
           action={requestClarificationAction.bind(null, invoiceId)}
         />
         <ActionDialog
-          trigger="Reject invoice"
+          trigger="Reject"
           triggerVariant="destructive"
           triggerIcon={<XCircle className="size-4" />}
           title={`Reject ${invoiceNumber}`}
@@ -95,6 +89,15 @@ export function ReviewActions({
           action={rejectInvoiceAction.bind(null, invoiceId)}
         />
       </div>
+      {status === "SUBMITTED" && (
+        <div className="mt-2 flex items-center justify-between gap-3 border-t border-dashed border-[#e3dccb] pt-4">
+          <p className="text-[0.75rem] leading-snug text-muted-foreground">Let {cpName} know you have started reviewing.</p>
+          <Button variant="ghost" size="sm" className="shrink-0 text-navy" onClick={markUnderReview} disabled={pending}>
+            {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Eye className="size-3.5" />}
+            Mark under review
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

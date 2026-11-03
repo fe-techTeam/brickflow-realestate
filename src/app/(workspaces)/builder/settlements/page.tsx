@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, CalendarClock, CalendarDays, CheckCircle2, Info, Landmark, SearchX } from "lucide-react";
-import { DataTable, readSort, SortTh, sortRows, Td, Th, Tr } from "@/components/common/data-table";
+import { Info, Landmark, SearchX } from "lucide-react";
+import { readSort, sortRows } from "@/components/common/data-table";
 import { ListToolbar } from "@/components/common/list-toolbar";
-import { PageHeader } from "@/components/common/page-header";
-import { EmptyState, Section } from "@/components/common/panels";
-import { StatCard, StatGrid } from "@/components/common/stat-card";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import type { SettlementStatus } from "@/generated/prisma/enums";
 import { formatDate } from "@/lib/format";
-import { formatINR, formatINRCompact, sumPaise } from "@/lib/money";
+import { sumPaise } from "@/lib/money";
 import { SETTLEMENT_STATUS } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { requireWorkspace } from "@/server/auth/session";
 import { listBuilderSettlements, type BuilderSettlement } from "@/server/queries/builder";
-import { ToolbarRow } from "../_components/toolbar-row";
+import { BucketBar, type Bucket } from "../_components/ageing";
+import { CARD, Callout, Empty, Masthead, Panel } from "../_components/kit";
+import { Money } from "../_components/money";
+import { Ledger, Ref, RowLink, SortTh, TableToolbar, Td, Th, Tr } from "../_components/table";
 import { calendarDaysUntil } from "../_lib/dates";
 import { enumParam, param, type SearchParams } from "../_lib/params";
 
@@ -26,15 +26,31 @@ const STATUSES: SettlementStatus[] = ["NOT_DUE", "DUE", "OVERDUE", "SETTLED"];
 const STATUS_ORDER: Record<SettlementStatus, number> = { OVERDUE: 0, DUE: 1, NOT_DUE: 2, SETTLED: 3 };
 const SORT_KEYS = ["request", "cp", "amount", "due", "status"] as const;
 
+const MATURITY: { key: string; label: string; tone: Bucket["tone"]; test: (days: number) => boolean }[] = [
+  { key: "overdue", label: "Overdue", tone: "rose", test: (d) => d < 0 },
+  { key: "today", label: "Due today", tone: "amber", test: (d) => d === 0 },
+  { key: "week", label: "Within 7 days", tone: "gold", test: (d) => d > 0 && d <= 7 },
+  { key: "month", label: "8–30 days", tone: "navy", test: (d) => d > 7 && d <= 30 },
+  { key: "later", label: "Beyond 30 days", tone: "slate", test: (d) => d > 30 },
+];
+
 function DaysCell({ settlement, now }: { settlement: BuilderSettlement; now: Date }) {
   if (settlement.effectiveStatus === "SETTLED") {
     const days = settlement.settledAt ? calendarDaysUntil(settlement.dueDate, settlement.settledAt) : null;
-    return <span className="text-xs text-muted-foreground">{days === null ? "Settled" : days >= 0 ? "Settled on time" : `Settled ${-days} ${days === -1 ? "day" : "days"} late`}</span>;
+    return (
+      <span className="text-[0.75rem] text-heritage">
+        {days === null ? "Settled" : days >= 0 ? "Settled on time" : `Settled ${-days} ${days === -1 ? "day" : "days"} late`}
+      </span>
+    );
   }
   const days = calendarDaysUntil(settlement.dueDate, now);
-  if (days === 0) return <span className="text-sm font-medium text-[#8a5a12]">Due today</span>;
-  if (days < 0) return <span className="text-sm font-medium text-[#93342a]">{-days} {days === -1 ? "day" : "days"} overdue</span>;
-  return <span className={cn("text-sm", days <= 7 ? "font-medium text-[#8a5a12]" : "text-slate-ink")}>{days} {days === 1 ? "day" : "days"} to due</span>;
+  if (days === 0) return <span className="font-medium text-[#8a5a12]">Due today</span>;
+  if (days < 0) return <span className="font-medium text-[#93342a]">{-days} {days === -1 ? "day" : "days"} overdue</span>;
+  return (
+    <span className={cn("tabular", days <= 7 ? "font-medium text-[#8a5a12]" : "text-slate-ink")}>
+      {days} {days === 1 ? "day" : "days"} to due
+    </span>
+  );
 }
 
 export default async function SettlementsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -60,55 +76,62 @@ export default async function SettlementsPage({ searchParams }: { searchParams: 
     status: (s) => STATUS_ORDER[s.effectiveStatus],
   });
 
-  const totals = Object.fromEntries(
-    STATUSES.map((st) => {
-      const group = settlements.filter((s) => s.effectiveStatus === st);
-      return [st, { count: group.length, value: sumPaise(group.map((s) => s.amountPaise)) }];
-    }),
-  ) as Record<SettlementStatus, { count: number; value: bigint }>;
-  const countLabel = (n: number) => `${n} ${n === 1 ? "settlement" : "settlements"}`;
+  const open = settlements.filter((s) => s.effectiveStatus !== "SETTLED");
+  const settled = settlements.filter((s) => s.effectiveStatus === "SETTLED");
+  const maturity: Bucket[] = MATURITY.map((band) => {
+    const group = open.filter((s) => band.test(calendarDaysUntil(s.dueDate, now)));
+    return { key: band.key, label: band.label, tone: band.tone, count: group.length, value: sumPaise(group.map((s) => s.amountPaise)) };
+  });
 
   return (
     <>
-      <PageHeader
+      <Masthead
         eyebrow="Finance"
         title="Settlements"
-        description="What you owe Veefin for invoices it paid early to your channel partners. Each settlement is the full approved invoice amount, due on the invoice's original due date."
+        lede="What you owe Veefin for invoices it paid early to your channel partners. Each settlement is the full approved invoice amount, due on the invoice's original due date."
       />
 
-      <StatGrid className="mb-6 xl:grid-cols-4 2xl:grid-cols-4">
-        <StatCard label="Not due" value={formatINRCompact(totals.NOT_DUE.value)} hint={countLabel(totals.NOT_DUE.count)} icon={CalendarDays} />
-        <StatCard label="Due today" value={formatINRCompact(totals.DUE.value)} hint={countLabel(totals.DUE.count)} icon={CalendarClock} tone="gold" />
-        <StatCard label="Overdue" value={formatINRCompact(totals.OVERDUE.value)} hint={countLabel(totals.OVERDUE.count)} icon={AlertTriangle} tone="slate" />
-        <StatCard label="Settled" value={formatINRCompact(totals.SETTLED.value)} hint={countLabel(totals.SETTLED.count)} icon={CheckCircle2} tone="heritage" />
-      </StatGrid>
-
-      <div className="mb-6 flex animate-fade-up gap-3 rounded-lg border border-heritage/15 bg-sage/60 px-5 py-4 text-sm text-heritage">
-        <Info className="mt-0.5 size-4 shrink-0" />
-        <div className="space-y-1 leading-relaxed">
-          <p>
-            <span className="font-semibold">Settlement is recorded by Veefin.</span> Pay the approved amount to Veefin on or before the due date; Veefin marks the
-            settlement as settled once your payment is received. Your credit period with each channel partner is unchanged, and the discount is borne by the partner.
+      <section className={cn(CARD, "mb-6 grid animate-fade-up gap-px overflow-hidden bg-[#ebe5d8] lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]")}>
+        <div className="bg-navy px-5 py-6 text-white sm:px-7">
+          <p className="flex items-center gap-2 text-[0.625rem] font-semibold tracking-[0.18em] text-gold uppercase">
+            <Landmark className="size-3.5" />
+            Owed to Veefin
           </p>
-          {awaitingDisbursement.count > 0 && (
-            <p className="text-heritage/85">
-              {awaitingDisbursement.count} approved {awaitingDisbursement.count === 1 ? "request" : "requests"} ({formatINRCompact(awaitingDisbursement.value)}) will appear here
-              once Veefin completes the disbursement.
-            </p>
-          )}
+          <Money paise={sumPaise(open.map((s) => s.amountPaise))} compact size="xl" className="mt-4 font-light text-white" />
+          <p className="mt-2 text-[0.75rem] text-white/60">
+            {open.length} open {open.length === 1 ? "settlement" : "settlements"}
+          </p>
+          <div className="mt-5 border-t border-white/10 pt-4 text-[0.75rem] text-white/60">
+            <Money paise={sumPaise(settled.map((s) => s.amountPaise))} compact className="font-medium text-white/85" /> settled to date · {settled.length}
+          </div>
         </div>
-      </div>
+        <div className="bg-card px-5 py-6 sm:px-7">
+          <p className="mb-4 text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Maturity of open settlements</p>
+          <BucketBar buckets={maturity} format={(v) => <Money paise={v} compact className="text-[0.9375rem] font-medium" />} />
+        </div>
+      </section>
 
-      <Section title="Settlement schedule" description={rows.length > 0 ? `${rows.length} of ${settlements.length} shown · read-only` : "Read-only"} bodyClassName="py-0">
-        <ToolbarRow>
+      <Callout icon={Info} title="Settlement is recorded by Veefin" className="mb-6 animate-fade-up sm:mb-8">
+        Pay the approved amount to Veefin on or before the due date; Veefin marks the settlement as settled once your payment is received. Your credit period with each
+        channel partner is unchanged, and the discount is borne by the partner.
+        {awaitingDisbursement.count > 0 && (
+          <span className="mt-1 block">
+            {awaitingDisbursement.count} approved {awaitingDisbursement.count === 1 ? "request" : "requests"} (
+            <Money paise={awaitingDisbursement.value} compact />) will appear here once Veefin completes the disbursement.
+          </span>
+        )}
+      </Callout>
+
+      <Panel title="Settlement schedule" description={rows.length > 0 ? `${rows.length} of ${settlements.length} shown · read-only` : "Read-only"} flush>
+        <TableToolbar>
           <ListToolbar
             searchPlaceholder="Search request, invoice, partner or reference…"
             filters={[{ param: "status", label: "Statuses", options: STATUSES.map((s) => ({ value: s, label: SETTLEMENT_STATUS[s].label })) }]}
           />
-        </ToolbarRow>
+        </TableToolbar>
         {rows.length === 0 ? (
           settlements.length === 0 ? (
-            <EmptyState
+            <Empty
               icon={Landmark}
               title="Nothing owed to Veefin"
               description="Settlements are created when Veefin pays a channel partner early on one of your approved invoices."
@@ -119,17 +142,17 @@ export default async function SettlementsPage({ searchParams }: { searchParams: 
               }
             />
           ) : (
-            <EmptyState icon={SearchX} title="No settlements match your filters" description="Try a different search term or clear the filters." />
+            <Empty icon={SearchX} title="No settlements match your filters" description="Try a different search term or clear the filters." />
           )
         ) : (
-          <DataTable minWidth={1000}>
+          <Ledger minWidth={1060} caption="Settlement schedule">
             <thead>
               <tr>
+                <SortTh label="Due date" sortKey="due" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Request" sortKey="request" sort={sort} searchParams={sp} pathname={PATH} />
                 <Th>Invoice</Th>
                 <SortTh label="Partner" sortKey="cp" sort={sort} searchParams={sp} pathname={PATH} />
                 <SortTh label="Amount due" sortKey="amount" sort={sort} searchParams={sp} pathname={PATH} align="right" />
-                <SortTh label="Due date" sortKey="due" sort={sort} searchParams={sp} pathname={PATH} />
                 <Th>Days to due</Th>
                 <SortTh label="Status" sortKey="status" sort={sort} searchParams={sp} pathname={PATH} />
                 <Th>Settled</Th>
@@ -138,21 +161,21 @@ export default async function SettlementsPage({ searchParams }: { searchParams: 
             <tbody>
               {rows.map((s) => (
                 <Tr key={s.id}>
-                  <Td>
-                    <p className="font-mono text-xs text-navy">{s.request.reference}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Payable to {s.request.financier.name}</p>
+                  <Td className="whitespace-nowrap">
+                    <span className="font-medium text-navy">{formatDate(s.dueDate)}</span>
                   </Td>
                   <Td>
-                    <Link href={`/builder/invoices/${s.request.invoice.id}`} className="font-medium text-navy underline-offset-4 hover:underline">
-                      {s.request.invoice.invoiceNumber}
-                    </Link>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{s.request.invoice.project.name}</p>
+                    <p className="font-mono text-[0.75rem] text-navy">{s.request.reference}</p>
+                    <p className="mt-1 text-[0.75rem] text-muted-foreground">Payable to {s.request.financier.name}</p>
                   </Td>
-                  <Td className="font-medium text-navy">{s.request.cp.name}</Td>
-                  <Td align="right" className="font-semibold text-navy">
-                    {formatINR(s.amountPaise)}
+                  <Td>
+                    <RowLink href={`/builder/invoices/${s.request.invoice.id}`}>{s.request.invoice.invoiceNumber}</RowLink>
+                    <p className="mt-1 text-[0.75rem] text-muted-foreground">{s.request.invoice.project.name}</p>
                   </Td>
-                  <Td className="whitespace-nowrap">{formatDate(s.dueDate)}</Td>
+                  <Td className="font-medium whitespace-nowrap text-navy">{s.request.cp.name}</Td>
+                  <Td align="right">
+                    <Money paise={s.amountPaise} className="font-semibold text-navy" />
+                  </Td>
                   <Td className="whitespace-nowrap">
                     <DaysCell settlement={s} now={now} />
                   </Td>
@@ -163,18 +186,18 @@ export default async function SettlementsPage({ searchParams }: { searchParams: 
                     {s.effectiveStatus === "SETTLED" ? (
                       <>
                         <p className="whitespace-nowrap">{formatDate(s.settledAt)}</p>
-                        {s.reference && <p className="mt-0.5 font-mono text-[0.6875rem] text-muted-foreground">{s.reference}</p>}
+                        {s.reference && <Ref>{s.reference}</Ref>}
                       </>
                     ) : (
-                      <span className="text-xs whitespace-nowrap text-muted-foreground">Awaiting payment</span>
+                      <span className="text-[0.75rem] whitespace-nowrap text-muted-foreground">Awaiting payment</span>
                     )}
                   </Td>
                 </Tr>
               ))}
             </tbody>
-          </DataTable>
+          </Ledger>
         )}
-      </Section>
+      </Panel>
     </>
   );
 }
