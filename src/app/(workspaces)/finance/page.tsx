@@ -15,7 +15,6 @@ import { RequestActionLink } from "./_components/request-table";
 export const metadata: Metadata = { title: "Overview · Veefin Finance" };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const dayFormatter = new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" });
 const dueDay = new Intl.DateTimeFormat("en-IN", { day: "2-digit", timeZone: "Asia/Kolkata" });
 const dueMonth = new Intl.DateTimeFormat("en-IN", { month: "short", timeZone: "Asia/Kolkata" });
 
@@ -180,15 +179,12 @@ export default async function FinanceOverviewPage() {
         title="Credit portfolio"
         context={context}
         actions={
-          <>
-            <span className="mr-2 hidden text-xs text-muted-foreground lg:inline">{dayFormatter.format(now)}</span>
-            <Button asChild variant="outline" className="bg-card">
-              <Link href="/finance/reports">
-                <FileBarChart2 className="size-4" />
-                Reports
-              </Link>
-            </Button>
-          </>
+          <Button asChild variant="outline" className="bg-card">
+            <Link href="/finance/reports">
+              <FileBarChart2 className="size-4" />
+              Reports
+            </Link>
+          </Button>
         }
       />
 

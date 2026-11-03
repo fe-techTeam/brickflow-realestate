@@ -109,8 +109,7 @@ export default async function BuildersPage() {
                 <tr>
                   <LTh>Builder</LTh>
                   <LTh>Programme</LTh>
-                  <LTh align="right">Projects</LTh>
-                  <LTh align="right">Approved book</LTh>
+                                    <LTh align="right">Approved book</LTh>
                   <LTh>Utilisation</LTh>
                   <LTh align="right">Financed</LTh>
                   <LTh align="right">Outstanding</LTh>
@@ -122,7 +121,7 @@ export default async function BuildersPage() {
               <tbody>
                 {builders.map((b) => (
                   <LTr key={b.id}>
-                    <LTd>
+                    <LTd className="min-w-56">
                       <div className="flex items-center gap-3">
                         <Monogram name={b.name} tone="heritage" size="sm" />
                         <div className="min-w-0">
@@ -130,21 +129,21 @@ export default async function BuildersPage() {
                             {b.name}
                           </Link>
                           <p className="text-xs text-muted-foreground">{[b.city, b.state].filter(Boolean).join(", ")}</p>
+                          <p className="tabular text-[0.6875rem] text-muted-foreground">
+                            {b.projectCount} project{b.projectCount === 1 ? "" : "s"}
+                          </p>
                         </div>
                       </div>
                     </LTd>
                     <LTd>
                       <div className="flex items-center gap-2">
-                        <span className="tabular font-medium tracking-wide text-navy">{b.programme.code}</span>
+                        <span className="tabular font-medium tracking-wide whitespace-nowrap text-navy">{b.programme.code}</span>
                         <span className="tabular rounded-md bg-gold-100 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-gold-600">{formatBps(b.programme.discountRateBps)}</span>
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         <StatusBadge kind="programme" status={b.programme.status} />
                         {b.status !== "ACTIVE" && <StatusBadge kind="record" status={b.status} />}
                       </div>
-                    </LTd>
-                    <LTd align="right" className="text-navy">
-                      {b.projectCount}
                     </LTd>
                     <LTd align="right">
                       <Money paise={b.approvedInvoiceValue} className="font-normal text-slate-ink" />

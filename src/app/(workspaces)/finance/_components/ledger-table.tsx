@@ -24,7 +24,7 @@ export function LTh({ children, align = "left", className }: { children?: ReactN
     <th
       scope="col"
       className={cn(
-        "border-y border-navy/10 bg-ivory/45 px-4 py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
+        "border-y border-navy/10 bg-ivory/45 px-3.5 py-3 text-[0.625rem] font-semibold tracking-[0.16em] whitespace-nowrap text-muted-foreground uppercase",
         edge,
         align === "right" && "text-right",
         align === "center" && "text-center",
@@ -41,7 +41,7 @@ export function LTd({ children, align = "left", className }: { children?: ReactN
   return (
     <td
       className={cn(
-        "border-b border-border/60 px-4 py-4 align-middle text-slate-ink",
+        "border-b border-border/60 px-3.5 py-4 align-middle text-slate-ink",
         edge,
         align === "right" && "tabular text-right",
         align === "center" && "text-center",

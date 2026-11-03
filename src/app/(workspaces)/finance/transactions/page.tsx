@@ -41,7 +41,7 @@ function SettlementCell({ row }: { row: LedgerRow }) {
     );
   }
   if (r.status === "REJECTED") return <span className="text-muted-foreground">—</span>;
-  return <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">Opens on disbursement · invoice due {formatDate(r.invoice.dueDate)}</p>;
+  return <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">Opens on payout · due {formatDate(r.invoice.dueDate)}</p>;
 }
 
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -173,7 +173,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
               <thead>
                 <tr>
                   {th("Request", "reference")}
-                  {th("Channel partner → Builder", "cp")}
+                  {th("Counterparties", "cp")}
                   {th("Approved", "approved", "right")}
                   {th("Net payable", "net", "right")}
                   {th("Status", "status")}
@@ -193,13 +193,13 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                         <p className="tabular mt-0.5 text-xs text-slate-ink/80">{r.invoice.invoiceNumber}</p>
                         <p className="text-[0.6875rem] text-muted-foreground">{formatDate(r.createdAt)}</p>
                       </LTd>
-                      <LTd className="min-w-48">
+                      <LTd className="min-w-44">
                         <span className="text-navy">{r.cp.name}</span>
                         <p className="text-xs text-muted-foreground">to {r.builder.name}</p>
                       </LTd>
                       <LTd align="right">
                         <Money paise={r.approvedAmountPaise} className="font-normal text-slate-ink" />
-                        <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
+                        <p className="mt-0.5 text-[0.6875rem] whitespace-nowrap text-muted-foreground">
                           <Money paise={r.discountAmountPaise} sign="−" size="xs" className="font-normal text-danger" /> at {formatBps(r.discountRateBps)}
                         </p>
                       </LTd>
@@ -210,7 +210,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                         <StatusBadge kind="financing" status={r.status} />
                       </LTd>
                       <LTd className="text-xs whitespace-nowrap">{formatDate(r.disbursement?.completedAt)}</LTd>
-                      <LTd className="min-w-40">
+                      <LTd className="min-w-36">
                         <SettlementCell row={row} />
                       </LTd>
                     </LTr>
