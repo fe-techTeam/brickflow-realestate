@@ -42,23 +42,41 @@ export function ListToolbar({ searchPlaceholder = "Search…", filters = [] }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
-  const active = Boolean(params.get("q")) || filters.some((f) => params.get(f.param));
+  const activeCount = (params.get("q") ? 1 : 0) + filters.filter((f) => params.get(f.param)).length;
+  const active = activeCount > 0;
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-      <div className="relative min-w-0 flex-1 sm:max-w-sm">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="group/search relative min-w-0 flex-1 sm:max-w-sm">
+        <Search
+          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within/search:text-gold-600"
+          strokeWidth={1.75}
+        />
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={searchPlaceholder}
           aria-label="Search"
-          className="h-9 bg-card pl-9"
+          className="h-9 bg-card pr-8 pl-9"
         />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            aria-label="Clear search"
+            className="absolute top-1/2 right-1.5 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-ivory-200/70 hover:text-navy focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
       </div>
       {filters.map((filter) => (
         <Select key={filter.param} value={params.get(filter.param) ?? ALL} onValueChange={(v) => update({ [filter.param]: v === ALL ? null : v })}>
-          <SelectTrigger className="h-9 w-full bg-card sm:w-52" aria-label={filter.label}>
+          <SelectTrigger
+            className="h-9 w-full bg-card data-[active=true]:border-gold/60 data-[active=true]:shadow-[0_0_0_3px_rgb(196_164_106/0.12)] sm:w-52"
+            data-active={Boolean(params.get(filter.param))}
+            aria-label={filter.label}
+          >
             <SelectValue placeholder={filter.label} />
           </SelectTrigger>
           <SelectContent>
@@ -75,6 +93,7 @@ export function ListToolbar({ searchPlaceholder = "Search…", filters = [] }: {
         <Button
           variant="ghost"
           size="sm"
+          className="text-muted-foreground"
           onClick={() => {
             setQuery("");
             update(Object.fromEntries([["q", null], ...filters.map((f) => [f.param, null])]));
@@ -82,6 +101,11 @@ export function ListToolbar({ searchPlaceholder = "Search…", filters = [] }: {
         >
           <X className="size-3.5" />
           Clear
+          {activeCount > 1 && (
+            <span className="figure ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-navy px-1 text-[0.625rem] font-semibold text-gold-300">
+              {activeCount}
+            </span>
+          )}
         </Button>
       )}
       {pending && <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Updating results" />}

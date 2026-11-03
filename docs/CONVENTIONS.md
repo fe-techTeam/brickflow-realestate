@@ -45,6 +45,34 @@ Midnight Navy `#142B43` (navigation, primary), Heritage Green `#174D3C` (approva
 Tailwind tokens: `bg-navy`, `text-heritage`, `text-gold`, `bg-ivory`, `bg-sage`, `text-slate-ink`, plus `surface`, `eyebrow`, `tabular`, `animate-fade-up` utilities.
 Headings use the display serif (`font-display`); body text uses Inter. Keep shadows subtle, radii modest, motion restrained.
 
+## Design system building blocks
+
+Tokens, utilities and components added for the premium visual system. All existing props still work; everything below is additive.
+
+**Type and utilities.** Page titles use `display-title` (Playfair Display), brand moments `display-hero`, section headings `heading-section`; italic accents use `font-accent` / `kicker` (Cormorant Garamond). Every amount, count and rate uses `figure`, which sets Inter with tabular, lining numerals. Lines: `hairline` (border colour), `gold-rule`, `gold-rule-center`, `hairline-rule`. Surfaces: `surface`, `surface-raised`, `surface-quiet`, `surface-navy`. Gold is an accent only, never a fill for large areas.
+
+**Buttons.** `variant`: `default` (navy primary), `gold` (one special action per screen, e.g. *Accept offer*), `success` (approvals, financing), `outline`, `secondary`, `ghost`, `destructive`, `link`.
+
+| Component | Import | Notes |
+| --- | --- | --- |
+| `PageHeader` | `common/page-header` | Adds `kicker` (italic line above the title), `meta` (chips under the description) and `divider`. |
+| `StatCard` | `common/stat-card` | Adds `trend`, `footer` and `emphasis="gold" \| "navy"` for the one or two hero metrics in a row. Values render as `figure`. |
+| `HeroMetric` | `common/hero-metric` | One headline figure: `label`, `value`, `context`, `icon`, `trend`, `aside` (e.g. `KeyFigureRow`), `footer`, `variant="navy" \| "ivory"`. |
+| `KeyFigure`, `KeyFigureRow` | `common/key-figure` | Compact label/value pairs: `tone` (`navy`, `heritage`, `gold`, `danger`, `light`), `size`, `align`, `hint`. Use `KeyFigureRow onDark` inside navy panels. |
+| `Money` | `common/money` | `<Money paise={...} />` formats INR with the paise de-emphasised. `compact`, `showPaise`, `tone` (`positive`, `negative`, `gold`, `muted`, `navy`), `display` for large figures. Accepts `bigint`, number or string paise. |
+| `Trend` | `common/trend` | `value`, `direction`, `sentiment`, `label`; used by `StatCard`/`HeroMetric` but usable alone. |
+| `ChartFrame` | `common/chart-frame` | Chart card: `title`, `eyebrow`, `description`, `figure`, `legend`, `actions`, `height`, `empty`, `table` (accessible data fallback), `label`, `footer`, `bare`. Also exports `ChartLegend` and `ChartTooltipCard`. |
+| Chart theme | `common/chart-theme` | `CHART_COLORS`, `CHART_SERIES`, `chartXAxisProps`, `chartYAxisProps`, `chartGridProps`, `chartTooltipProps`, `chartBarProps`, `chartLineProps`, `chartLegendProps`, `chartAreaGradientStops(color)`. Spread them onto Recharts elements so all charts match. |
+| `DataTable` | `common/data-table` | Adds `zebra` and `dense`. Rows highlight on hover with a gold edge. |
+| `DetailList`, `Timeline`, `AmountRow`, `EmptyState`, `Section` | `common/panels` | `DetailItem.emphasis` renders as a figure; `TimelineEntry.tone` adds `gold`. |
+| `ActionDialog` | `common/action-dialog` | Shows a tone medallion from `confirmVariant`; override with `icon` or hide with `icon={null}`. |
+| `ErrorState`, `errorDigest` | `common/error-state` | Card for workspace `error.tsx`: `<ErrorState error={error} onRetry={retry} back={{ href: "/builder", label: "Back to overview" }} />`. |
+| `BreadcrumbLabel` | `shell/breadcrumbs` | Optional. Render `<BreadcrumbLabel label={invoice.number} />` on a detail page to name the last breadcrumb. Without it the shell derives a record name from the route (e.g. "Invoice", "Financing request", "Transaction"). |
+| `StatusScreen` | `brand/status-screen` | Full-page brand composition used by the root `not-found`, `error` and `global-error` pages. |
+| `Logo`, `LogoMark`, `ArchitecturalScene` | `brand/*` | `Logo` takes `tone`, `size` (`sm`, `md`, `lg`), `showTagline`. The scene is decorative and respects reduced motion. |
+
+Toasts (`sonner`) are already themed: call `toast.success`, `toast.error` and so on as usual.
+
 ## Security
 
 - Authorise in services (organisation ownership + organisation type), not only in the UI.
