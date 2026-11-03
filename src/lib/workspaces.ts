@@ -52,9 +52,22 @@ export function workspaceForOrgType(type: OrganisationType): WorkspaceDefinition
   return match;
 }
 
-export const DEMO_ACCOUNTS = [
-  { workspace: "partner", email: "partner@prestige-demo.test", name: "Ananya Rao", org: "Prestige Realty Partners" },
-  { workspace: "builder", email: "accounts@godrej-demo.test", name: "Rohan Mehta", org: "Godrej Properties Demo" },
-  { workspace: "finance", email: "finance@brickflow.demo", name: "Kavita Iyer", org: "Veefin Finance Demo" },
-  { workspace: "admin", email: "admin@brickflow.demo", name: "Arjun Shah", org: "BrickFlow Platform" },
-] as const satisfies ReadonlyArray<{ workspace: WorkspaceKey; email: string; name: string; org: string }>;
+export interface DemoAccount {
+  workspace: WorkspaceKey;
+  email: string;
+  name: string;
+  org: string;
+}
+
+const WORKSPACE_ORDER: WorkspaceKey[] = ["partner", "builder", "finance", "admin"];
+
+/** One-click sign-in cards for a demo dataset, in workspace order. */
+export function demoAccountsFor(users: ReadonlyArray<{ email: string; name: string; org: string; role: RoleKey; loginCard?: boolean }>, orgName: (orgKey: string) => string): DemoAccount[] {
+  return users
+    .filter((u) => u.loginCard)
+    .flatMap((u) => {
+      const workspace = Object.values(WORKSPACES).find((w) => w.role === u.role);
+      return workspace ? [{ workspace: workspace.key, email: u.email, name: u.name, org: orgName(u.org) }] : [];
+    })
+    .sort((a, b) => WORKSPACE_ORDER.indexOf(a.workspace) - WORKSPACE_ORDER.indexOf(b.workspace));
+}

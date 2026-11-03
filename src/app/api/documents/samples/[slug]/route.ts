@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { buildInvoiceDocument, SAMPLE_INVOICES } from "@/lib/demo/catalogue";
+import { buildInvoiceDocument, demoClock, resolveDemoDataset } from "@/lib/demo/catalogue";
 import { renderBrokerageInvoicePdf } from "@/lib/pdf/brokerage-invoice";
 import { getActor } from "@/server/auth/session";
 
@@ -9,11 +9,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!actor) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
 
   const { slug } = await params;
-  const sample = SAMPLE_INVOICES.find((s) => s.slug === slug);
+  const dataset = resolveDemoDataset();
+  const sample = dataset.samples(demoClock()).find((s) => s.slug === slug);
   if (!sample) return NextResponse.json({ error: "Sample document not found" }, { status: 404 });
 
   try {
-    const bytes = await renderBrokerageInvoicePdf(buildInvoiceDocument(sample));
+    const bytes = await renderBrokerageInvoicePdf(buildInvoiceDocument(sample, dataset));
     const disposition = request.nextUrl.searchParams.get("download") === "1" ? "attachment" : "inline";
     const fileName = `${sample.invoiceNumber.replace(/[^A-Za-z0-9.-]+/g, "-")}-sample.pdf`;
     return new NextResponse(Buffer.from(bytes), {

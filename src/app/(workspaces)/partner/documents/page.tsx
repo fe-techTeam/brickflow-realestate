@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Download, Eye, FileText, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DEMO_ORGANISATIONS, DEMO_PROJECTS, SAMPLE_INVOICES } from "@/lib/demo/catalogue";
+import { demoClock, resolveDemoDataset } from "@/lib/demo/catalogue";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { requireWorkspace } from "@/server/auth/session";
@@ -30,6 +30,8 @@ function PdfGlyph({ className }: { className?: string }) {
 export default async function DocumentsPage() {
   const actor = await requireWorkspace("partner");
   const documents = await listPartnerDocuments(actor);
+  const dataset = resolveDemoDataset();
+  const samples = dataset.samples(demoClock());
   const latestByInvoice = new Set<string>();
   const current = new Set<string>();
   for (const doc of documents) {
@@ -44,10 +46,10 @@ export default async function DocumentsPage() {
 
       <div className="flex flex-col gap-6">
         <Panel eyebrow="Try the upload flow" title="Sample documents" description="Fictional GST brokerage invoices for extraction and submission">
-          <ul className="grid gap-5 md:grid-cols-3">
-            {SAMPLE_INVOICES.map((sample) => {
-              const builder = DEMO_ORGANISATIONS[sample.builder];
-              const project = DEMO_PROJECTS.find((p) => p.key === sample.project);
+          <ul className={cn("grid gap-5", samples.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3")}>
+            {samples.map((sample) => {
+              const builder = dataset.organisations[sample.builder];
+              const project = dataset.projects.find((p) => p.key === sample.project);
               return (
                 <li key={sample.slug} className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-[0_20px_40px_-28px_rgba(20,43,67,0.35)]">
                   <div className="relative border-b border-hairline bg-ivory-100 px-5 pt-5 pb-4">
@@ -61,7 +63,7 @@ export default async function DocumentsPage() {
                   <dl className="grid gap-2 px-5 py-4 text-xs">
                     <div className="flex justify-between gap-3">
                       <dt className="text-muted-foreground">Bill to</dt>
-                      <dd className="text-right text-navy">{builder.name}</dd>
+                      <dd className="text-right text-navy">{builder?.name}</dd>
                     </div>
                     <div className="flex justify-between gap-3">
                       <dt className="text-muted-foreground">Project</dt>

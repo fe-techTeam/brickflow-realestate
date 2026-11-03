@@ -1,7 +1,7 @@
 /**
  * Recreates an isolated SQLite database for automated tests: deletes the file, applies all
- * migrations and runs the real demo seed. Used by the Vitest global setup and the Playwright
- * web server.
+ * migrations and runs the real demo seed with the "standard" dataset the tests are written
+ * against. Used by the Vitest global setup and the Playwright web server.
  *
  *   node scripts/prepare-db.mjs --database-url file:./prisma/e2e.db --storage-dir ./storage/e2e
  */
@@ -28,7 +28,7 @@ export function prepareDatabase({ databaseUrl, storageDir, demoPassword = "Brick
   for (const suffix of ["", "-journal", "-wal", "-shm"]) rmSync(`${dbFile}${suffix}`, { force: true });
   rmSync(path.resolve(ROOT, storageDir), { recursive: true, force: true });
 
-  const env = { ...process.env, DATABASE_URL: databaseUrl, STORAGE_DIR: storageDir, DEMO_PASSWORD: demoPassword };
+  const env = { ...process.env, DATABASE_URL: databaseUrl, STORAGE_DIR: storageDir, DEMO_PASSWORD: demoPassword, DEMO_DATASET: "standard" };
   const stdio = quiet ? "pipe" : "inherit";
   execFileSync(process.execPath, [PRISMA_CLI, "migrate", "deploy"], { cwd: ROOT, env, stdio });
   execFileSync(process.execPath, [TSX_CLI, "prisma/seed.ts"], { cwd: ROOT, env, stdio });

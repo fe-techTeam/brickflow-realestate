@@ -392,7 +392,7 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
                 id="field-invoiceNumber"
                 value={values.invoiceNumber}
                 onChange={(e) => setField("invoiceNumber", e.target.value)}
-                placeholder="e.g. GFH/2026/004"
+                placeholder="e.g. INV/2026/018"
                 autoComplete="off"
                 maxLength={40}
                 className="h-10 bg-card"

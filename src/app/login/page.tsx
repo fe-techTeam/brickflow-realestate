@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { ArchitecturalScene } from "@/components/brand/architectural-scene";
 import { Logo } from "@/components/brand/logo";
-import { WORKSPACES } from "@/lib/workspaces";
+import { resolveDemoDataset } from "@/lib/demo/catalogue";
+import { demoAccountsFor, WORKSPACES } from "@/lib/workspaces";
 import { getActor } from "@/server/auth/session";
 import { LoginForm } from "./login-form";
 
@@ -14,6 +15,11 @@ const STEPS = [
   { title: "Pre-agreed pricing", body: "A fixed discount agreed between builder and financier, transparent to every party." },
   { title: "Paid early", body: "Partners accept the offer and receive the net amount. Builder credit terms stay unchanged." },
 ];
+
+function demoAccounts() {
+  const dataset = resolveDemoDataset();
+  return demoAccountsFor(dataset.users, (key) => dataset.organisations[key]?.name ?? key);
+}
 
 export default async function LoginPage() {
   const actor = await getActor();
@@ -85,7 +91,7 @@ export default async function LoginPage() {
             </p>
             <h2 className="display-title mt-4">Welcome back</h2>
             <p className="mt-2.5 mb-9 text-[0.9375rem] leading-relaxed text-muted-foreground">Sign in to your BrickFlow workspace.</p>
-            <LoginForm demoPassword={process.env.DEMO_PASSWORD ?? "BrickFlow@2026"} />
+            <LoginForm demoPassword={process.env.DEMO_PASSWORD ?? "BrickFlow@2026"} accounts={demoAccounts()} />
           </div>
         </div>
 
