@@ -13,7 +13,7 @@ import { effectiveSettlementStatus, listFinancingRequests } from "@/server/servi
 import { CompactMoney, Money } from "../_components/money";
 import { firstParam } from "../_components/summaries";
 import { RefCell, SortTh, Table, TableToolbar, Td, Th, Tr } from "../_components/table";
-import { EmptyNote, MetricStrip, PageIntro, Panel, SimulatedTag, StatusMark } from "../_components/ui";
+import { EmptyNote, MetricStrip, PageIntro, Panel, SimulatedTag, StatusMark, statusMeta } from "../_components/ui";
 
 export const metadata: Metadata = { title: "My Transactions" };
 
@@ -165,16 +165,12 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                     </Td>
                     <Td>
                       <StatusMark kind="financing" status={r.status} />
-                      <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
-                        <span>Settlement</span>
-                        {r.settlement ? (
-                          <>
-                            <StatusMark kind="settlement" status={effectiveSettlementStatus(r.settlement)} className="text-xs font-normal" />
-                            <span className="whitespace-nowrap">· due {formatDate(r.settlement.dueDate)}</span>
-                          </>
-                        ) : (
-                          <span>{r.status === "REJECTED" ? "not applicable" : "after disbursement"}</span>
-                        )}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {r.settlement
+                          ? `Settlement ${statusMeta("settlement", effectiveSettlementStatus(r.settlement)).label.toLowerCase()} · ${formatDate(r.settlement.dueDate)}`
+                          : r.status === "REJECTED"
+                            ? "No settlement"
+                            : "Settles after disbursement"}
                       </p>
                     </Td>
                     <Td className="text-[0.8125rem] whitespace-nowrap">{formatDateTime(r.acceptedAt)}</Td>
