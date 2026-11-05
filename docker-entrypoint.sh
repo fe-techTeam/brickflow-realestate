@@ -1,10 +1,11 @@
 #!/bin/sh
-# Applies migrations, seeds demo data on first start (or when SEED_ON_START=true), then starts the server.
+# Applies migrations, seeds demo data when the database is empty (or every start with
+# SEED_ON_START=true), then starts the server. Data persists across restarts by default.
 set -eu
 
 case "${DATABASE_URL:-}" in
-  file:*) db_file="${DATABASE_URL#file:}" ;;
-  *) echo "DATABASE_URL must be a SQLite file: URL" >&2; exit 1 ;;
+  postgresql://* | postgres://*) ;;
+  *) echo "DATABASE_URL must be a postgresql:// connection URL" >&2; exit 1 ;;
 esac
 
 if [ -z "${AUTH_SECRET:-}" ]; then
@@ -12,12 +13,35 @@ if [ -z "${AUTH_SECRET:-}" ]; then
   exit 1
 fi
 
-mkdir -p "$(dirname "$db_file")" "${STORAGE_DIR:-/app/data/storage}"
+mkdir -p "${STORAGE_DIR:-/app/data/storage}"
+
+echo "Waiting for the database"
+node -e '
+const { Client } = require("pg");
+const deadline = Date.now() + 60_000;
+(async function attempt() {
+  const client = new Client({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5_000 });
+  try {
+    await client.connect();
+    await client.end();
+  } catch (error) {
+    if (Date.now() > deadline) { console.error("Database unreachable:", error.message); process.exit(1); }
+    setTimeout(attempt, 2_000);
+  }
+})();
+'
 
 echo "Applying database migrations"
 node node_modules/prisma/build/index.js migrate deploy
 
-user_count=$(node -e 'const Database = require("better-sqlite3"); const db = new Database(process.argv[1], { readonly: true }); console.log(String(db.prepare("SELECT COUNT(*) AS n FROM User").get().n)); db.close();' "$db_file")
+user_count=$(node -e '
+const { Client } = require("pg");
+const client = new Client({ connectionString: process.env.DATABASE_URL });
+client.connect()
+  .then(() => client.query("SELECT COUNT(*)::int AS n FROM \"User\""))
+  .then((result) => { console.log(String(result.rows[0].n)); return client.end(); })
+  .catch((error) => { console.error(error.message); process.exit(1); });
+')
 
 if [ "${SEED_ON_START:-false}" = "true" ] || [ "$user_count" = "0" ]; then
   echo "Seeding demo data"

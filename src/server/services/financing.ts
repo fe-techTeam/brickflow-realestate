@@ -503,10 +503,10 @@ export async function listFinancingRequests(actor: Actor, filters: RequestListFi
     const q = filters.search.trim();
     and.push({
       OR: [
-        { reference: { contains: q } },
-        { invoice: { invoiceNumber: { contains: q } } },
-        { cp: { name: { contains: q } } },
-        { builder: { name: { contains: q } } },
+        { reference: { contains: q, mode: "insensitive" } },
+        { invoice: { invoiceNumber: { contains: q, mode: "insensitive" } } },
+        { cp: { name: { contains: q, mode: "insensitive" } } },
+        { builder: { name: { contains: q, mode: "insensitive" } } },
       ],
     });
   }

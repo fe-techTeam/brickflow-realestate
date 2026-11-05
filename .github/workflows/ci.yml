@@ -14,7 +14,8 @@ permissions:
   contents: read
 
 env:
-  DATABASE_URL: file:./prisma/ci.db
+  # Test suites recreate brickflow_test / brickflow_e2e on the same service (see scripts/prepare-db.mjs).
+  DATABASE_URL: postgresql://brickflow:brickflow@localhost:5432/brickflow
   AUTH_SECRET: ci-only-secret-value-that-is-at-least-32-characters-long
   DEMO_PASSWORD: BrickFlow@2026
   STORAGE_DIR: ./storage
@@ -25,6 +26,20 @@ jobs:
     name: Lint, type-check, test, audit, build
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17.11-alpine3.24
+        env:
+          POSTGRES_USER: brickflow
+          POSTGRES_PASSWORD: brickflow
+          POSTGRES_DB: brickflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brickflow -d brickflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,12 +57,28 @@ jobs:
         run: npm test
       - name: Prepare database
         run: npx prisma migrate deploy && npx prisma db seed
+      - name: Check migrations match the schema
+        run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
       - run: npm run build
 
   e2e:
     name: End-to-end smoke tests
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17.11-alpine3.24
+        env:
+          POSTGRES_USER: brickflow
+          POSTGRES_PASSWORD: brickflow
+          POSTGRES_DB: brickflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U brickflow -d brickflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

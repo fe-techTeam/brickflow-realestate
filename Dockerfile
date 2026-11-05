@@ -14,7 +14,8 @@ RUN apt-get update \
 # Production dependencies for the Prisma CLI (`migrate deploy`), tsx and the demo seed. Browser-only and
 # build-only packages are removed; the standalone server brings its own traced copies of what it needs.
 FROM base AS deps
-ENV DATABASE_URL=file:/tmp/build.db
+# Placeholder so `prisma generate` can load prisma.config.ts; nothing connects during the build.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 COPY package.json package-lock.json .npmrc prisma.config.ts ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev \
@@ -24,7 +25,7 @@ RUN npm ci --omit=dev \
     pdfjs-dist @napi-rs tesseract.js tesseract.js-core playwright playwright-core @playwright sonner
 
 FROM base AS build
-ENV DATABASE_URL=file:/tmp/build.db
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 COPY package.json package-lock.json .npmrc prisma.config.ts ./
 COPY prisma ./prisma
 RUN npm ci
@@ -35,7 +36,6 @@ FROM base AS runtime
 ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
-    DATABASE_URL=file:/app/data/brickflow.db \
     STORAGE_DRIVER=local \
     STORAGE_DIR=/app/data/storage \
     SEED_ON_START=false
@@ -51,6 +51,7 @@ COPY --from=build /app/prisma/schema.prisma /app/prisma/seed.ts ./prisma/
 COPY --from=build /app/prisma/migrations ./prisma/migrations
 COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/src/lib ./src/lib
+COPY --from=build /app/scripts/demo-reset.mjs ./scripts/
 COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN mkdir -p /app/data/storage /app/.next/cache \

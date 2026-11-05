@@ -444,11 +444,11 @@ export async function listInvoices(actor: Actor, filters: InvoiceListFilters = {
     const q = filters.search.trim();
     and.push({
       OR: [
-        { invoiceNumber: { contains: q } },
-        { reference: { contains: q } },
-        { cp: { name: { contains: q } } },
-        { builder: { name: { contains: q } } },
-        { project: { name: { contains: q } } },
+        { invoiceNumber: { contains: q, mode: "insensitive" } },
+        { reference: { contains: q, mode: "insensitive" } },
+        { cp: { name: { contains: q, mode: "insensitive" } } },
+        { builder: { name: { contains: q, mode: "insensitive" } } },
+        { project: { name: { contains: q, mode: "insensitive" } } },
       ],
     });
   }

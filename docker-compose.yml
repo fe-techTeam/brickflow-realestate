@@ -1,15 +1,38 @@
+# Local development. `docker compose up -d postgres` starts only the database (for `npm run dev`);
+# `docker compose up --build` also builds and runs the app container on http://localhost:3000.
 name: brickflow
 
 services:
+  postgres:
+    image: postgres:17.11-alpine3.24
+    environment:
+      POSTGRES_USER: brickflow
+      POSTGRES_PASSWORD: brickflow
+      POSTGRES_DB: brickflow
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brickflow -d brickflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
   app:
     build:
       context: .
     image: brickflow:local
     init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: file:/app/data/brickflow.db
+      DATABASE_URL: postgresql://brickflow:brickflow@postgres:5432/brickflow
       STORAGE_DRIVER: local
       STORAGE_DIR: /app/data/storage
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (at least 32 random characters) in your shell or .env}
@@ -18,8 +41,9 @@ services:
       APP_URL: ${APP_URL:-http://localhost:3000}
       SEED_ON_START: ${SEED_ON_START:-false}
     volumes:
-      - brickflow-data:/app/data
+      - app-storage:/app/data/storage
     restart: unless-stopped
 
 volumes:
-  brickflow-data:
+  postgres-data:
+  app-storage:

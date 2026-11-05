@@ -1,0 +1,12 @@
+# Reverse proxy for docker-compose.prod.yml. Caddy obtains and renews the TLS certificate for
+# $DOMAIN automatically (ports 80 and 443 must be reachable and DNS must point at this server).
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	reverse_proxy app:3000
+}

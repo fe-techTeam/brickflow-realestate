@@ -1,12 +1,12 @@
 # Deployment
 
-BrickFlow ships as a single Docker image (Next.js standalone server, Prisma migrations and the demo seed). In its current form it stores data in **SQLite** and uploaded invoice PDFs on the **local file system**, so a deployment needs exactly one running container with a persistent volume mounted at `/app/data`.
+BrickFlow ships as a single Docker image (Next.js standalone server, Prisma migrations and the demo seed). It stores data in **PostgreSQL** and uploaded invoice PDFs on the **local file system** (`STORAGE_DIR`), so a deployment needs a PostgreSQL database and one running container with a persistent volume mounted at `STORAGE_DIR`.
 
 This guide covers:
 
-1. [Recommended demo topology on AWS](#1-recommended-demo-topology-aws-ecs-fargate) (ECS Fargate + ALB + EFS), with an infrastructure template and a GitHub Actions workflow.
-2. [A simpler alternative](#2-simpler-alternative-single-ec2-or-lightsail-instance) on a single EC2 or Lightsail instance with Docker Compose.
-3. [The production path](#3-production-path-postgresql-and-s3) (PostgreSQL + S3) for multi-instance and multi-tenant use.
+1. [Demo topology on AWS](#1-recommended-demo-topology-aws-ecs-fargate) (ECS Fargate + ALB + EFS), with an infrastructure template and a GitHub Actions workflow. **The template still targets the earlier SQLite build** and needs a PostgreSQL database before it can run this release (see the note in that section).
+2. [Single server with Docker Compose and PostgreSQL](#2-single-server-with-docker-compose-and-postgresql): app, PostgreSQL, automatic HTTPS and nightly backups on one host.
+3. [The production path](#3-production-path-postgresql-and-s3) (managed PostgreSQL + S3) for multi-instance and multi-tenant use.
 4. [A note on Vercel](#4-vercel).
 
 No AWS resources exist yet. Every command below is for the AWS account owner to run.
@@ -19,12 +19,13 @@ No AWS resources exist yet. Every command below is for the AWS account owner to 
 
 | Variable | Required | Example / default | Notes |
 | --- | --- | --- | --- |
-| `DATABASE_URL` | Yes | `file:/app/data/brickflow.db` | SQLite file on the persistent volume. |
+| `DATABASE_URL` | Yes | `postgresql://brickflow:<password>@postgres:5432/brickflow` | PostgreSQL connection URL. Percent-encode special characters in the password, or use a hex password (`openssl rand -hex 24`). Append `?sslmode=require` for a managed database reached over the network. |
+| `DATABASE_POOL_MAX` | No | `10` | Maximum connections in the app's pool. Keep the sum across all app containers below the server's `max_connections` (100 by default). |
 | `AUTH_SECRET` | Yes | — | Signs session tokens (HS256). At least 32 random characters: `openssl rand -base64 48`. Store in a secret manager, never in the repository. Rotating it signs everyone out. |
 | `DEMO_PASSWORD` | Yes | `BrickFlow@2026` | Shared password the seed gives every demo account. Treat it as a secret on public deployments. |
 | `DEMO_DATASET` | No | `standard` | Demo dataset to seed and offer on the sign-in page: `standard` or `chandak` (builder pitch). Takes effect on the next seed. |
 | `STORAGE_DRIVER` | No | `local` | Only `local` is implemented today. |
-| `STORAGE_DIR` | Yes | `/app/data/storage` | Uploaded and seeded invoice PDFs. Must be on the persistent volume. |
+| `STORAGE_DIR` | Yes | `/app/data/storage` | Uploaded and seeded invoice PDFs. Must be on a persistent volume. |
 | `APP_URL` | Yes | `https://brickflow.example.com` | Public base URL. When it starts with `https://`, session cookies are marked `Secure`. |
 | `SEED_ON_START` | No | `false` | `true` wipes and reseeds the demo data on every container start. The database is always seeded when it is empty. |
 | `PORT` | No | `3000` | Port the server listens on. |
@@ -36,15 +37,18 @@ No AWS resources exist yet. Every command below is for the AWS account owner to 
 
 On start, `docker-entrypoint.sh`:
 
-1. runs `prisma migrate deploy` (forward-only migrations) against `DATABASE_URL`;
-2. runs the demo seed when `SEED_ON_START=true` or when the database has no users yet (first start);
-3. starts the Next.js standalone server with `node server.js`.
+1. checks that `DATABASE_URL` is a `postgresql://` URL and `AUTH_SECRET` is set, then waits up to 60 seconds for the database to accept connections;
+2. runs `prisma migrate deploy` (forward-only migrations) against `DATABASE_URL`;
+3. runs the demo seed only when the database has no users yet (first start) or when `SEED_ON_START=true`, so data persists across restarts and upgrades by default;
+4. starts the Next.js standalone server with `node server.js`.
 
 The container runs as a non-root user (uid/gid `1001`) and declares a `HEALTHCHECK` on `GET /api/health`, which returns `{"status":"ok","db":"ok"}` after a `SELECT 1`, or HTTP 503 when the database is unreachable. The endpoint needs no authentication and exposes no configuration.
 
 ---
 
 ## 1. Recommended demo topology (AWS ECS Fargate)
+
+> **Not yet updated for PostgreSQL.** `infra/aws/brickflow-ecs.yml` and the diagram below describe the earlier SQLite-on-EFS build. The current image refuses to start with a `file:` `DATABASE_URL`, so before deploying this release through the template (or the *Deploy to AWS* workflow, which runs on pushes to `main` once it is configured), provision PostgreSQL (for example Amazon RDS for PostgreSQL 17) and pass its URL as `DATABASE_URL`, ideally from Secrets Manager. EFS is then only needed for `STORAGE_DIR` until an S3 storage driver exists. Until then, use [section 2](#2-single-server-with-docker-compose-and-postgresql).
 
 ```
                      Internet
@@ -333,32 +337,116 @@ For a short-lived demo, running the task in public subnets with `AssignPublicIp=
 
 ---
 
-## 2. Simpler alternative: single EC2 or Lightsail instance
+## 2. Single server with Docker Compose and PostgreSQL
 
-For the lowest cost and effort, run the same image with Docker Compose on one small instance (2 GB RAM recommended for building the image on the host).
+The lowest-cost persistent setup: one Linux host runs the whole stack from `docker-compose.prod.yml`.
 
-1. Launch an Ubuntu instance; allow inbound 22 (your IP only), 80 and 443.
-2. Install Docker Engine and the Compose plugin.
-3. Clone the repository and create `.env` next to `docker-compose.yml`:
+```
+  Internet ──► :80 / :443 ──► caddy ──► app:3000 ──► postgres:5432
+               (only published      (edge network)   (internal network, no published port)
+                ports)                                     ▲
+                                                 backup ───┘  nightly pg_dump ──► volume postgres-backups
+```
+
+| Service | Image | Role |
+| --- | --- | --- |
+| `caddy` | `caddy:2.11.7-alpine` | Reverse proxy. Obtains and renews a Let's Encrypt certificate for `DOMAIN` automatically, redirects HTTP to HTTPS, adds HSTS. Config: `infra/compose/Caddyfile`. |
+| `app` | built from this repository | BrickFlow. Invoice PDFs on the named volume `app-storage`, mounted at `STORAGE_DIR` (`/app/data/storage`). |
+| `postgres` | `postgres:17.11-alpine3.24` | Database on the named volume `postgres-data`. Not published on any host port; reachable only from `app` and `backup` on an internal network. |
+| `backup` | `postgres:17.11-alpine3.24` | Runs `infra/compose/pg-backup.sh`: a `pg_dump` (custom format) every night into the volume `postgres-backups`, deleting dumps older than 14 days. |
+
+All images are pinned to exact versions. Update the tags deliberately (and check the release notes) rather than pulling `latest`.
+
+### Prerequisites
+
+- A Linux host (for example an Ubuntu 24.04 EC2 or Lightsail instance) with **2 GB RAM** or more (the image is built on the host) and about 20 GB of disk.
+- Docker Engine 24+ with the Compose plugin (`docker compose version`).
+- A DNS `A` (and optionally `AAAA`) record for your domain pointing at the host's public IP. Caddy needs it to obtain the certificate.
+- Firewall / security group: inbound **80/tcp and 443/tcp** only (443/udp optionally, for HTTP/3), plus SSH (22/tcp) restricted to your own IP. Do not open 3000 or 5432; neither is published by the stack.
+
+### First deploy
+
+1. Clone the repository on the host and check out the release to run:
 
    ```bash
+   git clone https://github.com/fe-techTeam/brickflow-realestate.git brickflow && cd brickflow
+   git checkout main
+   ```
+
+2. Create `.env` next to `docker-compose.prod.yml` (Compose reads it automatically; it is git-ignored, never commit it) and restrict it with `chmod 600 .env`:
+
+   ```bash
+   DOMAIN=brickflow.example.com
+   POSTGRES_PASSWORD=<openssl rand -hex 24>
    AUTH_SECRET=<openssl rand -base64 48>
-   DEMO_PASSWORD=BrickFlow@2026
-   APP_URL=https://brickflow.example.com
+   DEMO_PASSWORD=<shared password for the demo accounts>
+   DEMO_DATASET=standard          # or chandak
+   # Optional:
+   # BACKUP_HOUR_UTC=21           # 21:00 UTC = 02:30 IST (default)
+   # BACKUP_RETENTION_DAYS=14
+   # DATABASE_POOL_MAX=10
+   # BRICKFLOW_VERSION=latest     # tag given to the locally built image
    ```
 
-4. `docker compose up -d --build`. Data lives in the named volume `brickflow-data`.
-5. Terminate TLS with a reverse proxy on the host, for example Caddy (automatic Let's Encrypt certificates):
+   Use a hex `POSTGRES_PASSWORD` so it can be embedded in the connection URL without escaping. PostgreSQL applies the password only when it initialises an **empty** `postgres-data` volume; changing it later needs `ALTER USER brickflow PASSWORD '...'` as well.
 
-   ```
-   brickflow.example.com {
-       reverse_proxy 127.0.0.1:3000
-   }
+3. Validate the configuration, then build and start:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml config --quiet
+   docker compose -f docker-compose.prod.yml up -d --build
    ```
 
-   Do not open port 3000 to the internet.
-6. Back up with scheduled EBS snapshots (EC2, via Amazon Data Lifecycle Manager) or Lightsail automatic snapshots.
-7. Upgrade with `git pull && docker compose up -d --build`.
+   On first start the app applies the migrations and seeds the selected demo dataset (the database is empty). Follow progress with `docker compose -f docker-compose.prod.yml logs -f app caddy`.
+
+4. Open `https://<DOMAIN>`. `https://<DOMAIN>/api/health` returns `{"status":"ok","db":"ok"}`.
+
+To save typing, `export COMPOSE_FILE=docker-compose.prod.yml` in the shell; the commands below assume this and are written as plain `docker compose ...`.
+
+### Updates
+
+```bash
+git fetch && git checkout <release tag or main> && git pull
+docker compose exec backup sh /usr/local/bin/pg-backup.sh --now   # backup before a release with migrations
+docker compose up -d --build
+docker image prune -f
+```
+
+The new app container applies pending migrations on start; data and PDFs persist. Migrations are forward-only: to roll back across a migration, restore the backup taken before the update and run the previous release.
+
+### Backups and restore
+
+- **Schedule:** the `backup` service writes `brickflow-<UTC timestamp>.dump` into the `postgres-backups` volume every night at `BACKUP_HOUR_UTC` and keeps `BACKUP_RETENTION_DAYS` (14) days. Check with `docker compose logs backup` and `docker compose exec backup ls -lh /backups`.
+- **On demand:** `docker compose exec backup sh /usr/local/bin/pg-backup.sh --now`.
+- **Off the host:** the volume lives on the same disk as the database, so also copy dumps elsewhere (for example a daily `aws s3 sync` or `rclone` of the volume's directory from the host, or EBS/Lightsail snapshots of the disk). Copy the dumps with `docker compose cp backup:/backups ./backups`.
+- **Invoice PDFs** live in the `app-storage` volume, not in the dump. Back them up together, e.g. `docker run --rm -v brickflow_app-storage:/data:ro -v "$PWD":/out alpine:3.22 tar czf /out/storage-$(date -u +%Y%m%d).tgz -C /data .`.
+
+**Restore** a dump (replaces all current data):
+
+```bash
+docker compose stop app
+docker compose exec backup pg_restore --clean --if-exists --no-owner --no-privileges \
+  -d brickflow /backups/brickflow-<timestamp>.dump
+docker compose start app
+```
+
+To restore a dump taken on another host, copy it in first with `docker compose cp ./brickflow-<timestamp>.dump backup:/backups/`. Restore the matching `app-storage` archive at the same time so the PDFs referenced by the database exist.
+
+### Resetting the demo
+
+`npm run demo:reset` (script `scripts/demo-reset.mjs`) deletes every stored invoice PDF and re-seeds the dataset selected by `DEMO_DATASET`. All data entered since the last seed is lost. Inside the running container it needs `--yes`:
+
+```bash
+docker compose exec app node scripts/demo-reset.mjs --yes
+```
+
+To switch datasets, change `DEMO_DATASET` in `.env`, run `docker compose up -d app` to recreate the container with the new value, then run the reset. Leave `SEED_ON_START=false` (the default) so restarts keep the data; `SEED_ON_START=true` reseeds on every start.
+
+### Operations notes
+
+- Logs are rotated by Docker (`json-file`, 5 × 10 MB per service).
+- All services restart automatically (`unless-stopped`), including after a host reboot.
+- `docker compose down` keeps the volumes; `docker compose down -v` **deletes the database, PDFs, backups and certificates**.
 
 ---
 
@@ -368,7 +456,7 @@ The demo topology is deliberately single-instance. For production use, and for t
 
 | Concern | Change |
 | --- | --- |
-| Database | Amazon RDS for PostgreSQL (or Aurora PostgreSQL). In `prisma/schema.prisma` set `provider = "postgresql"`; replace `@prisma/adapter-better-sqlite3` with `@prisma/adapter-pg` in `src/server/db.ts` and `prisma/seed.ts`; update `serverExternalPackages` in `next.config.ts`; create a fresh baseline migration for PostgreSQL (SQLite migrations do not carry over). Money is already `BigInt` paise, which maps to `bigint`. |
+| Database | Done in the application: BrickFlow runs on PostgreSQL through `@prisma/adapter-pg`. For production, point `DATABASE_URL` at Amazon RDS for PostgreSQL 17 (or Aurora PostgreSQL) with `?sslmode=require`, Multi-AZ and automated backups. Text sorting follows the database collation: the Alpine image used locally and in CI sorts byte-wise (as SQLite did), while a glibc `en_US.UTF-8` database (RDS default) sorts names linguistically. To keep byte-wise order, create the database with `CREATE DATABASE brickflow TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'en_US.UTF-8';`. |
 | File storage | Add an S3 implementation of the existing `StorageDriver` interface (`put` / `get` / `delete`) in `src/server/storage.ts`, selected with `STORAGE_DRIVER=s3` and a bucket name. Use a private, encrypted bucket with Block Public Access and access through the task role. Downloads keep going through the authorised `/api/documents/...` route. |
 | Scaling | With no local state, the ECS service can run two or more tasks across AZs with rolling deployments (minimum healthy 100 %, maximum 200 %) and target-tracking auto scaling. EFS is no longer needed. |
 | Migrations | Run `prisma migrate deploy` as a one-off task in the pipeline before updating the service, instead of on every container start. |
@@ -380,7 +468,7 @@ This is the path toward multiple builders, financiers and channel-partner networ
 
 ## 4. Vercel
 
-Vercel works only after the production-path changes: its serverless functions have an ephemeral, read-only file system, so SQLite and local PDF storage cannot persist there. Use a hosted PostgreSQL database (Neon / Vercel Postgres) with the `@prisma/adapter-pg` (or the Neon serverless adapter) and **Vercel Blob** as the storage driver. Set `AUTH_SECRET`, `DEMO_PASSWORD`, `APP_URL` and the database and Blob variables in the project settings, and run migrations and the seed from the build pipeline or a one-off job.
+Vercel works only after the storage change: its serverless functions have an ephemeral, read-only file system, so local PDF storage cannot persist there. Use a hosted PostgreSQL database (Neon / Vercel Postgres, with the existing `@prisma/adapter-pg` and a small `DATABASE_POOL_MAX`, or the provider's pooled connection URL) and **Vercel Blob** as the storage driver. Set `AUTH_SECRET`, `DEMO_PASSWORD`, `APP_URL` and the database and Blob variables in the project settings, and run migrations and the seed from the build pipeline or a one-off job.
 
 ---
 
@@ -392,7 +480,9 @@ A single-container dev server for product demos in `ap-south-1`, with HTTPS on a
 
 **Why not App Runner:** App Runner was the first choice, but `CreateService` fails with `Account 870551426015 can't create new App Runner services` because App Runner is closed to new customers. The dev environment therefore runs on Lightsail Container Service, which also provides HTTPS without a custom domain.
 
-> **Data is ephemeral.** The SQLite file and uploaded documents live inside the container (`/app/data`). `SEED_ON_START=true` wipes and reseeds the demo data on every start, so each deployment, restart or node replacement resets everything. Do not keep anything there that matters. The persistent path is EFS (section 1) or PostgreSQL + S3 (section 3).
+> **Data is ephemeral.** The SQLite file and uploaded documents live inside the container (`/app/data`). `SEED_ON_START=true` wipes and reseeds the demo data on every start, so each deployment, restart or node replacement resets everything. Do not keep anything there that matters. The persistent paths are section 2 (single server) and section 3 (managed PostgreSQL + S3).
+>
+> **Needs a database before the next redeploy.** This environment was created with the SQLite build. Images from this release require `DATABASE_URL` to point at PostgreSQL (for example a Lightsail managed PostgreSQL database), so add that variable to the deployment below before pushing a new image.
 
 ### Resources
 
@@ -451,6 +541,7 @@ About **$15/month**: the Lightsail `small` power includes the HTTPS endpoint and
 - Secrets live in Secrets Manager (or a host `.env` that is never committed); `.env*` files are git-ignored and excluded from the Docker build context.
 - Least privilege: the execution role can read only the two application secrets; the task role can only mount the EFS access point; the deploy role can only push to one repository, register task definitions, update one service and pass the two task roles.
 - Network: the task accepts traffic only from the load balancer security group; EFS accepts NFS only from the task security group; the EFS policy denies unencrypted transport.
+- Single server: only Caddy publishes ports (80/443); PostgreSQL sits on an internal Docker network with no published port and a generated password.
 - The container runs as a non-root user; ECS Exec is disabled.
 - Images are scanned on push; CI fails on high or critical advisories in production dependencies.
 - Disbursements are simulated: no bank integration or payment credentials exist in any environment.
