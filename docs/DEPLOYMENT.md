@@ -472,66 +472,56 @@ Vercel works only after the storage change: its serverless functions have an eph
 
 ---
 
-## 5. Dev environment (App Runner → Lightsail Container Service)
+## 5. Demo environment (single Lightsail server)
 
-A single-container dev server for product demos in `ap-south-1`, with HTTPS on an AWS-provided hostname.
+The demo environment runs the [single-server stack](#2-single-server-with-docker-compose-and-postgresql) on one Lightsail instance. Data and invoice PDFs persist across restarts and deployments.
 
-**URL:** https://brickflow-dev.qgy1q4z4fmedy.ap-south-1.cs.amazonlightsail.com (sign in with any demo account, password `BrickFlow@2026`).
-
-**Why not App Runner:** App Runner was the first choice, but `CreateService` fails with `Account 870551426015 can't create new App Runner services` because App Runner is closed to new customers. The dev environment therefore runs on Lightsail Container Service, which also provides HTTPS without a custom domain.
-
-> **Data is ephemeral.** The SQLite file and uploaded documents live inside the container (`/app/data`). `SEED_ON_START=true` wipes and reseeds the demo data on every start, so each deployment, restart or node replacement resets everything. Do not keep anything there that matters. The persistent paths are section 2 (single server) and section 3 (managed PostgreSQL + S3).
->
-> **Needs a database before the next redeploy.** This environment was created with the SQLite build. Images from this release require `DATABASE_URL` to point at PostgreSQL (for example a Lightsail managed PostgreSQL database), so add that variable to the deployment below before pushing a new image.
-
-### Resources
-
-All resources are tagged `Project=brickflow`, `Environment=dev`.
-
-| Resource | Identifier |
+| Item | Value |
 | --- | --- |
-| ECR repository (scan on push, mutable tags) | `arn:aws:ecr:ap-south-1:870551426015:repository/brickflow` |
-| ECR repository policy | Pull only (`ecr:BatchGetImage`, `ecr:GetDownloadUrlForLayer`) for the service's Lightsail private-registry principal |
-| Lightsail container service `brickflow-dev` (power `small`: 0.5 vCPU / 1 GB, scale 1) | `arn:aws:lightsail:ap-south-1:870551426015:ContainerService/428a44bb-7fee-4749-b01b-313572c0141d` |
-| Secrets Manager secret `brickflow/dev/auth-secret` (48 random bytes, base64url) | `arn:aws:secretsmanager:ap-south-1:870551426015:secret:brickflow/dev/auth-secret-Jmsq5K` |
+| AWS account / region | `617103915273` / `ap-south-1` (Mumbai) |
+| Instance | Lightsail `brickflow-app`: Ubuntu 24.04, 2 vCPU, 2 GB RAM (+2 GB swap), 60 GB SSD. Plan `small_3_1`. |
+| Public IP | Static IP `brickflow-app-ip` = `35.154.239.217` |
+| Firewall | 80/tcp and 443/tcp+udp open to all; 22/tcp only from the office VPN egress IP |
+| SSH | `ssh -i ~/.ssh/brickflow-app.pem ubuntu@35.154.239.217` (Lightsail key pair `brickflow-app-key`) |
+| Stack | `~/brickflow` on the instance: `docker-compose.prod.yml`, `infra/compose/*` and a `chmod 600` `.env` |
+| Secrets | `.env` on the instance; a recovery copy is in Secrets Manager `brickflow/demo/env` (same account) |
+| Dataset | `DEMO_DATASET=chandak`, `SEED_ON_START=false` (seeded once on first start) |
+| Backups | Nightly `pg_dump` to the `postgres-backups` volume (14 days), plus Lightsail automatic instance snapshots daily at 22:00 UTC |
+| Cost | About $12/month for the instance, plus snapshot storage |
 
-The container listens on port 3000. The public endpoint health check is `GET /api/health` (expects 200). Environment variables: `NODE_ENV=production`, `DATABASE_URL=file:/app/data/brickflow.db`, `STORAGE_DIR=/app/data/storage`, `STORAGE_DRIVER=local`, `SEED_ON_START=true`, `DEMO_PASSWORD=BrickFlow@2026`, `NEXT_TELEMETRY_DISABLED=1`, `APP_URL=<service URL>` and `AUTH_SECRET`.
+All resources are tagged `Project=brickflow`. All BrickFlow resources were removed from the earlier account (870551426015).
 
-Lightsail containers cannot reference Secrets Manager or assume an IAM role. `AUTH_SECRET` is therefore read from Secrets Manager at deploy time and passed as a container environment variable. Anyone with `lightsail:GetContainerServiceDeployments` can read it. That is acceptable for a demo with seeded data, but it is not acceptable for production.
+### Redeploy a new version
 
-### Redeploy
-
-Lightsail resolves `:dev` when a deployment is created. Pushing a new image alone does nothing, so always create a new deployment. Build without attestations so ECR stores a plain single-platform manifest:
+The instance has 2 GB of RAM, so the image is built on a workstation and copied over; the instance needs no repository access.
 
 ```bash
-export AWS_REGION=ap-south-1
-REPO=870551426015.dkr.ecr.ap-south-1.amazonaws.com/brickflow
 SHA=$(git rev-parse --short HEAD)
-
-aws ecr get-login-password | docker login --username AWS --password-stdin "${REPO%%/*}"
-docker build --platform linux/amd64 --provenance=false --sbom=false -t "$REPO:dev" -t "$REPO:$SHA" .
-docker push "$REPO:dev" && docker push "$REPO:$SHA"
-
-# Re-create the deployment from the current one, injecting AUTH_SECRET without printing it.
-aws lightsail get-container-services --service-name brickflow-dev \
-  --query 'containerServices[0].currentDeployment' --output json > current.json
-aws secretsmanager get-secret-value --secret-id brickflow/dev/auth-secret --query SecretString --output text \
-  | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const d=require("./current.json");
-      d.containers.app.environment.AUTH_SECRET=s.trim();
-      require("fs").writeFileSync("containers.json",JSON.stringify(d.containers));
-      require("fs").writeFileSync("endpoint.json",JSON.stringify(d.publicEndpoint));})'
-aws lightsail create-container-service-deployment --service-name brickflow-dev \
-  --containers file://containers.json --public-endpoint file://endpoint.json
-rm -f current.json containers.json endpoint.json
+docker build --platform linux/amd64 --provenance=false --sbom=false -t brickflow:$SHA .
+docker save brickflow:$SHA | gzip -1 | ssh -i ~/.ssh/brickflow-app.pem ubuntu@35.154.239.217 'gunzip | docker load'
+scp -i ~/.ssh/brickflow-app.pem docker-compose.prod.yml ubuntu@35.154.239.217:~/brickflow/
+scp -i ~/.ssh/brickflow-app.pem infra/compose/* ubuntu@35.154.239.217:~/brickflow/infra/compose/
+ssh -i ~/.ssh/brickflow-app.pem ubuntu@35.154.239.217 \
+  "cd ~/brickflow && sed -i 's/^BRICKFLOW_VERSION=.*/BRICKFLOW_VERSION=$SHA/' .env && docker compose -f docker-compose.prod.yml up -d --no-build"
 ```
 
-On Windows Git Bash, set `MSYS_NO_PATHCONV=1` first. Otherwise `/app/...` values are rewritten into Windows paths. A rollout takes about 3 minutes. Follow it with `aws lightsail get-container-services --service-name brickflow-dev --query 'containerServices[0].[state,currentDeployment.state,nextDeployment.state]'`, and read the logs with `aws lightsail get-container-log --service-name brickflow-dev --container-name app`.
+Migrations run on start. To roll back, set `BRICKFLOW_VERSION` back to the previous tag (older images stay on the instance until pruned) and run `up -d --no-build` again. A rollback across a migration also needs the matching database backup.
 
-To roll back, deploy an earlier `:<sha>` tag instead of `:dev`.
+### Change the domain
 
-### Cost and teardown
+Point an `A` record for the new host name at `35.154.239.217`, with the proxy off (DNS only) so Caddy can complete the certificate challenge. Then set `DOMAIN=<host name>` in `~/brickflow/.env` and run `docker compose -f docker-compose.prod.yml up -d --no-build`. Caddy obtains the certificate within a minute, and `APP_URL` follows `DOMAIN`.
 
-About **$15/month**: the Lightsail `small` power includes the HTTPS endpoint and 500 GB of data transfer. Secrets Manager costs about $0.40/month, and ECR storage costs about $0.10 per GB-month for images over the free tier. There is no NAT gateway, load balancer or database. To tear down, run `aws lightsail delete-container-service --service-name brickflow-dev`, `aws ecr delete-repository --repository-name brickflow --force` and `aws secretsmanager delete-secret --secret-id brickflow/dev/auth-secret`.
+### Operations
+
+```bash
+cd ~/brickflow
+docker compose -f docker-compose.prod.yml ps                                   # status
+docker compose -f docker-compose.prod.yml logs app --tail 100                  # app logs
+docker compose -f docker-compose.prod.yml exec backup /bin/sh /usr/local/bin/pg-backup.sh --now   # backup now
+docker compose -f docker-compose.prod.yml exec app node scripts/demo-reset.mjs --yes             # reset demo data
+```
+
+`demo-reset` deletes every stored invoice PDF and all data entered since the last seed. Run it only to restore the pitch dataset.
 
 ---
 
