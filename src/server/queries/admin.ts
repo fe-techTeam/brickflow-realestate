@@ -4,6 +4,7 @@ import packageJson from "../../../package.json";
 import type { Actor } from "../auth/session";
 import { db } from "../db";
 import { forbidden } from "../errors";
+import { sortByEnumName } from "../ordering";
 import { getOrganisation } from "../services/admin";
 
 /** Request statuses at which Veefin has committed funds (approved, paying out or paid). */
@@ -111,7 +112,7 @@ export async function listBuilderSummaries(actor: Actor, filters: { search?: str
   const q = filters.search?.trim();
   const [builders, invoiceAgg, financedAgg, outstandingAgg] = await Promise.all([
     db.organisation.findMany({
-      where: { type: "BUILDER", ...(q ? { OR: [{ name: { contains: q } }, { legalName: { contains: q } }, { city: { contains: q } }] } : {}) },
+      where: { type: "BUILDER", ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { legalName: { contains: q, mode: "insensitive" } }, { city: { contains: q, mode: "insensitive" } }] } : {}) },
       include: {
         _count: { select: { projects: true, builderRelationships: { where: { status: "ACTIVE" } } } },
         builderProgrammes: {
@@ -153,7 +154,7 @@ export async function listPartnerSummaries(actor: Actor, filters: { search?: str
   const q = filters.search?.trim();
   const [partners, invoiceAgg, financedAgg, receivedAgg] = await Promise.all([
     db.organisation.findMany({
-      where: { type: "CHANNEL_PARTNER", ...(q ? { OR: [{ name: { contains: q } }, { legalName: { contains: q } }, { city: { contains: q } }] } : {}) },
+      where: { type: "CHANNEL_PARTNER", ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { legalName: { contains: q, mode: "insensitive" } }, { city: { contains: q, mode: "insensitive" } }] } : {}) },
       include: {
         cpRelationships: {
           include: { builder: { select: { id: true, name: true, status: true } } },
@@ -204,11 +205,13 @@ export async function getOrganisationProfile(actor: Actor, organisationId: strin
 
   const [programmes, invoiceAgg, financedAgg] = await Promise.all([
     org.type === "BUILDER" || org.type === "FINANCIER"
-      ? db.financingProgramme.findMany({
-          where: org.type === "BUILDER" ? { builderId: org.id } : { financierId: org.id },
-          include: { builder: { select: { id: true, name: true } }, financier: { select: { id: true, name: true } } },
-          orderBy: [{ status: "asc" }, { effectiveFrom: "desc" }],
-        })
+      ? db.financingProgramme
+          .findMany({
+            where: org.type === "BUILDER" ? { builderId: org.id } : { financierId: org.id },
+            include: { builder: { select: { id: true, name: true } }, financier: { select: { id: true, name: true } } },
+            orderBy: [{ effectiveFrom: "desc" }, { id: "asc" }],
+          })
+          .then((rows) => sortByEnumName(rows, (p) => p.status))
       : Promise.resolve([]),
     invoiceWhere
       ? db.invoice.aggregate({ where: { ...invoiceWhere, status: { not: "DRAFT" } }, _count: { _all: true }, _sum: { amountPaise: true } })
@@ -285,7 +288,7 @@ export function getEnvironmentInfo(actor: Actor): EnvironmentInfo {
   assertPlatform(actor);
   return {
     appVersion: packageJson.version,
-    database: "SQLite (demo)",
+    database: "PostgreSQL",
     storageDriver: process.env.STORAGE_DRIVER ?? "local",
     nodeVersion: process.version,
     environment: process.env.NODE_ENV ?? "development",

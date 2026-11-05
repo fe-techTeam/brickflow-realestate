@@ -10,7 +10,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import bcrypt from "bcryptjs";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type FinancingStatus, type InvoiceStatus } from "../src/generated/prisma/client";
 import { calculateDiscount } from "../src/lib/financing";
 import { buildInvoiceDocument, demoClock, GST_RATE_PERCENT, resolveDemoDataset } from "../src/lib/demo/catalogue";
@@ -24,7 +24,7 @@ try {
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not configured");
-const db = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) });
+const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
 
 const STORAGE_ROOT = path.resolve(process.cwd(), process.env.STORAGE_DIR ?? "./storage");
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "BrickFlow@2026";

@@ -9,8 +9,6 @@ out
 build
 coverage
 storage
-prisma/*.db
-prisma/*.db-journal
 src/generated
 test-results
 playwright-report
@@ -18,6 +16,7 @@ playwright
 e2e
 test
 scripts
+!scripts/demo-reset.mjs
 infra
 docs
 **/*.test.ts
@@ -26,6 +25,6 @@ docs
 .env*
 Dockerfile
 .dockerignore
-docker-compose.yml
+docker-compose*.yml
 vitest.config.mts
 playwright.config.ts

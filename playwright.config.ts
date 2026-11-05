@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { TEST_DATABASE_URLS } from "./scripts/test-databases.mjs";
 
 const PORT = 3300;
 const externalBaseURL = process.env.PLAYWRIGHT_BASE_URL;
@@ -33,7 +34,7 @@ export default defineConfig({
         stdout: "pipe",
         stderr: "pipe",
         env: {
-          DATABASE_URL: "file:./prisma/e2e.db",
+          DATABASE_URL: TEST_DATABASE_URLS.e2e,
           STORAGE_DRIVER: "local",
           STORAGE_DIR: "./storage/e2e",
           DEMO_PASSWORD: demoPassword,

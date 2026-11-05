@@ -61,7 +61,7 @@ Every state change is recorded in the audit log.
 | Framework | Next.js 16 (App Router, server components, server actions), React 19 |
 | Language | TypeScript 5.9 (strict) |
 | Styling | Tailwind CSS 4, Radix UI primitives, lucide-react icons, Recharts |
-| Data | Prisma 7 with the `@prisma/adapter-better-sqlite3` driver adapter, SQLite |
+| Data | PostgreSQL 17, Prisma 7 with the `@prisma/adapter-pg` driver adapter (`pg` connection pool) |
 | Auth | jose (HS256 JWT in an httpOnly cookie), bcryptjs |
 | Validation | zod |
 | Documents | pdf-lib (invoice PDF generation), tesseract.js and pdfjs-dist (in-browser text extraction, see [A14](docs/ASSUMPTIONS.md)) |
@@ -104,12 +104,15 @@ Layering rules are in [docs/CONVENTIONS.md](docs/CONVENTIONS.md): all money is `
 
 ## Local setup
 
-Requirements: **Node.js 24** and npm.
+Requirements: **Node.js 24**, npm and **Docker** (for PostgreSQL; any PostgreSQL 17 server works if you prefer a native install).
 
 ```bash
-npm ci
 cp .env.example .env
+docker compose up -d postgres   # PostgreSQL 17 on localhost:5432, data in the volume postgres-data
+npm ci
 ```
+
+`npm ci` runs `prisma generate`, which reads `DATABASE_URL` from `.env`, so create `.env` first. If port 5432 is already taken, start the database with `POSTGRES_PORT=5433 docker compose up -d postgres` and change the port in `DATABASE_URL` (and set `TEST_DATABASE_URL` / `E2E_DATABASE_URL` for the tests).
 
 Generate a session secret and put it in `AUTH_SECRET` in `.env`:
 
@@ -119,18 +122,20 @@ openssl rand -base64 48
 node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 ```
 
-Create the database, seed the demo data and start the app:
+Apply the migrations, seed the demo data and start the app:
 
 ```bash
 npm run setup      # prisma migrate deploy + seed
 npm run dev
 ```
 
-Open <http://localhost:3000>. `npm run db:reset` recreates the database and reseeds it at any time.
+Open <http://localhost:3000>. `npm run demo:reset` deletes the stored invoice PDFs and reseeds the selected `DEMO_DATASET` at any time. `npm run db:reset` drops and recreates the schema from the migrations (follow it with `npm run db:seed`). `docker compose down -v` deletes the local database volume.
 
 | Variable | Default in `.env.example` | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | `file:./prisma/dev.db` | SQLite database file |
+| `DATABASE_URL` | `postgresql://brickflow:brickflow@localhost:5432/brickflow` | PostgreSQL connection URL |
+| `DATABASE_POOL_MAX` | `10` (commented out) | Maximum connections in the app's pool |
+| `TEST_DATABASE_URL` / `E2E_DATABASE_URL` | `…/brickflow_test` / `…/brickflow_e2e` on the same server (commented out) | Databases the Vitest and Playwright runs drop and recreate |
 | `AUTH_SECRET` | placeholder | Session signing secret, at least 32 characters |
 | `STORAGE_DRIVER` | `local` | Document storage driver |
 | `STORAGE_DIR` | `./storage` | Where invoice PDFs are stored |
@@ -261,8 +266,10 @@ npm run test:e2e     # Playwright smoke tests (Chromium)
 ```
 
 - **Unit tests** cover money parsing and formatting, the discount calculation, amounts in words, the GST split and PDF generation.
-- **Service integration tests** (`test/integration`) run the real services against an isolated SQLite database (`prisma/test.db`) that is migrated and seeded with the real seed before the run. They cover sign-in for every role, the full invoice-to-settlement flow, rate changes, cross-organisation access and duplicate prevention.
-- **End-to-end smoke tests** (`e2e/`) build and start the app on port 3300 against a fresh database (`prisma/e2e.db`) and check sign-in and sign-out for the four main accounts. Install the browser once with `npx playwright install chromium`.
+- **Service integration tests** (`test/integration`) run the real services against an isolated PostgreSQL database (`brickflow_test`) that is dropped, recreated, migrated and seeded with the real seed before the run. They cover sign-in for every role, the full invoice-to-settlement flow, rate changes, cross-organisation access, duplicate prevention, case-insensitive search and list ordering.
+- **End-to-end smoke tests** (`e2e/`) build and start the app on port 3300 against a fresh database (`brickflow_e2e`) and check sign-in and sign-out for the four main accounts. Install the browser once with `npx playwright install chromium`.
+
+Both suites need the PostgreSQL server from `docker compose up -d postgres` (or `TEST_DATABASE_URL` / `E2E_DATABASE_URL` pointing elsewhere). `scripts/prepare-db.mjs` only recreates databases whose name ends in `_test` or `_e2e`, so it never touches the development database.
 
 ## Docker
 
@@ -270,11 +277,13 @@ npm run test:e2e     # Playwright smoke tests (Chromium)
 docker compose up --build
 ```
 
-Then open <http://localhost:3000>. Compose needs `AUTH_SECRET` from your shell or `.env`. Data (SQLite database and PDFs) lives in the named volume `brickflow-data`. On start the container applies migrations, seeds when the database is empty (or every time with `SEED_ON_START=true`) and serves the app as a non-root user. `GET /api/health` returns `{"status":"ok","db":"ok"}` and backs the container health check. `docker compose down -v` removes the data volume.
+Then open <http://localhost:3000>. This starts PostgreSQL and the app container; the app waits for the database to be healthy. Compose needs `AUTH_SECRET` from your shell or `.env`. The database lives in the named volume `postgres-data` and the PDFs in `app-storage`. On start the container applies migrations, seeds only when the database is empty (or every time with `SEED_ON_START=true`), so data persists across restarts, and serves the app as a non-root user. `GET /api/health` returns `{"status":"ok","db":"ok"}` and backs the container health check. Reset the demo inside the container with `docker compose exec app node scripts/demo-reset.mjs --yes`. `docker compose down -v` removes the volumes.
+
+For a single production server (PostgreSQL, Caddy with automatic HTTPS, nightly backups), use `docker-compose.prod.yml`; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#2-single-server-with-docker-compose-and-postgresql).
 
 ## Deployment
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md): ECS Fargate behind an HTTPS load balancer with EFS storage (CloudFormation template in `infra/aws/` and a GitHub Actions workflow using OIDC), a single-instance Docker Compose alternative, and the PostgreSQL + S3 production path.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md): a single server with Docker Compose, PostgreSQL and automatic HTTPS, ECS Fargate behind an HTTPS load balancer (CloudFormation template in `infra/aws/` and a GitHub Actions workflow using OIDC; still to be moved to PostgreSQL), and the managed PostgreSQL + S3 production path.
 
 ## Contributing and branching model
 

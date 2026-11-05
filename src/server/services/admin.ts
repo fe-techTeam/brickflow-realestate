@@ -7,6 +7,7 @@ import { recordAudit } from "../audit";
 import { assertOrgType, type Actor } from "../auth/session";
 import { db, type Tx } from "../db";
 import { conflict, forbidden, invalid, notFound } from "../errors";
+import { sortByEnumName } from "../ordering";
 import { nextReference } from "../sequence";
 
 const dateString = z
@@ -178,15 +179,16 @@ export async function listProgrammes(actor: Actor) {
   if (actor.orgType !== "PLATFORM" && actor.orgType !== "FINANCIER" && actor.orgType !== "BUILDER") throw forbidden();
   const where: Prisma.FinancingProgrammeWhereInput =
     actor.orgType === "FINANCIER" ? { financierId: actor.orgId } : actor.orgType === "BUILDER" ? { builderId: actor.orgId } : {};
-  return db.financingProgramme.findMany({
+  const programmes = await db.financingProgramme.findMany({
     where,
     include: {
       builder: { select: { id: true, name: true, status: true } },
       financier: { select: { id: true, name: true } },
       _count: { select: { requests: true, offers: true } },
     },
-    orderBy: [{ status: "asc" }, { builder: { name: "asc" } }],
+    orderBy: [{ builder: { name: "asc" } }, { id: "asc" }],
   });
+  return sortByEnumName(programmes, (p) => p.status);
 }
 
 export type ProgrammeListItem = Awaited<ReturnType<typeof listProgrammes>>[number];
@@ -211,17 +213,18 @@ export async function listOrganisations(actor: Actor, filters: { type?: Organisa
     ...(filters.type ? { type: filters.type } : {}),
     ...(actor.orgType === "FINANCIER" ? { AND: [financierCounterpartyScope(actor.orgId)] } : {}),
     ...(filters.search?.trim()
-      ? { OR: [{ name: { contains: filters.search.trim() } }, { legalName: { contains: filters.search.trim() } }, { gstin: { contains: filters.search.trim() } }] }
+      ? { OR: [{ name: { contains: filters.search.trim(), mode: "insensitive" } }, { legalName: { contains: filters.search.trim(), mode: "insensitive" } }, { gstin: { contains: filters.search.trim(), mode: "insensitive" } }] }
       : {}),
   };
-  return db.organisation.findMany({
+  const organisations = await db.organisation.findMany({
     where,
     include: {
       _count: { select: { members: true, projects: true, cpInvoices: true, builderInvoices: true, cpRelationships: true, builderRelationships: true } },
       builderProgrammes: { where: { status: "ACTIVE" }, select: { code: true, discountRateBps: true, financierId: true } },
     },
-    orderBy: [{ type: "asc" }, { name: "asc" }],
+    orderBy: [{ name: "asc" }, { id: "asc" }],
   });
+  return sortByEnumName(organisations, (o) => o.type);
 }
 
 export type OrganisationListItem = Awaited<ReturnType<typeof listOrganisations>>[number];
@@ -268,7 +271,7 @@ export async function listUsers(actor: Actor, filters: { search?: string } = {})
   requireSuperAdmin(actor);
   const q = filters.search?.trim();
   return db.organisationUser.findMany({
-    where: q ? { OR: [{ user: { name: { contains: q } } }, { user: { email: { contains: q } } }, { organisation: { name: { contains: q } } }] } : {},
+    where: q ? { OR: [{ user: { name: { contains: q, mode: "insensitive" } } }, { user: { email: { contains: q, mode: "insensitive" } } }, { organisation: { name: { contains: q, mode: "insensitive" } } }] } : {},
     include: {
       user: { select: { id: true, name: true, email: true, status: true, lastLoginAt: true, createdAt: true } },
       organisation: { select: { id: true, name: true, type: true, status: true } },
@@ -367,7 +370,7 @@ export async function listAuditLogs(
         scope,
         filters.entityType ? { entityType: filters.entityType } : {},
         filters.entityId ? { entityId: filters.entityId } : {},
-        q ? { OR: [{ summary: { contains: q } }, { actorName: { contains: q } }, { action: { contains: q } }] } : {},
+        q ? { OR: [{ summary: { contains: q, mode: "insensitive" } }, { actorName: { contains: q, mode: "insensitive" } }, { action: { contains: q, mode: "insensitive" } }] } : {},
       ],
     },
     orderBy: { createdAt: "desc" },

@@ -15,7 +15,7 @@ describe("GET /api/health", () => {
   });
 
   it("returns 503 without leaking error details when the database is unavailable", async () => {
-    vi.spyOn(db, "$queryRaw").mockRejectedValue(new Error("SQLITE_CANTOPEN: unable to open /secret/path/brickflow.db"));
+    vi.spyOn(db, "$queryRaw").mockRejectedValue(new Error("connect ECONNREFUSED 10.0.0.5:5432 (postgresql://brickflow:secret@db/brickflow)"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const response = await GET();

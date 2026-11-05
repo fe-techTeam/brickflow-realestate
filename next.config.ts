@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   agentRules: false,
   poweredByHeader: false,
-  serverExternalPackages: ["better-sqlite3", "@prisma/adapter-better-sqlite3"],
+  serverExternalPackages: ["pg", "@prisma/adapter-pg"],
   experimental: {
     serverActions: {
       bodySizeLimit: "12mb",

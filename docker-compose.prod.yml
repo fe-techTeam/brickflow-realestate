@@ -1,0 +1,107 @@
+# Single-server production stack: Caddy (automatic HTTPS) -> app -> PostgreSQL, plus a nightly
+# pg_dump backup. Only Caddy publishes ports (80/443). See docs/DEPLOYMENT.md, section
+# "Single server with Docker Compose and PostgreSQL".
+#
+#   docker compose -f docker-compose.prod.yml up -d --build    (variables from .env next to this file)
+name: brickflow
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  caddy:
+    image: caddy:2.11.7-alpine
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN to the public host name, e.g. demo.example.com}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infra/compose/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge]
+    logging: *logging
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+    image: brickflow:${BRICKFLOW_VERSION:-latest}
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://brickflow:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/brickflow
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      STORAGE_DRIVER: local
+      STORAGE_DIR: /app/data/storage
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (at least 32 random characters)}
+      APP_URL: https://${DOMAIN}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-BrickFlow@2026}
+      DEMO_DATASET: ${DEMO_DATASET:-standard}
+      SEED_ON_START: ${SEED_ON_START:-false}
+    volumes:
+      - app-storage:/app/data/storage
+    networks: [edge, backend]
+    logging: *logging
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17.11-alpine3.24
+    environment:
+      POSTGRES_USER: brickflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: brickflow
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brickflow -d brickflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks: [backend]
+    logging: *logging
+    restart: unless-stopped
+
+  backup:
+    image: postgres:17.11-alpine3.24
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/usr/local/bin/pg-backup.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: brickflow
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      PGDATABASE: brickflow
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-21}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ./infra/compose/pg-backup.sh:/usr/local/bin/pg-backup.sh:ro
+      - postgres-backups:/backups
+    networks: [backend]
+    logging: *logging
+    restart: unless-stopped
+
+networks:
+  edge:
+  # No route to the internet: PostgreSQL and the backup job are reachable only from the app.
+  backend:
+    internal: true
+
+volumes:
+  caddy-data:
+  caddy-config:
+  app-storage:
+  postgres-data:
+  postgres-backups:
