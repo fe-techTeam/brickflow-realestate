@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { BodyTooLargeError, readBodyWithLimit } from "@/server/http/read-body";
 import { applyStatusUpdates, extractStatusUpdates, verifySubscription, verifyWebhookSignature } from "@/server/notifications/whatsapp/webhook";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +18,13 @@ export async function POST(request: NextRequest) {
   const secret = process.env.WHATSAPP_APP_SECRET?.trim();
   if (!secret) return NextResponse.json({ error: "Not configured" }, { status: 503 });
 
-  const declared = Number(request.headers.get("content-length") ?? "0");
-  if (declared > MAX_BODY_BYTES) return NextResponse.json({ error: "Payload too large" }, { status: 413 });
-  const raw = new Uint8Array(await request.arrayBuffer());
-  if (raw.byteLength > MAX_BODY_BYTES) return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  let raw: Uint8Array;
+  try {
+    raw = await readBodyWithLimit(request, MAX_BODY_BYTES);
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+    throw error;
+  }
 
   if (!verifyWebhookSignature(raw, request.headers.get("x-hub-signature-256"), secret)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });

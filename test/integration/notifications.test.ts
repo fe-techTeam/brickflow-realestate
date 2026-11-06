@@ -435,6 +435,42 @@ describe("WhatsApp delivery-status webhook", () => {
     expect(await db.notificationDelivery.findUniqueOrThrow({ where: { id: delivery.id } })).toMatchObject({ status: "FAILED", error: "WhatsApp 131026 Recipient is not on WhatsApp" });
   });
 
+  it("answers 413 to an oversize chunked body without buffering it, before checking the signature", async () => {
+    let pulled = 0;
+    let cancelled = false;
+    const endless = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          pulled += 1;
+          controller.enqueue(new Uint8Array(64 * 1024).fill(123));
+        },
+        cancel() {
+          cancelled = true;
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const response = await webhookPost(
+      new NextRequest("http://localhost:3000/api/webhooks/whatsapp", {
+        method: "POST",
+        body: endless,
+        headers: { "Content-Type": "application/json", "X-Hub-Signature-256": `sha256=${"0".repeat(64)}` },
+        duplex: "half",
+      } as ConstructorParameters<typeof NextRequest>[1]),
+    );
+    expect(response.status).toBe(413);
+    expect(cancelled).toBe(true);
+    expect(pulled).toBeLessThanOrEqual(18);
+  });
+
+  it("accepts a signed body just under the limit and rejects a bad signature on it", async () => {
+    const padding = " ".repeat(1024 * 1024 - 200);
+    const body = `{"object":"whatsapp_business_account","entry":[]}${padding}`;
+    expect(body.length).toBeLessThan(1024 * 1024);
+    expect((await post(body, sign(body))).status).toBe(200);
+    expect((await post(body, sign(`${body}x`))).status).toBe(401);
+  });
+
   it("returns 503 when no app secret is configured", async () => {
     delete process.env.WHATSAPP_APP_SECRET;
     try {
