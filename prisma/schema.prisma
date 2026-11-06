@@ -426,8 +426,11 @@ model Settlement {
   @@index([dueDate])
 }
 
+/// Append-only, hash-chained audit trail. `seq` is the gapless position in the single global chain and
+/// `hash` = SHA-256 over the row's canonical content plus `prevHash` (see src/lib/audit-chain.ts).
 model AuditLog {
   id          String   @id @default(cuid())
+  seq         BigInt   @unique
   actorUserId String?
   actorName   String
   actorOrgId  String?
@@ -438,10 +441,50 @@ model AuditLog {
   summary     String
   metadata    String?
   createdAt   DateTime @default(now())
+  prevHash    String?
+  hash        String?
 
   @@index([entityType, entityId])
   @@index([actorOrgId, createdAt])
-  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action])
+  @@index([createdAt, id])
+}
+
+/// Daily published head of the audit chain; lets verification detect truncation of the newest rows.
+model AuditAnchor {
+  id         String   @id @default(cuid())
+  day        String   @unique
+  seq        BigInt
+  hash       String
+  anchoredAt DateTime @default(now())
+
+  @@index([seq])
+}
+
+enum AuditChainStatus {
+  VERIFIED
+  BROKEN
+  EMPTY
+}
+
+/// Result of each audit chain verification run (admin "Verify now", CLI or scheduler).
+model AuditChainCheck {
+  id                 String           @id @default(cuid())
+  status             AuditChainStatus
+  checkedRows        Int
+  headSeq            BigInt?
+  verifiedThroughSeq BigInt?
+  brokenSeq          BigInt?
+  brokenAuditId      String?
+  brokenReason       String?
+  anchorsChecked     Int              @default(0)
+  durationMs         Int
+  triggeredById      String?
+  triggeredByName    String
+  checkedAt          DateTime         @default(now())
+
+  @@index([checkedAt])
 }
 
 model Sequence {

@@ -22,6 +22,9 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "demo:reset": "node scripts/demo-reset.mjs",
+    "audit:verify": "tsx scripts/audit-chain.ts verify",
+    "audit:backfill": "tsx scripts/audit-chain.ts backfill",
+    "audit:anchor": "tsx scripts/audit-chain.ts anchor",
     "setup": "prisma migrate deploy && prisma db seed",
     "postinstall": "prisma generate"
   },
