@@ -481,6 +481,7 @@ The demo environment runs the [single-server stack](#2-single-server-with-docker
 | AWS account / region | `617103915273` / `ap-south-1` (Mumbai) |
 | Instance | Lightsail `brickflow-app`: Ubuntu 24.04, 2 vCPU, 2 GB RAM (+2 GB swap), 60 GB SSD. Plan `small_3_1`. |
 | Public IP | Static IP `brickflow-app-ip` = `35.154.239.217` |
+| Domain | `https://brickflow.firsteconomy.com`: Cloudflare `A` record to the static IP, proxy off (DNS only). The certificate is issued and renewed by Caddy (Let's Encrypt). |
 | Firewall | 80/tcp and 443/tcp+udp open to all; 22/tcp only from the office VPN egress IP |
 | SSH | `ssh -i ~/.ssh/brickflow-app.pem ubuntu@35.154.239.217` (Lightsail key pair `brickflow-app-key`) |
 | Stack | `~/brickflow` on the instance: `docker-compose.prod.yml`, `infra/compose/*` and a `chmod 600` `.env` |

@@ -1,13 +1,22 @@
 # Delivery progress
 
-Living checklist of the build. Each phase lands on `develop` through its own pull request.
+Living checklist of the build. Each change lands on `develop` through its own pull request; `main` receives releases from `develop` only.
 
-| Phase | Branch | Scope | Status |
+| Phase | Pull requests | Scope | Status |
 | --- | --- | --- | --- |
-| 1 | `feature/foundation` | Next.js 16 + Prisma 7 setup, design system, auth/RBAC, full service layer, schema, seed, shell, login, docs | Done |
-| 2a | `feature/partner-portal` | Channel partner workspace (overview, invoices, upload + extraction, offers, transactions, disbursements, documents, profile) | Pending |
-| 2b | `feature/builder-portal` | Builder workspace (overview, partners, projects, approvals, approved, financed, settlements, reports) | Pending |
-| 2c | `feature/finance-portal` | Veefin workspace (overview, builders, partners, programmes, requests, disbursements, transactions, reports) | Pending |
-| 2d | `feature/admin-portal` | Super admin workspace (dashboard, organisations, users, builders, partners, financing configuration, transactions, audit, settings) | Pending |
-| 3 | `chore/quality-and-delivery` | Automated tests (unit, service integration, e2e), CI, Docker, AWS deployment, README | Pending |
-| 4 | — | Integrated end-to-end verification on `develop` | Pending |
+| 1 | #1, #2 | Next.js + Prisma foundation, design system, auth/RBAC, service layer, schema, seed; financier organisation-scope fix | Done |
+| 2 | #3, #4, #5, #6 | Super Admin, Builder, Veefin Finance and Channel Partner workspaces | Done |
+| 3 | #7, #10 | Automated tests (unit, service integration, e2e), CI, Docker, deployment guide; per-checkout test storage | Done |
+| 4 | #8, #9, #11, #12, #13 | Visual redesign of the shell, sign-in and all four workspaces | Done |
+| 5 | #14 | Selectable demo datasets (`standard`, `chandak`) | Done |
+| 6 | #15, #16, #17 | Palette and dark glass theme; production interface copy; unused files removed | Done |
+| 7 | #18, #19 | PostgreSQL; single-server Docker Compose stack (Caddy HTTPS, nightly backups, demo reset); demo environment documented | Done |
+| 8 | — | Demo environment live at https://brickflow.firsteconomy.com (see `docs/DEPLOYMENT.md`, section 5) | Done |
+
+## Next
+
+Planned work is tracked in the product roadmap. The first candidates are:
+
+- settlement status evaluated in the Asia/Kolkata calendar instead of UTC;
+- early-payment pricing on the amount the builder actually remits (net of TDS) and as an annual rate × days;
+- production hardening: CSP, login rate limiting, password reset and MFA, uptime alerts.
