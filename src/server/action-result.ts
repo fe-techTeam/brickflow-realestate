@@ -1,10 +1,10 @@
 import "server-only";
 import { ZodError } from "zod";
-import { DomainError } from "./errors";
+import { DomainError, type DomainErrorCode } from "./errors";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T; message?: string }
-  | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
+  | { ok: false; error: string; fieldErrors?: Record<string, string[]>; code?: DomainErrorCode };
 
 function zodFieldErrors(error: ZodError): Record<string, string[]> {
   const out: Record<string, string[]> = {};
@@ -22,7 +22,7 @@ export async function runAction<T>(fn: () => Promise<T>, message?: string): Prom
     return { ok: true, data, message };
   } catch (error) {
     if (error instanceof DomainError) {
-      return { ok: false, error: error.message, fieldErrors: error.fieldErrors };
+      return { ok: false, error: error.message, fieldErrors: error.fieldErrors, code: error.code };
     }
     if (error instanceof ZodError) {
       return { ok: false, error: "Please correct the highlighted fields.", fieldErrors: zodFieldErrors(error) };

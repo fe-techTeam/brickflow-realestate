@@ -6,6 +6,7 @@ import { calculateDiscount } from "@/lib/financing";
 import { formatBps, formatINR } from "@/lib/money";
 import { recordAudit } from "../audit";
 import { assertOrgType, type Actor } from "../auth/session";
+import { authorize, type Permission } from "../auth/permissions";
 import { db, type Tx } from "../db";
 import { conflict, forbidden, notFound } from "../errors";
 import { nextReference } from "../sequence";
@@ -85,6 +86,7 @@ export function parseOfferTerms(snapshot: string): OfferTerms {
 /** "GET DISCOUNTED AMOUNT": creates (or returns the still-valid) offer computed on the server from the configured rate. */
 export async function generateOffer(actor: Actor, invoiceId: string) {
   assertOrgType(actor, "CHANNEL_PARTNER");
+  authorize(actor, "offer.generate");
   const invoice = await db.invoice.findUnique({ where: { id: invoiceId } });
   if (!invoice || invoice.cpId !== actor.orgId) throw notFound("Invoice not found.");
 
@@ -139,6 +141,7 @@ export async function generateOffer(actor: Actor, invoiceId: string) {
 }
 
 export async function getOfferForActor(actor: Actor, offerId: string) {
+  authorize(actor, "financing.read");
   const offer = await db.financingOffer.findUnique({
     where: { id: offerId },
     include: { invoice: { include: { builder: true, project: true, cp: true } }, programme: { include: { financier: true } } },
@@ -170,6 +173,7 @@ async function addEvent(tx: Tx, requestId: string, from: FinancingStatus | null,
  */
 export async function acceptOffer(actor: Actor, offerId: string, raw: { consent: boolean }) {
   assertOrgType(actor, "CHANNEL_PARTNER");
+  authorize(actor, "offer.accept");
   acceptSchema.parse(raw);
   const offer = await db.financingOffer.findUnique({ where: { id: offerId }, include: { invoice: true, programme: true } });
   if (!offer || offer.invoice.cpId !== actor.orgId) throw notFound("Offer not found.");
@@ -254,8 +258,9 @@ export async function acceptOffer(actor: Actor, offerId: string, raw: { consent:
  * Financier operations
  * -------------------------------------------------------------------------------------------- */
 
-async function loadRequestForFinancier(actor: Actor, requestId: string) {
+async function loadRequestForFinancier(actor: Actor, requestId: string, permission: Permission) {
   assertOrgType(actor, "FINANCIER");
+  authorize(actor, permission);
   const request = await db.financingRequest.findUnique({ where: { id: requestId }, include: { invoice: true, cp: true } });
   if (!request || request.financierId !== actor.orgId) throw notFound("Financing request not found.");
   return request;
@@ -273,7 +278,7 @@ const reasonSchema = z.object({
 
 export async function approveFinancingRequest(actor: Actor, requestId: string, raw: { note?: string }) {
   const { note } = noteSchema.parse(raw);
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "financing.decide");
   if (request.status !== "PENDING_APPROVAL") throw conflict("Only requests pending approval can be approved.");
   const now = new Date();
   await db.$transaction(async (tx) => {
@@ -292,7 +297,7 @@ export async function approveFinancingRequest(actor: Actor, requestId: string, r
 
 export async function rejectFinancingRequest(actor: Actor, requestId: string, raw: { reason: string }) {
   const { reason } = reasonSchema.parse(raw);
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "financing.decide");
   if (request.status !== "PENDING_APPROVAL") throw conflict("Only requests pending approval can be rejected.");
   const now = new Date();
   await db.$transaction(async (tx) => {
@@ -313,7 +318,7 @@ const commentSchema = z.object({ body: z.string().trim().min(2, "Comment is too 
 
 export async function addInternalComment(actor: Actor, requestId: string, raw: { body: string }) {
   const { body } = commentSchema.parse(raw);
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "financing.comment");
   await db.$transaction(async (tx) => {
     await tx.internalComment.create({ data: { requestId: request.id, body, authorId: actor.userId, authorName: actor.name } });
     await recordAudit(tx, actor, {
@@ -332,7 +337,7 @@ function maskAccount(account: string | null): string {
 
 /** Payout step 1: books the disbursement instruction. */
 export async function initiateDisbursement(actor: Actor, requestId: string) {
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "payout.release");
   if (request.status !== "APPROVED") throw conflict("Only approved requests can be disbursed.");
   const now = new Date();
   return db.$transaction(async (tx) => {
@@ -369,7 +374,7 @@ function addDays(date: Date, days: number): Date {
 
 /** Payout step 2: confirms the bank acknowledgement and opens the builder settlement. */
 export async function completeDisbursement(actor: Actor, requestId: string) {
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "payout.release");
   if (request.status !== "DISBURSEMENT_INITIATED") throw conflict("No disbursement is in progress for this request.");
   const relationship = await db.cpBuilderRelationship.findUnique({
     where: { cpId_builderId: { cpId: request.cpId, builderId: request.builderId } },
@@ -438,7 +443,7 @@ const settleSchema = z.object({
 /** Records that the builder has paid the financier. Performed by the financier's operations user. */
 export async function markSettlementSettled(actor: Actor, requestId: string, raw: { reference: string; note?: string }) {
   const input = settleSchema.parse(raw);
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "settlement.record");
   const settlement = await db.settlement.findUnique({ where: { requestId: request.id } });
   if (!settlement) throw conflict("No settlement exists for this request yet.");
   if (settlement.status === "SETTLED") throw conflict("This settlement is already marked as settled.");
@@ -464,6 +469,7 @@ export async function markSettlementSettled(actor: Actor, requestId: string, raw
  * -------------------------------------------------------------------------------------------- */
 
 export function requestScope(actor: Actor): Prisma.FinancingRequestWhereInput {
+  authorize(actor, "financing.read");
   switch (actor.orgType) {
     case "CHANNEL_PARTNER":
       return { cpId: actor.orgId };
@@ -540,6 +546,7 @@ export type FinancingRequestDetail = Awaited<ReturnType<typeof getFinancingReque
 /** Open (not accepted/expired) offers for a channel partner. Expired offers are flagged on read. */
 export async function listOpenOffers(actor: Actor) {
   assertOrgType(actor, "CHANNEL_PARTNER");
+  authorize(actor, "offer.generate");
   const now = new Date();
   await db.financingOffer.updateMany({
     where: { status: "OFFERED", validUntil: { lte: now }, invoice: { cpId: actor.orgId } },

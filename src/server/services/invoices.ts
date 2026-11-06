@@ -4,6 +4,7 @@ import type { InvoiceStatus, Prisma } from "@/generated/prisma/client";
 import { parseRupeesToPaise } from "@/lib/money";
 import { recordAudit } from "../audit";
 import { assertOrgType, type Actor } from "../auth/session";
+import { authorize } from "../auth/permissions";
 import { db } from "../db";
 import { conflict, forbidden, invalid, notFound } from "../errors";
 import { nextReference } from "../sequence";
@@ -88,6 +89,7 @@ function safeFileName(name: string): string {
 /** Builders and projects a channel partner is empanelled with and may invoice. */
 export async function listInvoiceableBuilders(actor: Actor) {
   assertOrgType(actor, "CHANNEL_PARTNER");
+  authorize(actor, "invoice.submit");
   const relationships = await db.cpBuilderRelationship.findMany({
     where: { cpId: actor.orgId, status: "ACTIVE", builder: { status: "ACTIVE" } },
     include: {
@@ -107,6 +109,7 @@ export async function listInvoiceableBuilders(actor: Actor) {
 
 export async function submitInvoice(actor: Actor, rawInput: SubmitInvoiceInput, rawFile: UploadedFile | null) {
   assertOrgType(actor, "CHANNEL_PARTNER");
+  authorize(actor, "invoice.submit");
   const input = submitInvoiceSchema.parse(rawInput);
   const file = validatePdf(rawFile);
 
@@ -206,6 +209,7 @@ const responseSchema = z.object({
 /** CP response to a clarification request; optionally replaces the PDF and returns the invoice to the builder's inbox. */
 export async function resubmitInvoice(actor: Actor, invoiceId: string, raw: { note: string }, rawFile: UploadedFile | null) {
   assertOrgType(actor, "CHANNEL_PARTNER");
+  authorize(actor, "invoice.respond");
   const { note } = responseSchema.parse(raw);
   const invoice = await db.invoice.findUnique({ where: { id: invoiceId } });
   if (!invoice || invoice.cpId !== actor.orgId) throw notFound("Invoice not found.");
@@ -271,6 +275,7 @@ const REVIEWABLE: InvoiceStatus[] = ["SUBMITTED", "UNDER_REVIEW"];
 
 async function loadForBuilder(actor: Actor, invoiceId: string) {
   assertOrgType(actor, "BUILDER");
+  authorize(actor, "invoice.review");
   const invoice = await db.invoice.findUnique({ where: { id: invoiceId } });
   if (!invoice || invoice.builderId !== actor.orgId) throw notFound("Invoice not found.");
   return invoice;
@@ -336,6 +341,7 @@ const approveSchema = z.object({
 
 export async function approveInvoice(actor: Actor, invoiceId: string, raw: z.input<typeof approveSchema>) {
   const input = approveSchema.parse(raw);
+  authorize(actor, "invoice.approve");
   const invoice = await loadForBuilder(actor, invoiceId);
   let approved = invoice.amountPaise;
   if (input.approvedAmount && input.approvedAmount.trim()) {
@@ -393,6 +399,7 @@ export async function requestClarification(actor: Actor, invoiceId: string, raw:
 
 /** Prisma filter restricting invoices to the actor's visibility. */
 export function invoiceScope(actor: Actor): Prisma.InvoiceWhereInput {
+  authorize(actor, "invoice.read");
   switch (actor.orgType) {
     case "CHANNEL_PARTNER":
       return { cpId: actor.orgId };
@@ -490,6 +497,7 @@ export type InvoiceDetail = Awaited<ReturnType<typeof getInvoiceDetail>>;
 
 /** Returns document metadata if the actor may download it. */
 export async function getDocumentForActor(actor: Actor, documentId: string) {
+  authorize(actor, "document.read");
   const document = await db.invoiceDocument.findUnique({ where: { id: documentId }, include: { invoice: true } });
   if (!document) throw notFound("Document not found.");
   const visible = await db.invoice.count({ where: { AND: [{ id: document.invoiceId }, invoiceScope(actor)] } });

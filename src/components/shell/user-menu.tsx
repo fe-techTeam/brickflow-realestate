@@ -1,7 +1,8 @@
 "use client";
 
 import { useTransition } from "react";
-import { Building2, ChevronDown, LogOut, Mail } from "lucide-react";
+import Link from "next/link";
+import { Building2, ChevronDown, LogOut, Mail, ShieldCheck } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -60,6 +61,14 @@ export function UserMenu({ user, workspace }: { user: ShellUser; workspace?: Wor
         </div>
         <DropdownMenuSeparator className="mx-0 my-0" />
         <div className="p-1.5">
+          {workspace && (
+            <DropdownMenuItem asChild>
+              <Link href={`${WORKSPACES[workspace].basePath}/security`}>
+                <ShieldCheck className="size-4" />
+                Security
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem variant="destructive" disabled={pending} onSelect={() => startTransition(() => logoutAction())}>
             <LogOut className="size-4" />
             {pending ? "Signing out…" : "Sign out"}

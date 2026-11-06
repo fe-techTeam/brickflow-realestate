@@ -44,7 +44,7 @@ export function RecordStatusToggle({
         ? `${organisationImpact(orgType)} Existing invoices, financing requests and settlements are preserved and remain visible.`
         : "Its users will be able to sign in again and normal activity resumes. Programmes and empanelments keep their own status."
       : deactivating
-        ? "The user will be signed out on their next request and cannot sign in until reactivated. Their history is preserved."
+        ? "All of the user's sessions end immediately and they cannot sign in until reactivated. Their history is preserved."
         : "The user will be able to sign in again, provided their organisation is active.";
 
   return (

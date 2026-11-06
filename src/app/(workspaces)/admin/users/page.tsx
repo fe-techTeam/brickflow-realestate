@@ -14,6 +14,7 @@ import { ORG_TYPE_META, param, ROLE_LABELS } from "../_components/labels";
 import { Ledger, LSortTh, LTd, LTh, LTr } from "../_components/ledger";
 import { OrgTypeBadge } from "../_components/org-type-badge";
 import { RecordStatusToggle } from "../_components/record-status-toggle";
+import { ResetMfaButton } from "./_components/reset-mfa-button";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -139,7 +140,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       {m.designation && <p className="text-xs text-muted-foreground">{m.designation}</p>}
                     </LTd>
                     <LTd>
-                      <StatusBadge kind="record" status={m.user.status} />
+                      <div className="flex flex-wrap gap-1.5">
+                        <StatusBadge kind="record" status={m.user.status} />
+                        {m.user.mfaEnabledAt && <ToneBadge meta={{ label: "2-step on", tone: "kota" }} />}
+                      </div>
                     </LTd>
                     <LTd className="tabular text-xs whitespace-nowrap">{m.user.lastLoginAt ? formatDateTime(m.user.lastLoginAt) : <span className="text-muted-foreground">Never</span>}</LTd>
                     <LTd className="tabular text-xs whitespace-nowrap">{formatDate(m.user.createdAt)}</LTd>
@@ -147,7 +151,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       {self ? (
                         <span className="text-xs text-muted-foreground">Your account</span>
                       ) : (
-                        <RecordStatusToggle kind="user" id={m.user.id} name={m.user.name} status={m.user.status} />
+                        <div className="flex justify-end gap-2">
+                          {m.user.mfaEnabledAt && <ResetMfaButton userId={m.user.id} name={m.user.name} />}
+                          <RecordStatusToggle kind="user" id={m.user.id} name={m.user.name} status={m.user.status} />
+                        </div>
                       )}
                     </LTd>
                   </LTr>
