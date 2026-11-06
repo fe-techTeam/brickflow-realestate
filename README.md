@@ -15,6 +15,7 @@ Every organisation is fictional and every payment is **simulated**. No bank inte
 - [Tech stack](#tech-stack)
 - [Architecture](#architecture)
 - [Local setup](#local-setup)
+- [Background jobs and notifications](#background-jobs-and-notifications)
 - [Demo credentials](#demo-credentials)
 - [Seeded demo data](#seeded-demo-data)
 - [Guided demo script](#guided-demo-script)
@@ -77,22 +78,28 @@ src/
     api/
       documents/             authorised invoice PDF downloads
       health/                liveness and database check for load balancers and Docker
+      notifications/         signed one-click email unsubscribe
+      webhooks/whatsapp/     WhatsApp Cloud API delivery-status callbacks (signature-verified)
     login/                   sign-in page
   components/
     ui/                      design-system primitives
     common/                  BrickFlow building blocks (page header, data table, status badge, dialogs)
     shell/                   application shell, navigation, user menu
+    notifications/           notification bell, inbox and preferences
     brand/                   logo
   server/
     services/                business rules, state transitions and authorisation (invoices, financing, admin, auth)
     actions/                 thin server actions: actor -> service -> revalidate -> result
     auth/                    sessions, password hashing, token signing
+    jobs/                    PostgreSQL job queue: outbox enqueue, worker, retries, schedules, metrics
+    notifications/           notify(), templates, email (SMTP/log) and WhatsApp adapters, delivery log
     db.ts                    Prisma client
     storage.ts               pluggable document storage (local driver)
     audit.ts                 audit log writer
     sequence.ts              human-readable references (BF-INV, BF-OFR, BF-FIN, BFPAY-DEMO, BF-PRG)
   lib/                       money, discount calculation, formatting, statuses, PDF rendering, demo catalogue
   proxy.ts                   optimistic sign-in gate for workspace routes
+  worker/                    background worker entry point (`npm run worker`)
 prisma/                      schema, migrations, seed
 test/                        Vitest setup and service integration tests
 e2e/                         Playwright smoke tests
@@ -129,7 +136,7 @@ npm run setup      # prisma migrate deploy + seed
 npm run dev
 ```
 
-Open <http://localhost:3000>. `npm run demo:reset` deletes the stored invoice PDFs and reseeds the selected `DEMO_DATASET` at any time. `npm run db:reset` drops and recreates the schema from the migrations (follow it with `npm run db:seed`). `docker compose down -v` deletes the local database volume.
+Open <http://localhost:3000>. In a second terminal, `npm run worker` runs the background worker that delivers email and WhatsApp notifications and sends reminders; with the default `EMAIL_PROVIDER=log` it writes each email to its log instead of sending it. In-app notifications appear without the worker. `npm run demo:reset` deletes the stored invoice PDFs and reseeds the selected `DEMO_DATASET` at any time. `npm run db:reset` drops and recreates the schema from the migrations (follow it with `npm run db:seed`). `docker compose down -v` deletes the local database volume.
 
 | Variable | Default in `.env.example` | Purpose |
 | --- | --- | --- |
@@ -141,7 +148,28 @@ Open <http://localhost:3000>. `npm run demo:reset` deletes the stored invoice PD
 | `STORAGE_DIR` | `./storage` | Where invoice PDFs are stored |
 | `DEMO_PASSWORD` | `BrickFlow@2026` | Shared password for the seeded accounts |
 | `DEMO_DATASET` | `standard` | Which demo dataset to seed and offer on the sign-in page (see below) |
-| `APP_URL` | `http://localhost:3000` | Public base URL; `https://` enables secure cookies |
+| `APP_URL` | `http://localhost:3000` | Public base URL; `https://` enables secure cookies; base of links in emails |
+| `EMAIL_PROVIDER` | `log` | `log` (write emails to the worker log) or `smtp`; see [Background jobs and notifications](#background-jobs-and-notifications) |
+| `EMAIL_ALLOW_LOG_IN_PRODUCTION` | `false` (commented out) | Must be `true` to run the `log` provider with `NODE_ENV=production` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_REQUIRE_TLS`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_RATE_LIMIT_PER_SECOND` | commented out | SMTP relay (Amazon SES SMTP or any relay) for `EMAIL_PROVIDER=smtp` |
+| `WHATSAPP_PROVIDER` | `none` | `none` or `cloud` (Meta WhatsApp Cloud API) |
+| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_API_VERSION`, `WHATSAPP_TEMPLATE_LANGUAGE` | commented out | Cloud API credentials, webhook secrets and template settings |
+| `WORKER_*`, `JOB_*`, `SETTLEMENT_REMINDER_CRON` | commented out | Worker tuning; defaults in `.env.example` and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
+
+## Background jobs and notifications
+
+Background work runs on a **PostgreSQL job queue** (no extra infrastructure) processed by a separate worker process, `npm run worker` (the `worker` service in both Compose files, same image as the app).
+
+- **Transactional outbox.** `enqueueJob(tx, { type, payload, runAt?, idempotencyKey?, maxAttempts? })` inserts the job in the caller's transaction, so it exists only if the business change commits. An idempotency key makes a second enqueue a no-op.
+- **Worker.** Claims jobs with `SELECT … FOR UPDATE SKIP LOCKED`, so any number of workers can run. Each claim takes a lease (visibility timeout, `WORKER_LEASE_MS`) that is renewed while the handler runs; a job whose worker dies is picked up again when the lease expires. Failures retry with exponential backoff and jitter; after `JOB_MAX_ATTEMPTS` (or a permanent error) the job is dead-lettered. `SIGTERM` stops claiming, lets running jobs finish for `WORKER_SHUTDOWN_TIMEOUT_MS`, then hands the rest back.
+- **Schedules.** Cron-style recurring jobs (`JobSchedule`, evaluated in IST) run once per period across all workers: settlement reminders daily at 09:00 IST and job-table maintenance at 03:30 IST.
+- **Operations.** *Super Admin → Jobs* shows queue health, schedules, failed and dead-lettered jobs (retry or cancel, both audited) and the email/WhatsApp delivery log.
+
+`notify(tx, { event, recipients, data })` turns a workflow event into notifications. It resolves recipients (an organisation's users, optionally by role), applies each user's preferences and, in the same transaction, writes in-app notifications and queues one delivery job per email/WhatsApp message. Every invoice, offer, financing, disbursement and settlement transition notifies the parties involved; offer-expiry (24 hours before `validUntil`) and settlement reminders (3 days before, on the due date, then weekly while overdue) are timed jobs.
+
+- **In-app:** the bell in the top bar (unread count, latest items, mark as read) and a *Notifications* page in every workspace with the full list and the preferences (channel × category).
+- **Email:** `EMAIL_PROVIDER=smtp` (Amazon SES SMTP or any relay, via `nodemailer`) or `log`. HTML and plain-text bodies, a footer explaining why the email was sent, a link to the preferences and a signed one-click unsubscribe (`List-Unsubscribe`, RFC 8058). Account emails (password reset, `sendTemplatedEmail`) ignore preferences.
+- **WhatsApp:** `WHATSAPP_PROVIDER=cloud` sends approved template messages through the Meta WhatsApp Cloud API to users who added a number and gave consent; delivery statuses arrive at `/api/webhooks/whatsapp`, verified with `X-Hub-Signature-256`. Template names and parameters are listed in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#whatsapp-cloud-api).
 
 ## Demo datasets
 
@@ -277,7 +305,7 @@ Both suites need the PostgreSQL server from `docker compose up -d postgres` (or 
 docker compose up --build
 ```
 
-Then open <http://localhost:3000>. This starts PostgreSQL and the app container; the app waits for the database to be healthy. Compose needs `AUTH_SECRET` from your shell or `.env`. The database lives in the named volume `postgres-data` and the PDFs in `app-storage`. On start the container applies migrations, seeds only when the database is empty (or every time with `SEED_ON_START=true`), so data persists across restarts, and serves the app as a non-root user. `GET /api/health` returns `{"status":"ok","db":"ok"}` and backs the container health check. Reset the demo inside the container with `docker compose exec app node scripts/demo-reset.mjs --yes`. `docker compose down -v` removes the volumes.
+Then open <http://localhost:3000>. This starts PostgreSQL, the app container and the background `worker` (same image; it starts once the app is healthy and writes emails to its log unless `EMAIL_PROVIDER=smtp` is set); the app waits for the database to be healthy. Compose needs `AUTH_SECRET` from your shell or `.env`. The database lives in the named volume `postgres-data` and the PDFs in `app-storage`. On start the container applies migrations, seeds only when the database is empty (or every time with `SEED_ON_START=true`), so data persists across restarts, and serves the app as a non-root user. `GET /api/health` returns `{"status":"ok","db":"ok"}` and backs the container health check. Reset the demo inside the container with `docker compose exec app node scripts/demo-reset.mjs --yes`. `docker compose down -v` removes the volumes.
 
 For a single production server (PostgreSQL, Caddy with automatic HTTPS, nightly backups), use `docker-compose.prod.yml`; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#2-single-server-with-docker-compose-and-postgresql).
 
