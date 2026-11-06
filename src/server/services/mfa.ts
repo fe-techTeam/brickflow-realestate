@@ -12,7 +12,7 @@ import { decryptField, encryptField } from "../crypto/encryption";
 import { db, type Tx } from "../db";
 import { conflict, forbidden, invalid, notFound } from "../errors";
 
-const INVALID_CODE = "That code is not valid. Check your authenticator app and try again.";
+const INVALID_CODE = "That code is not valid. Check it and try again.";
 
 const activeContext = (userId: string) => `user:${userId}:totp`;
 const pendingContext = (userId: string) => `user:${userId}:totp-pending`;

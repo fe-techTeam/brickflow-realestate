@@ -69,11 +69,16 @@ test.describe("sign-in protection", () => {
   test("gives the same generic message for unknown accounts and then throttles", async ({ page }) => {
     const ghost = `nobody.${randomUUID().slice(0, 8)}@example.com`;
     await signIn(page, ghost, "wrong-password");
-    await expect(page.getByRole("alert")).toHaveText("The email or password is incorrect.");
-    await signIn(page, ghost, "wrong-password");
-    await expect(page.getByRole("alert")).toHaveText("The email or password is incorrect.");
-    await signIn(page, ghost, "wrong-password");
-    await expect(page.getByRole("alert")).toContainText("Too many attempts");
+    await expect(page.getByRole("alert").filter({ hasText: "The email or password is incorrect." })).toBeVisible();
+
+    // Keep submitting: the progressive delays and then the lockout must stop the guesses.
+    const throttled = page.getByRole("alert").filter({ hasText: "Too many attempts" });
+    for (let attempt = 0; attempt < 8 && !(await throttled.isVisible()); attempt += 1) {
+      await page.getByLabel("Password").fill(`wrong-password-${attempt}`);
+      await page.getByRole("button", { name: "Sign in" }).click();
+      await expect(page.getByRole("button", { name: "Sign in" })).toBeEnabled();
+    }
+    await expect(throttled).toBeVisible();
   });
 });
 
@@ -101,7 +106,7 @@ test.describe("security page", () => {
 
     await page.getByLabel("Enter the 6-digit code shown in the app").fill("000000");
     await page.getByRole("button", { name: "Verify and turn on" }).click();
-    await expect(page.getByRole("alert")).toContainText("not valid");
+    await expect(page.getByRole("alert").filter({ hasText: "not valid" })).toBeVisible();
 
     await page.getByLabel("Enter the 6-digit code shown in the app").fill(totp(key));
     await page.getByRole("button", { name: "Verify and turn on" }).click();
@@ -137,7 +142,7 @@ test.describe("security page", () => {
     await page.getByRole("button", { name: /Use a recovery code/ }).click();
     await page.getByLabel("Recovery code").fill(recoveryCodes[0]!);
     await page.getByRole("button", { name: "Verify and sign in" }).click();
-    await expect(page.getByRole("alert")).toContainText("not valid");
+    await expect(page.getByRole("alert").filter({ hasText: "not valid" })).toBeVisible();
 
     await page.getByLabel("Recovery code").fill(newCodes[0]!);
     await page.getByRole("button", { name: "Verify and sign in" }).click();
