@@ -9,6 +9,7 @@ import { assertOrgType, type Actor } from "../auth/session";
 import { db, type Tx } from "../db";
 import { conflict, forbidden, notFound } from "../errors";
 import { nextReference } from "../sequence";
+import { assertCpEligibleForPayout } from "./kyc";
 
 export const CONSENT_TEXT =
   "I confirm that I wish to receive early payment for this builder-approved invoice at the discount shown. " +
@@ -175,6 +176,8 @@ export async function acceptOffer(actor: Actor, offerId: string, raw: { consent:
   if (!offer || offer.invoice.cpId !== actor.orgId) throw notFound("Offer not found.");
   if (offer.status === "ACCEPTED") throw conflict("This offer has already been accepted.");
   if (offer.status !== "OFFERED") throw conflict("This offer is no longer available. Generate a fresh offer.");
+  // KYC payout gate (Verification & KYC area); a no-op unless KYC_ENFORCED is on.
+  await assertCpEligibleForPayout(offer.invoice.cpId);
 
   const now = new Date();
   if (offer.validUntil <= now) {
