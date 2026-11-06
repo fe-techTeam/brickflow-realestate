@@ -427,7 +427,8 @@ model Settlement {
 }
 
 /// Append-only, hash-chained audit trail. `seq` is the gapless position in the single global chain and
-/// `hash` = SHA-256 over the row's canonical content plus `prevHash` (see src/lib/audit-chain.ts).
+/// `hash` = HMAC-SHA256 (key `hashKeyId`) over the row's canonical content plus `prevHash`
+/// (see src/lib/audit-chain.ts).
 model AuditLog {
   id          String   @id @default(cuid())
   seq         BigInt   @unique
@@ -443,6 +444,7 @@ model AuditLog {
   createdAt   DateTime @default(now())
   prevHash    String?
   hash        String?
+  hashKeyId   String?
 
   @@index([entityType, entityId])
   @@index([actorOrgId, createdAt])
@@ -451,15 +453,25 @@ model AuditLog {
   @@index([createdAt, id])
 }
 
-/// Daily published head of the audit chain; lets verification detect truncation of the newest rows.
+/// Daily HMAC-signed statement of the chain head; lets verification detect truncation of the newest rows.
 model AuditAnchor {
   id         String   @id @default(cuid())
   day        String   @unique
   seq        BigInt
   hash       String
+  keyId      String
+  signature  String
   anchoredAt DateTime @default(now())
 
   @@index([seq])
+}
+
+/// Singleton (id = 1). Rows with seq <= legacyCutoffSeq predate the chain and are sealed exactly once
+/// by `npm run audit:backfill`; any other row without a hash is an integrity failure.
+model AuditChainState {
+  id              Int       @id @default(1)
+  legacyCutoffSeq BigInt
+  legacySealedAt  DateTime?
 }
 
 enum AuditChainStatus {

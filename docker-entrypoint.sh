@@ -13,6 +13,11 @@ if [ -z "${AUTH_SECRET:-}" ]; then
   exit 1
 fi
 
+if [ -z "${AUDIT_HMAC_KEY:-}" ]; then
+  echo "AUDIT_HMAC_KEY is not set; refusing to start (generate one with: openssl rand -base64 32)" >&2
+  exit 1
+fi
+
 mkdir -p "${STORAGE_DIR:-/app/data/storage}"
 
 echo "Waiting for the database"
@@ -34,7 +39,8 @@ const deadline = Date.now() + 60_000;
 echo "Applying database migrations"
 node node_modules/prisma/build/index.js migrate deploy
 
-echo "Sealing audit log entries"
+# One-time sealing of audit rows that predate the hash chain. The database records when it ran, so
+# every later start only reads that marker and changes nothing.
 node node_modules/tsx/dist/cli.mjs scripts/audit-chain.ts backfill
 
 user_count=$(node -e '

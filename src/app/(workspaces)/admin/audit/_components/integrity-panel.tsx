@@ -27,7 +27,7 @@ export function IntegrityPanel({ overview, canVerify }: { overview: AuditIntegri
     <Panel
       eyebrow="Integrity"
       title="Audit integrity"
-      description="Every entry is sealed with a SHA-256 hash of its content and of the entry before it, so editing, removing or reordering any entry breaks the chain."
+      description="Every entry is sealed with a keyed SHA-256 hash (HMAC) of its content and of the entry before it, so editing, removing or reordering any entry breaks the chain."
       actions={canVerify ? <VerifyChainButton /> : undefined}
       className="mb-6"
     >

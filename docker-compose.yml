@@ -36,6 +36,7 @@ services:
       STORAGE_DRIVER: local
       STORAGE_DIR: /app/data/storage
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (at least 32 random characters) in your shell or .env}
+      AUDIT_HMAC_KEY: ${AUDIT_HMAC_KEY:?Set AUDIT_HMAC_KEY (openssl rand -base64 32) in your shell or .env}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-BrickFlow@2026}
       DEMO_DATASET: ${DEMO_DATASET:-standard}
       APP_URL: ${APP_URL:-http://localhost:3000}

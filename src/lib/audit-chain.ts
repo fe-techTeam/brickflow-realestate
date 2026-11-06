@@ -2,9 +2,11 @@
  * Tamper-evident audit chain.
  *
  * Every AuditLog row has a gapless position `seq` (1, 2, 3, …) in one global chain and
- *   hash = SHA-256( canonicalJson({ v, seq, createdAt, actorUserId, actorName, actorOrgId, actorRole,
- *                                   action, entityType, entityId, summary, metadata, prevHash }) )
- * where `prevHash` is the `hash` of row `seq - 1` (null for the first row).
+ *   hash = HMAC-SHA256( key[hashKeyId], canonicalJson({ v, seq, createdAt, actorUserId, actorName,
+ *          actorOrgId, actorRole, action, entityType, entityId, summary, metadata, prevHash, keyId }) )
+ * where `prevHash` is the `hash` of row `seq - 1` (null for the first row). Because the hash is keyed
+ * (AUDIT_HMAC_KEY, see audit-keys.ts), someone with write access to the database but not the key
+ * cannot recompute a consistent chain after editing it.
  *
  * Canonical JSON (version 1):
  * - object keys sorted by UTF-16 code unit order (`Array.prototype.sort`), at every depth;
@@ -17,15 +19,22 @@
  * - `metadata` is hashed as the exact text stored in the column (it is already serialised JSON).
  *
  * Appends take a transaction-scoped PostgreSQL advisory lock, so concurrent writers are serialised
- * into a single chain. Deleting or editing any row breaks the link or the hash of that row; removing
- * the newest rows is caught by comparing against the daily anchors.
+ * into a single chain, and refuse to extend a head that is unsealed or fails its HMAC (fail closed).
+ * Rows that predate the chain (seq <= AuditChainState.legacyCutoffSeq) are sealed exactly once by
+ * `sealLegacyAuditRows`; a missing hash anywhere else is reported as a broken link and never re-sealed.
+ * Daily anchors are HMAC-signed statements of the head; they are also exported for write-once storage
+ * so that removal of the newest rows can be detected even if the database copy is altered.
  *
  * This module has no server-only imports so the seed and the CLI scripts can use it directly.
  */
-import { createHash } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { AuditLog, Prisma } from "../generated/prisma/client";
+import { auditKeyring, type AuditKeyring } from "./audit-keys";
 
 export const AUDIT_HASH_VERSION = 1;
+export const ANCHOR_STATEMENT_TYPE = "brickflow.audit.anchor";
+/** Fixed log event name for published anchors, so log pipelines can route them to archival storage. */
+export const ANCHOR_LOG_EVENT = "audit.anchor.published";
 
 /** Advisory lock key for the audit chain ("BFAUDIT1" as a 64-bit integer). */
 const AUDIT_CHAIN_LOCK_SQL = "SELECT pg_advisory_xact_lock(4775576289346671665)";
@@ -75,7 +84,7 @@ export interface AuditHashFields {
   prevHash: string | null;
 }
 
-export function auditHashInput(row: AuditHashFields): string {
+export function auditHashInput(row: AuditHashFields, keyId: string): string {
   return canonicalJson({
     v: AUDIT_HASH_VERSION,
     seq: row.seq,
@@ -90,11 +99,46 @@ export function auditHashInput(row: AuditHashFields): string {
     summary: row.summary,
     metadata: row.metadata ?? null,
     prevHash: row.prevHash ?? null,
+    keyId,
   });
 }
 
-export function computeAuditHash(row: AuditHashFields): string {
-  return createHash("sha256").update(auditHashInput(row), "utf8").digest("hex");
+function hmacHex(key: Buffer, input: string): string {
+  return createHmac("sha256", key).update(input, "utf8").digest("hex");
+}
+
+function sameHex(a: string, b: string): boolean {
+  const left = Buffer.from(a, "utf8");
+  const right = Buffer.from(b, "utf8");
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+/** HMAC of a row under the given key (defaults to the current key). */
+export function computeAuditHash(row: AuditHashFields, keyId?: string, keyring: AuditKeyring = auditKeyring()): string {
+  const id = keyId ?? keyring.currentKeyId;
+  const key = keyring.keys.get(id);
+  if (!key) throw new AuditChainIntegrityError(`Unknown audit key id "${id}"`);
+  return hmacHex(key, auditHashInput(row, id));
+}
+
+type RowCheck = { ok: true } | { ok: false; reason: "unsealed" | "unknown_key" | "hash_mismatch" };
+
+function checkRowHash(row: AuditHashFields & { hash: string | null; hashKeyId: string | null }, keyring: AuditKeyring): RowCheck {
+  if (row.hash === null || row.hashKeyId === null) return { ok: false, reason: "unsealed" };
+  const key = keyring.keys.get(row.hashKeyId);
+  if (!key) return { ok: false, reason: "unknown_key" };
+  return sameHex(hmacHex(key, auditHashInput(row, row.hashKeyId)), row.hash) ? { ok: true } : { ok: false, reason: "hash_mismatch" };
+}
+
+/** Raised when the chain cannot be safely extended; the caller's transaction must roll back. */
+export class AuditChainIntegrityError extends Error {
+  constructor(
+    message: string,
+    readonly seq: bigint | null = null,
+  ) {
+    super(message);
+    this.name = "AuditChainIntegrityError";
+  }
 }
 
 type AuditClient = Prisma.TransactionClient;
@@ -120,14 +164,18 @@ export interface AuditEntryData {
 /**
  * Appends one row to the chain. Must be called with an interactive-transaction client: the advisory
  * lock is held until that transaction commits or rolls back, so the next writer always sees this row
- * as the head. (Outside a transaction the lock would be released immediately.)
+ * as the head. Refuses (AuditChainIntegrityError) when the head is unsealed or fails its HMAC, so a
+ * damaged chain is never extended or silently repaired.
  */
-export async function appendAuditEntry(client: AuditClient, entry: AuditEntryData): Promise<AuditLog> {
+export async function appendAuditEntry(client: AuditClient, entry: AuditEntryData, keyring: AuditKeyring = auditKeyring()): Promise<AuditLog> {
   await lockChain(client);
-  let head = await client.auditLog.findFirst({ orderBy: { seq: "desc" }, select: { seq: true, hash: true } });
-  if (head && head.hash === null) {
-    await sealRows(client, Number.POSITIVE_INFINITY);
-    head = await client.auditLog.findFirst({ orderBy: { seq: "desc" }, select: { seq: true, hash: true } });
+  const head = await client.auditLog.findFirst({ orderBy: { seq: "desc" } });
+  if (head) {
+    const check = checkRowHash(head, keyring);
+    if (!check.ok) {
+      const why = check.reason === "unsealed" ? "has no hash" : check.reason === "unknown_key" ? `was sealed with an unknown key (${head.hashKeyId})` : "does not match its hash";
+      throw new AuditChainIntegrityError(`Audit chain head (entry ${head.seq}) ${why}; refusing to append`, head.seq);
+    }
   }
   const fields: AuditHashFields = {
     seq: (head?.seq ?? 0n) + 1n,
@@ -143,58 +191,135 @@ export async function appendAuditEntry(client: AuditClient, entry: AuditEntryDat
     metadata: entry.metadata,
     prevHash: head?.hash ?? null,
   };
-  return client.auditLog.create({ data: { ...fields, hash: computeAuditHash(fields) } });
+  const keyId = keyring.currentKeyId;
+  return client.auditLog.create({ data: { ...fields, hash: computeAuditHash(fields, keyId, keyring), hashKeyId: keyId } });
 }
 
-/** Seals up to `limit` unsealed rows (hash IS NULL) in seq order. Caller must hold the chain lock. */
-async function sealRows(tx: AuditClient, limit: number): Promise<number> {
-  const first = await tx.auditLog.findFirst({ where: { hash: null }, orderBy: { seq: "asc" }, select: { seq: true } });
-  if (!first) return 0;
-  const previous = first.seq > 1n ? await tx.auditLog.findUnique({ where: { seq: first.seq - 1n }, select: { hash: true } }) : null;
-  let prevHash = previous?.hash ?? null;
-  let cursor = first.seq;
+export interface LegacySealResult {
+  status: "sealed" | "already_sealed" | "nothing_to_seal";
+  cutoffSeq: bigint;
+  sealed: number;
+}
+
+/**
+ * Seals the rows that existed before the chain (seq <= legacyCutoffSeq), in seq order, exactly once:
+ * the state row is claimed with a conditional update in the same transaction, so a second run (or a
+ * concurrent one) does nothing. Rows above the cutoff are never touched.
+ */
+export async function sealLegacyAuditRows(tx: AuditClient, keyring: AuditKeyring = auditKeyring()): Promise<LegacySealResult> {
+  await lockChain(tx);
+  const state = await tx.auditChainState.findUnique({ where: { id: 1 } });
+  if (!state) throw new AuditChainIntegrityError("AuditChainState is missing; apply the database migrations first");
+  if (state.legacySealedAt) return { status: "already_sealed", cutoffSeq: state.legacyCutoffSeq, sealed: 0 };
+  const claimed = await tx.auditChainState.updateMany({ where: { id: 1, legacySealedAt: null }, data: { legacySealedAt: new Date() } });
+  if (claimed.count !== 1) return { status: "already_sealed", cutoffSeq: state.legacyCutoffSeq, sealed: 0 };
+  if (state.legacyCutoffSeq === 0n) return { status: "nothing_to_seal", cutoffSeq: 0n, sealed: 0 };
+
+  let prevHash: string | null = null;
+  let cursor = 1n;
   let sealed = 0;
-  while (sealed < limit) {
-    const rows = await tx.auditLog.findMany({ where: { seq: { gte: cursor } }, orderBy: { seq: "asc" }, take: Math.min(500, limit - sealed) });
-    if (rows.length === 0) break;
-    const updates: { id: string; prevHash: string | null; hash: string }[] = [];
-    for (const row of rows) {
-      if (row.hash === null) {
-        const hash = computeAuditHash({ ...row, prevHash });
-        updates.push({ id: row.id, prevHash, hash });
-        prevHash = hash;
-      } else {
-        // Already sealed rows are never rewritten, so tampering cannot be laundered by re-sealing.
-        prevHash = row.hash;
-      }
-    }
-    for (const u of updates) {
-      await tx.auditLog.updateMany({ where: { id: u.id, hash: null }, data: { prevHash: u.prevHash, hash: u.hash } });
-    }
-    sealed += updates.length;
-    cursor = rows[rows.length - 1]!.seq + 1n;
-  }
-  return sealed;
-}
-
-/** Computes hashes for rows that predate the chain (or were written without one), in seq order. */
-export async function sealAuditChain(client: RootClient, options: { batchSize?: number } = {}): Promise<number> {
-  const batchSize = options.batchSize ?? 500;
-  let total = 0;
+  const keyId = keyring.currentKeyId;
   for (;;) {
-    const sealed = await client.$transaction(
-      async (tx) => {
-        await lockChain(tx);
-        return sealRows(tx, batchSize);
-      },
-      { timeout: 60_000 },
-    );
-    total += sealed;
-    if (sealed < batchSize) return total;
+    const rows = await tx.auditLog.findMany({ where: { seq: { gte: cursor, lte: state.legacyCutoffSeq } }, orderBy: { seq: "asc" }, take: 500 });
+    if (rows.length === 0) break;
+    for (const row of rows) {
+      if (row.seq !== cursor) throw new AuditChainIntegrityError(`Legacy audit entry ${cursor} is missing; refusing to seal`, cursor);
+      if (row.hash !== null) throw new AuditChainIntegrityError(`Legacy audit entry ${row.seq} already has a hash; refusing to seal`, row.seq);
+      const hash = computeAuditHash({ ...row, prevHash }, keyId, keyring);
+      await tx.auditLog.update({ where: { id: row.id }, data: { prevHash, hash, hashKeyId: keyId } });
+      prevHash = hash;
+      cursor += 1n;
+      sealed += 1;
+    }
   }
+  if (cursor !== state.legacyCutoffSeq + 1n) throw new AuditChainIntegrityError(`Legacy audit entries end at ${cursor - 1n}, expected ${state.legacyCutoffSeq}`, cursor);
+  // The first post-cutoff row (if any) must have been written after sealing, i.e. it links to the legacy head.
+  const next = await tx.auditLog.findUnique({ where: { seq: state.legacyCutoffSeq + 1n } });
+  if (next && next.prevHash !== prevHash) throw new AuditChainIntegrityError(`Audit entry ${next.seq} does not link to the sealed legacy entries`, next.seq);
+  return { status: "sealed", cutoffSeq: state.legacyCutoffSeq, sealed };
 }
 
-export type ChainBreakReason = "sequence_gap" | "unsealed" | "prev_hash_mismatch" | "hash_mismatch" | "anchor_mismatch" | "truncated";
+/* ----------------------------------------------------------------------------------------------
+ * Signed anchors
+ * -------------------------------------------------------------------------------------------- */
+
+export interface AnchorStatement {
+  type: typeof ANCHOR_STATEMENT_TYPE;
+  v: 1;
+  day: string;
+  seq: string;
+  headHash: string;
+  keyId: string;
+  anchoredAt: string;
+}
+
+export interface SignedAnchor {
+  statement: AnchorStatement;
+  signature: string;
+}
+
+function signStatement(statement: AnchorStatement, keyring: AuditKeyring): string {
+  const key = keyring.keys.get(statement.keyId);
+  if (!key) throw new AuditChainIntegrityError(`Unknown audit key id "${statement.keyId}"`);
+  return hmacHex(key, canonicalJson({ ...statement }));
+}
+
+export function verifyAnchorSignature(anchor: SignedAnchor, keyring: AuditKeyring = auditKeyring()): boolean {
+  const key = keyring.keys.get(anchor.statement.keyId);
+  if (!key || anchor.statement.type !== ANCHOR_STATEMENT_TYPE || typeof anchor.signature !== "string") return false;
+  return sameHex(hmacHex(key, canonicalJson({ ...anchor.statement })), anchor.signature);
+}
+
+export function anchorFromRow(row: { day: string; seq: bigint; hash: string; keyId: string; signature: string; anchoredAt: Date }): SignedAnchor {
+  return {
+    statement: { type: ANCHOR_STATEMENT_TYPE, v: 1, day: row.day, seq: row.seq.toString(), headHash: row.hash, keyId: row.keyId, anchoredAt: row.anchoredAt.toISOString() },
+    signature: row.signature,
+  };
+}
+
+/** Parses an exported anchor file (one signed anchor JSON object per line). Throws on malformed lines. */
+export function parseAnchorFile(text: string): SignedAnchor[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(line);
+      } catch {
+        throw new Error(`Anchor file line ${index + 1} is not valid JSON`);
+      }
+      const candidate = parsed as Partial<SignedAnchor>;
+      const s = candidate.statement as Partial<AnchorStatement> | undefined;
+      if (!s || typeof candidate.signature !== "string" || typeof s.day !== "string" || typeof s.seq !== "string" || !/^\d+$/.test(s.seq) || typeof s.headHash !== "string" || typeof s.keyId !== "string") {
+        throw new Error(`Anchor file line ${index + 1} is not a signed anchor`);
+      }
+      return candidate as SignedAnchor;
+    });
+}
+
+export function serialiseAnchorFile(anchors: SignedAnchor[]): string {
+  return anchors.map((a) => JSON.stringify(a)).join("\n") + (anchors.length ? "\n" : "");
+}
+
+export async function listSignedAnchors(client: AuditClient): Promise<SignedAnchor[]> {
+  return (await client.auditAnchor.findMany({ orderBy: { seq: "asc" } })).map(anchorFromRow);
+}
+
+/* ----------------------------------------------------------------------------------------------
+ * Verification
+ * -------------------------------------------------------------------------------------------- */
+
+export type ChainBreakReason =
+  | "sequence_gap"
+  | "unsealed"
+  | "unknown_key"
+  | "prev_hash_mismatch"
+  | "hash_mismatch"
+  | "anchor_signature_invalid"
+  | "anchor_mismatch"
+  | "truncated";
 
 export interface ChainBreak {
   seq: bigint;
@@ -216,15 +341,25 @@ export interface ChainVerification {
 export const CHAIN_BREAK_LABELS: Record<ChainBreakReason, string> = {
   sequence_gap: "Missing entry (sequence gap)",
   unsealed: "Entry without a hash",
+  unknown_key: "Entry sealed with an unknown key",
   prev_hash_mismatch: "Link to the previous entry does not match",
   hash_mismatch: "Entry content does not match its hash",
-  anchor_mismatch: "Entry differs from its published daily anchor",
-  truncated: "Entries removed after a published daily anchor",
+  anchor_signature_invalid: "Daily anchor signature is invalid",
+  anchor_mismatch: "Entry differs from its signed daily anchor",
+  truncated: "Entries removed after a signed daily anchor",
 };
 
+export interface VerifyOptions {
+  batchSize?: number;
+  /** Signed anchors from an external copy (e.g. write-once storage), checked in addition to the table. */
+  externalAnchors?: SignedAnchor[];
+  keyring?: AuditKeyring;
+}
+
 /** Walks the whole chain in seq order and reports the first broken link, if any. Read-only. */
-export async function verifyAuditChain(client: AuditClient, options: { batchSize?: number } = {}): Promise<ChainVerification> {
+export async function verifyAuditChain(client: AuditClient, options: VerifyOptions = {}): Promise<ChainVerification> {
   const batchSize = options.batchSize ?? 1_000;
+  const keyring = options.keyring ?? auditKeyring();
   let expectedSeq = 1n;
   let prevHash: string | null = null;
   let checkedRows = 0;
@@ -248,11 +383,15 @@ export async function verifyAuditChain(client: AuditClient, options: { batchSize
         const missing = row.seq - expectedSeq === 1n ? `entry ${expectedSeq} is missing` : `entries ${expectedSeq}–${row.seq - 1n} are missing`;
         return withHead(client, result({ seq: expectedSeq, auditId: row.id, reason: "sequence_gap", detail: missing }));
       }
-      if (row.hash === null) return withHead(client, result({ seq: row.seq, auditId: row.id, reason: "unsealed", detail: `entry ${row.seq} has no hash` }));
+      const check = checkRowHash(row, keyring);
+      if (!check.ok && check.reason !== "hash_mismatch") {
+        const detail = check.reason === "unsealed" ? `entry ${row.seq} has no hash` : `entry ${row.seq} was sealed with unknown key "${row.hashKeyId}"`;
+        return withHead(client, result({ seq: row.seq, auditId: row.id, reason: check.reason, detail }));
+      }
       if (row.prevHash !== prevHash) {
         return withHead(client, result({ seq: row.seq, auditId: row.id, reason: "prev_hash_mismatch", detail: `entry ${row.seq} does not link to entry ${row.seq - 1n}` }));
       }
-      if (computeAuditHash(row) !== row.hash) {
+      if (!check.ok) {
         return withHead(client, result({ seq: row.seq, auditId: row.id, reason: "hash_mismatch", detail: `entry ${row.seq} was modified after it was recorded` }));
       }
       prevHash = row.hash;
@@ -263,22 +402,24 @@ export async function verifyAuditChain(client: AuditClient, options: { batchSize
     if (rows.length < batchSize) break;
   }
 
-  const anchors = await client.auditAnchor.findMany({ orderBy: { seq: "asc" } });
+  const anchors = [...(await listSignedAnchors(client)), ...(options.externalAnchors ?? [])].sort((a, b) => (BigInt(a.statement.seq) < BigInt(b.statement.seq) ? -1 : 1));
   if (anchors.length === 0) return result(null);
   const head = verifiedThroughSeq ?? 0n;
-  const anchored = await client.auditLog.findMany({ where: { seq: { in: anchors.map((a) => a.seq).filter((s) => s <= head) } }, select: { id: true, seq: true, hash: true } });
+  const anchoredSeqs = [...new Set(anchors.map((a) => BigInt(a.statement.seq)).filter((s) => s <= head))];
+  const anchored = await client.auditLog.findMany({ where: { seq: { in: anchoredSeqs } }, select: { id: true, seq: true, hash: true } });
   const bySeq = new Map(anchored.map((r) => [r.seq, r]));
   let checked = 0;
   for (const anchor of anchors) {
-    if (anchor.seq > head) {
-      return result(
-        { seq: head + 1n, auditId: null, reason: "truncated", detail: `the anchor of ${anchor.day} covers entry ${anchor.seq}, but the chain ends at entry ${head}` },
-        checked,
-      );
+    const seq = BigInt(anchor.statement.seq);
+    if (!verifyAnchorSignature(anchor, keyring)) {
+      return result({ seq, auditId: null, reason: "anchor_signature_invalid", detail: `the anchor of ${anchor.statement.day} is not signed by a known key` }, checked);
     }
-    const row = bySeq.get(anchor.seq);
-    if (!row || row.hash !== anchor.hash) {
-      return result({ seq: anchor.seq, auditId: row?.id ?? null, reason: "anchor_mismatch", detail: `entry ${anchor.seq} differs from the anchor of ${anchor.day}` }, checked);
+    if (seq > head) {
+      return result({ seq: head + 1n, auditId: null, reason: "truncated", detail: `the anchor of ${anchor.statement.day} covers entry ${seq}, but the chain ends at entry ${head}` }, checked);
+    }
+    const row = bySeq.get(seq);
+    if (!row || row.hash !== anchor.statement.headHash) {
+      return result({ seq, auditId: row?.id ?? null, reason: "anchor_mismatch", detail: `entry ${seq} differs from the anchor of ${anchor.statement.day}` }, checked);
     }
     checked += 1;
   }
@@ -286,9 +427,9 @@ export async function verifyAuditChain(client: AuditClient, options: { batchSize
 }
 
 /** Verifies the chain and stores the outcome as an AuditChainCheck row (shown in the admin console). */
-export async function runAuditChainCheck(client: AuditClient, triggeredBy: { id: string | null; name: string }) {
+export async function runAuditChainCheck(client: AuditClient, triggeredBy: { id: string | null; name: string }, options: VerifyOptions = {}) {
   const started = performance.now();
-  const verification = await verifyAuditChain(client);
+  const verification = await verifyAuditChain(client, options);
   const check = await client.auditChainCheck.create({
     data: {
       status: verification.status,
@@ -313,29 +454,43 @@ async function withHead(client: AuditClient, verification: ChainVerification): P
 }
 
 export interface AuditAnchorResult {
-  day: string;
-  seq: bigint;
-  hash: string;
+  anchor: SignedAnchor;
   created: boolean;
 }
 
 /**
- * Records the current chain head as the anchor for the given UTC day (once per day; existing anchors are
- * never changed). Refuses to anchor a chain that fails verification. Intended for a daily scheduled job.
+ * Records an HMAC-signed statement of the current chain head for the given UTC day (once per day;
+ * existing anchors are never changed). Refuses to anchor a chain that fails verification. Callers
+ * should publish the returned anchor (log line `audit.anchor.published`, `npm run audit:export-anchors`).
  */
-export async function anchorAuditHead(client: AuditClient, now: Date = new Date()): Promise<AuditAnchorResult | null> {
-  const verification = await verifyAuditChain(client);
-  if (verification.status === "BROKEN") throw new Error(`Audit chain is broken at entry ${verification.broken?.seq}; refusing to anchor`);
+export async function anchorAuditHead(client: AuditClient, now: Date = new Date(), keyring: AuditKeyring = auditKeyring()): Promise<AuditAnchorResult | null> {
+  const verification = await verifyAuditChain(client, { keyring });
+  if (verification.status === "BROKEN") throw new AuditChainIntegrityError(`Audit chain is broken at entry ${verification.broken?.seq}; refusing to anchor`, verification.broken?.seq ?? null);
   if (verification.verifiedThroughSeq === null || verification.headHash === null) return null;
   const day = now.toISOString().slice(0, 10);
   const existing = await client.auditAnchor.findUnique({ where: { day } });
-  if (existing) return { day, seq: existing.seq, hash: existing.hash, created: false };
+  if (existing) return { anchor: anchorFromRow(existing), created: false };
+  const statement: AnchorStatement = {
+    type: ANCHOR_STATEMENT_TYPE,
+    v: 1,
+    day,
+    seq: verification.verifiedThroughSeq.toString(),
+    headHash: verification.headHash,
+    keyId: keyring.currentKeyId,
+    anchoredAt: now.toISOString(),
+  };
+  const signature = signStatement(statement, keyring);
   try {
-    const anchor = await client.auditAnchor.create({ data: { day, seq: verification.verifiedThroughSeq, hash: verification.headHash, anchoredAt: now } });
-    return { day, seq: anchor.seq, hash: anchor.hash, created: true };
+    await client.auditAnchor.create({ data: { day, seq: verification.verifiedThroughSeq, hash: verification.headHash, keyId: statement.keyId, signature, anchoredAt: now } });
+    return { anchor: { statement, signature }, created: true };
   } catch (error) {
     const raced = await client.auditAnchor.findUnique({ where: { day } });
-    if (raced) return { day, seq: raced.seq, hash: raced.hash, created: false };
+    if (raced) return { anchor: anchorFromRow(raced), created: false };
     throw error;
   }
+}
+
+/** Convenience for scripts holding a root client. */
+export async function sealLegacyAuditRowsInTransaction(client: RootClient): Promise<LegacySealResult> {
+  return client.$transaction((tx) => sealLegacyAuditRows(tx), { timeout: 10 * 60_000, maxWait: 30_000 });
 }

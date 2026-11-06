@@ -61,6 +61,9 @@ async function reset() {
     db.sequence.deleteMany(),
     db.platformSetting.deleteMany(),
   ]);
+  // The audit log was emptied, so there are no pre-chain rows left to seal.
+  const sealed = { legacyCutoffSeq: 0n, legacySealedAt: new Date() };
+  await db.auditChainState.upsert({ where: { id: 1 }, create: { id: 1, ...sealed }, update: sealed });
   await rm(path.join(STORAGE_ROOT, "invoices"), { recursive: true, force: true });
 }
 

@@ -1,5 +1,7 @@
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { auditHashInput, canonicalJson, computeAuditHash, type AuditHashFields } from "./audit-chain";
+import { ANCHOR_STATEMENT_TYPE, auditHashInput, type AnchorStatement, canonicalJson, computeAuditHash, parseAnchorFile, serialiseAnchorFile, verifyAnchorSignature, type AuditHashFields, type SignedAnchor } from "./audit-chain";
+import { AuditKeyConfigError, DEV_AUDIT_KEY_ID, loadAuditKeyring } from "./audit-keys";
 
 const ROW: AuditHashFields = {
   seq: 42n,
@@ -15,6 +17,11 @@ const ROW: AuditHashFields = {
   metadata: '{"platform.supportEmail":"help@example.com"}',
   prevHash: "a".repeat(64),
 };
+
+const KEY_A = randomBytes(32).toString("base64");
+const KEY_B = randomBytes(32).toString("base64");
+const ringA = loadAuditKeyring({ NODE_ENV: "production", AUDIT_HMAC_KEY: KEY_A, AUDIT_HMAC_KEY_ID: "a1" });
+const ringB = loadAuditKeyring({ NODE_ENV: "production", AUDIT_HMAC_KEY: KEY_B, AUDIT_HMAC_KEY_ID: "a1" });
 
 describe("canonicalJson", () => {
   it("sorts keys at every depth and drops whitespace", () => {
@@ -38,16 +45,22 @@ describe("canonicalJson", () => {
 });
 
 describe("audit hash", () => {
-  it("is pinned to the documented version-1 serialisation", () => {
-    expect(auditHashInput(ROW)).toBe(
+  it("is pinned to the documented version-1 serialisation, including the key id", () => {
+    expect(auditHashInput(ROW, "k1")).toBe(
       '{"action":"settings.updated","actorName":"Asha Rao","actorOrgId":"org_1","actorRole":"SUPER_ADMIN","actorUserId":"user_1",' +
-        '"createdAt":"2026-11-06T10:15:30.123Z","entityId":"platform.supportEmail","entityType":"PlatformSetting",' +
+        '"createdAt":"2026-11-06T10:15:30.123Z","entityId":"platform.supportEmail","entityType":"PlatformSetting","keyId":"k1",' +
         '"metadata":"{\\"platform.supportEmail\\":\\"help@example.com\\"}","prevHash":"' +
         "a".repeat(64) +
         '","seq":"42","summary":"Updated platform settings: Support email","v":1}',
     );
-    expect(computeAuditHash(ROW)).toMatch(/^[0-9a-f]{64}$/);
-    expect(computeAuditHash({ ...ROW })).toBe(computeAuditHash(ROW));
+    expect(computeAuditHash(ROW, "a1", ringA)).toMatch(/^[0-9a-f]{64}$/);
+    expect(computeAuditHash({ ...ROW }, "a1", ringA)).toBe(computeAuditHash(ROW, "a1", ringA));
+  });
+
+  it("is keyed: a plain SHA-256 or a different key produces a different value", () => {
+    const keyed = computeAuditHash(ROW, "a1", ringA);
+    expect(createHash("sha256").update(auditHashInput(ROW, "a1")).digest("hex")).not.toBe(keyed);
+    expect(computeAuditHash(ROW, "a1", ringB)).not.toBe(keyed);
   });
 
   it.each([
@@ -64,11 +77,62 @@ describe("audit hash", () => {
     ["metadata", { metadata: null }],
     ["prevHash", { prevHash: null }],
   ] as const)("changes when %s changes", (_field, change) => {
-    expect(computeAuditHash({ ...ROW, ...change })).not.toBe(computeAuditHash(ROW));
+    expect(computeAuditHash({ ...ROW, ...change }, "a1", ringA)).not.toBe(computeAuditHash(ROW, "a1", ringA));
   });
 
   it("distinguishes null from the string \"null\" and empty values", () => {
-    expect(computeAuditHash({ ...ROW, metadata: "null" })).not.toBe(computeAuditHash({ ...ROW, metadata: null }));
-    expect(computeAuditHash({ ...ROW, actorRole: "" })).not.toBe(computeAuditHash({ ...ROW, actorRole: null }));
+    expect(computeAuditHash({ ...ROW, metadata: "null" }, "a1", ringA)).not.toBe(computeAuditHash({ ...ROW, metadata: null }, "a1", ringA));
+    expect(computeAuditHash({ ...ROW, actorRole: "" }, "a1", ringA)).not.toBe(computeAuditHash({ ...ROW, actorRole: null }, "a1", ringA));
+  });
+
+  it("refuses an unknown key id", () => {
+    expect(() => computeAuditHash(ROW, "nope", ringA)).toThrow(/Unknown audit key/);
+  });
+});
+
+describe("audit keyring", () => {
+  it("requires a key in production and refuses short, malformed or development keys", () => {
+    expect(() => loadAuditKeyring({ NODE_ENV: "production" })).toThrow(AuditKeyConfigError);
+    expect(() => loadAuditKeyring({ NODE_ENV: "production", AUDIT_HMAC_KEY: randomBytes(16).toString("base64") })).toThrow(/at least 32 bytes/);
+    expect(() => loadAuditKeyring({ NODE_ENV: "production", AUDIT_HMAC_KEY: "not base64!" })).toThrow(/base64/);
+    const devKey = Buffer.from("brickflow-development-only-audit-hmac-key-not-secret").toString("base64");
+    expect(() => loadAuditKeyring({ NODE_ENV: "production", AUDIT_HMAC_KEY: devKey })).toThrow(/development key/);
+    expect(() => loadAuditKeyring({ NODE_ENV: "production", AUDIT_HMAC_KEY: KEY_A, AUDIT_HMAC_KEY_ID: DEV_AUDIT_KEY_ID })).toThrow(/AUDIT_HMAC_KEY_ID/);
+  });
+
+  it("uses the labelled development key outside production", () => {
+    const ring = loadAuditKeyring({ NODE_ENV: "test" });
+    expect(ring).toMatchObject({ currentKeyId: DEV_AUDIT_KEY_ID, insecure: true });
+  });
+
+  it("keeps retired keys for verifying older rows", () => {
+    const ring = loadAuditKeyring({ NODE_ENV: "production", AUDIT_HMAC_KEY: KEY_B, AUDIT_HMAC_KEY_ID: "k2", AUDIT_HMAC_PREVIOUS_KEYS: `k1:${KEY_A}` });
+    expect(ring.currentKeyId).toBe("k2");
+    expect([...ring.keys.keys()].sort()).toEqual(["k1", "k2"]);
+    expect(() => loadAuditKeyring({ NODE_ENV: "production", AUDIT_HMAC_KEY: KEY_B, AUDIT_HMAC_PREVIOUS_KEYS: "missing-separator" })).toThrow(/id:base64key/);
+  });
+});
+
+describe("signed anchors", () => {
+  const statement: AnchorStatement = { type: ANCHOR_STATEMENT_TYPE, v: 1, day: "2026-11-06", seq: "120", headHash: "b".repeat(64), keyId: "a1", anchoredAt: "2026-11-06T18:30:00.000Z" };
+  // Mirrors the documented signature: HMAC-SHA256 over the canonical statement with the statement's key.
+  const sign = (ring: typeof ringA): SignedAnchor => ({
+    statement,
+    signature: createHmac("sha256", ring.keys.get("a1")!).update(canonicalJson({ ...statement })).digest("hex"),
+  });
+
+  it("accepts only statements signed with a known key and unchanged fields", () => {
+    const anchor = sign(ringA);
+    expect(verifyAnchorSignature(anchor, ringA)).toBe(true);
+    expect(verifyAnchorSignature(anchor, ringB)).toBe(false);
+    expect(verifyAnchorSignature({ ...anchor, statement: { ...statement, seq: "121" } }, ringA)).toBe(false);
+    expect(verifyAnchorSignature({ ...anchor, statement: { ...statement, keyId: "zz" } }, ringA)).toBe(false);
+  });
+
+  it("round-trips the exported JSON-lines file and rejects malformed lines", () => {
+    const anchor = sign(ringA);
+    expect(parseAnchorFile(serialiseAnchorFile([anchor, anchor]))).toEqual([anchor, anchor]);
+    expect(() => parseAnchorFile("{not json}")).toThrow(/line 1/);
+    expect(() => parseAnchorFile('{"statement":{"day":"x"}}')).toThrow(/not a signed anchor/);
   });
 });

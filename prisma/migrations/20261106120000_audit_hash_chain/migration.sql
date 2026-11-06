@@ -1,9 +1,9 @@
--- Tamper-evident audit chain: a gapless global position (seq) plus prevHash/hash per row, daily
--- anchors of the chain head, and a record of every verification run.
+-- Tamper-evident audit chain: a gapless global position (seq) plus prevHash/hash/hashKeyId per row,
+-- HMAC-signed daily anchors of the chain head, and a record of every verification run.
 --
--- Existing rows receive seq in (createdAt, id) order here; their hashes are computed by
--- `npm run audit:backfill`, which the container entrypoint runs after `prisma migrate deploy`
--- (the canonical serialisation lives in application code and is not reimplemented in SQL).
+-- Existing rows receive seq in (createdAt, id) order here, and the highest such seq is fixed as the
+-- legacy cutoff in "AuditChainState". Those rows (and only those) are sealed once by
+-- `npm run audit:backfill`, which needs AUDIT_HMAC_KEY and therefore cannot run in SQL.
 
 -- CreateEnum
 CREATE TYPE "AuditChainStatus" AS ENUM ('VERIFIED', 'BROKEN', 'EMPTY');
@@ -13,6 +13,7 @@ DROP INDEX "AuditLog_createdAt_idx";
 
 -- AlterTable
 ALTER TABLE "AuditLog" ADD COLUMN "hash" TEXT,
+ADD COLUMN "hashKeyId" TEXT,
 ADD COLUMN "prevHash" TEXT,
 ADD COLUMN "seq" BIGINT;
 
@@ -28,11 +29,27 @@ WHERE a."id" = ordered."id";
 ALTER TABLE "AuditLog" ALTER COLUMN "seq" SET NOT NULL;
 
 -- CreateTable
+CREATE TABLE "AuditChainState" (
+    "id" INTEGER NOT NULL DEFAULT 1,
+    "legacyCutoffSeq" BIGINT NOT NULL,
+    "legacySealedAt" TIMESTAMP(3),
+
+    CONSTRAINT "AuditChainState_pkey" PRIMARY KEY ("id")
+);
+
+-- Fix the legacy cutoff once; an empty log has nothing to seal.
+INSERT INTO "AuditChainState" ("id", "legacyCutoffSeq", "legacySealedAt")
+SELECT 1, COALESCE(MAX("seq"), 0), CASE WHEN COUNT(*) = 0 THEN CURRENT_TIMESTAMP ELSE NULL END
+FROM "AuditLog";
+
+-- CreateTable
 CREATE TABLE "AuditAnchor" (
     "id" TEXT NOT NULL,
     "day" TEXT NOT NULL,
     "seq" BIGINT NOT NULL,
     "hash" TEXT NOT NULL,
+    "keyId" TEXT NOT NULL,
+    "signature" TEXT NOT NULL,
     "anchoredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "AuditAnchor_pkey" PRIMARY KEY ("id")

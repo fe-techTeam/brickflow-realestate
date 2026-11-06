@@ -142,6 +142,7 @@ Open <http://localhost:3000>. `npm run demo:reset` deletes the stored invoice PD
 | `DEMO_PASSWORD` | `BrickFlow@2026` | Shared password for the seeded accounts |
 | `DEMO_DATASET` | `standard` | Which demo dataset to seed and offer on the sign-in page (see below) |
 | `APP_URL` | `http://localhost:3000` | Public base URL; `https://` enables secure cookies |
+| `AUDIT_HMAC_KEY` / `AUDIT_HMAC_KEY_ID` / `AUDIT_HMAC_PREVIOUS_KEYS` | unset (commented out) | Audit chain HMAC key (base64, 32+ bytes), its id and retired keys. Required in production; development and tests fall back to a public development key |
 | `METRICS_TOKEN` | unset (commented out) | Bearer token that enables `GET /api/metrics`; at least 32 characters |
 | `LOG_LEVEL` | `info` (commented out) | JSON log level: `debug`, `info`, `warn`, `error`, `silent` |
 | `APP_VERSION` / `SERVICE_NAME` | package version / `brickflow-web` (commented out) | Stamped on log lines and metrics |
@@ -282,7 +283,7 @@ Both suites need the PostgreSQL server from `docker compose up -d postgres` (or 
 docker compose up --build
 ```
 
-Then open <http://localhost:3000>. This starts PostgreSQL and the app container; the app waits for the database to be healthy. Compose needs `AUTH_SECRET` from your shell or `.env`. The database lives in the named volume `postgres-data` and the PDFs in `app-storage`. On start the container applies migrations, seeds only when the database is empty (or every time with `SEED_ON_START=true`), so data persists across restarts, and serves the app as a non-root user. `GET /api/health` returns `{"status":"ok","db":"ok"}` and backs the container health check. Reset the demo inside the container with `docker compose exec app node scripts/demo-reset.mjs --yes`. `docker compose down -v` removes the volumes.
+Then open <http://localhost:3000>. This starts PostgreSQL and the app container; the app waits for the database to be healthy. Compose needs `AUTH_SECRET` and `AUDIT_HMAC_KEY` (`openssl rand -base64 32`) from your shell or `.env`. The database lives in the named volume `postgres-data` and the PDFs in `app-storage`. On start the container applies migrations, seeds only when the database is empty (or every time with `SEED_ON_START=true`), so data persists across restarts, and serves the app as a non-root user. `GET /api/health` returns `{"status":"ok","db":"ok"}` and backs the container health check. Reset the demo inside the container with `docker compose exec app node scripts/demo-reset.mjs --yes`. `docker compose down -v` removes the volumes.
 
 For a single production server (PostgreSQL, Caddy with automatic HTTPS, nightly backups), use `docker-compose.prod.yml`; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#2-single-server-with-docker-compose-and-postgresql).
 

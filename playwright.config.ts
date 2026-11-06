@@ -40,6 +40,9 @@ export default defineConfig({
           DEMO_PASSWORD: demoPassword,
           DEMO_DATASET: "standard",
           AUTH_SECRET: "playwright-e2e-only-secret-value-of-at-least-32-chars",
+          // Seed and server must share the audit key; this one exists only for the disposable e2e database.
+          AUDIT_HMAC_KEY: process.env.AUDIT_HMAC_KEY ?? Buffer.from("playwright-e2e-only-audit-hmac-key-0123456789").toString("base64"),
+          AUDIT_HMAC_KEY_ID: "e2e",
           APP_URL: baseURL,
           NEXT_TELEMETRY_DISABLED: "1",
         },

@@ -1,5 +1,5 @@
 import "server-only";
-import { CHAIN_BREAK_LABELS, runAuditChainCheck, type ChainBreakReason } from "@/lib/audit-chain";
+import { ANCHOR_LOG_EVENT, anchorAuditHead, CHAIN_BREAK_LABELS, runAuditChainCheck, type ChainBreakReason } from "@/lib/audit-chain";
 import { recordAudit } from "../audit";
 import type { Actor } from "../auth/session";
 import { db } from "../db";
@@ -77,6 +77,16 @@ export async function getAuditIntegrity(actor: Actor): Promise<AuditIntegrityOve
     entries: Number(head?.seq ?? 0n),
     latestAnchor: anchor ? { day: anchor.day, seq: anchor.seq.toString(), hash: anchor.hash } : null,
   };
+}
+
+/**
+ * Signs and records today's chain head, then writes it as an `audit.anchor.published` log line so it
+ * reaches external log storage. Plain function for the daily scheduler; safe to call repeatedly.
+ */
+export async function publishDailyAuditAnchor(now: Date = new Date()) {
+  const result = await anchorAuditHead(db, now);
+  if (result) logger.info(ANCHOR_LOG_EVENT, { created: result.created, statement: result.anchor.statement, signature: result.anchor.signature });
+  return result;
 }
 
 let running: Promise<unknown> | null = null;

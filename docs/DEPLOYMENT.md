@@ -32,6 +32,9 @@ No AWS resources exist yet. Every command below is for the AWS account owner to 
 | `HOSTNAME` | No | `0.0.0.0` | Bind address of the standalone server; must be `0.0.0.0` in containers. |
 | `NODE_ENV` | No | `production` | Set by the image. |
 | `NEXT_TELEMETRY_DISABLED` | No | `1` | Disables Next.js telemetry. |
+| `AUDIT_HMAC_KEY` | Yes (production) | — | Key that seals the audit chain and signs daily anchors (HMAC-SHA256). Base64 of at least 32 random bytes: `openssl rand -base64 32`. The app and the entrypoint refuse to start without it in production, and refuse the public development key. Store it in a secret manager, separately from database backups: anyone holding both the key and write access to the database could forge entries. Losing it makes existing entries unverifiable. |
+| `AUDIT_HMAC_KEY_ID` | No | `k1` | Identifier stored on every audit row and anchor sealed with the current key. Change it whenever the key changes. |
+| `AUDIT_HMAC_PREVIOUS_KEYS` | No | — | Retired keys still needed to verify older rows: `id:base64key,id:base64key`. To rotate: move the current key here under its id, then set a new `AUDIT_HMAC_KEY` and `AUDIT_HMAC_KEY_ID`. |
 | `METRICS_TOKEN` | No | — | Enables `GET /api/metrics` (Prometheus) for scrapers sending `Authorization: Bearer <token>`. At least 32 random characters: `openssl rand -hex 32`. Unset (or shorter than 32 characters) the endpoint answers 404. |
 | `LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, `error` or `silent`. Logs are JSON lines on stdout/stderr. |
 | `APP_VERSION` | No | `package.json` version | Version stamped on every log line and on `brickflow_build_info`; set it to the release tag or commit in CI. |
@@ -42,9 +45,9 @@ No AWS resources exist yet. Every command below is for the AWS account owner to 
 
 On start, `docker-entrypoint.sh`:
 
-1. checks that `DATABASE_URL` is a `postgresql://` URL and `AUTH_SECRET` is set, then waits up to 60 seconds for the database to accept connections;
+1. checks that `DATABASE_URL` is a `postgresql://` URL and that `AUTH_SECRET` and `AUDIT_HMAC_KEY` are set, then waits up to 60 seconds for the database to accept connections;
 2. runs `prisma migrate deploy` (forward-only migrations) against `DATABASE_URL`;
-3. seals any audit log rows that have no hash yet (`scripts/audit-chain.ts backfill`; a no-op after the first run);
+3. runs the one-time audit backfill (`scripts/audit-chain.ts backfill`). On the first start after the hash-chain migration it seals the audit rows that existed before it (up to the cutoff recorded by the migration) and records that it ran; every later start only reads that marker and changes nothing;
 4. runs the demo seed only when the database has no users yet (first start) or when `SEED_ON_START=true`, so data persists across restarts and upgrades by default;
 5. starts the Next.js standalone server with `node server.js`.
 
@@ -64,17 +67,28 @@ The app writes one JSON object per line: `level`, `time`, `message`, `service`, 
 
 ### Audit chain
 
-Audit log entries form a single SHA-256 hash chain (see `src/lib/audit-chain.ts` for the exact serialisation). Administrators can check it under **Audit logs → Audit integrity → Verify now**; from a shell:
+Audit log entries form a single chain. Each entry stores `HMAC-SHA256(AUDIT_HMAC_KEY, entry content + previous hash)` and the id of the key used. See `src/lib/audit-chain.ts` for the exact serialisation.
+
+Without the key, an edit, deletion or reordering cannot be hidden by recomputing hashes. The app also fails closed:
+
+- If the newest entry has no hash, fails its HMAC or names an unknown key, every state change is refused. The refusal is logged at error level (`audit.chain_append_refused`) until the chain is investigated.
+- An entry without a hash is reported as a broken link and is never re-sealed. Only the rows that existed before the chain was introduced are sealed, once, by the backfill.
+
+Administrators can check the chain under **Audit logs → Audit integrity → Verify now**. From a shell:
 
 ```bash
-npm run audit:verify     # exit code 1 and the first broken link when the chain is broken
-npm run audit:anchor     # record today's chain head (once per UTC day); run daily from a scheduler
-npm run audit:backfill   # seal rows written before the chain existed (also run by the entrypoint)
+npm run audit:verify                              # exit code 1 and the first broken link when the chain is broken
+npm run audit:verify -- --anchors anchors.jsonl   # also check an exported (e.g. write-once) anchor file
+npm run audit:anchor                              # sign and record today's chain head; run daily from a scheduler
+npm run audit:export-anchors -- --out anchors.jsonl  # every signed anchor as JSON lines, for publishing
+npm run audit:backfill                            # one-time sealing of pre-chain rows (run by the entrypoint)
 # inside the container:
 docker compose exec app node node_modules/tsx/dist/cli.mjs scripts/audit-chain.ts verify
 ```
 
-Anchors let verification detect removal of the newest entries; copy them off the host (for example into the off-site backup) for an independent record.
+**Anchors.** Each daily anchor is a statement `{type, v, day, seq, headHash, keyId, anchoredAt}` signed with the audit key. It is written to the `AuditAnchor` table and also logged as `audit.anchor.published` at info level, so it reaches external log storage. Anchors let verification detect removal of the newest entries.
+
+The database copy alone does not protect against someone who controls the database. Ship the exported anchor file (`audit:export-anchors`) and the `audit.anchor.published` log lines to write-once (WORM) storage, for example an S3 bucket with Object Lock in compliance mode, as soon as object storage is available. Until then, copy them into the off-site backup. During an investigation, verify against that external copy with `--anchors`.
 
 ---
 
@@ -126,9 +140,11 @@ All images are pinned to exact versions. Update the tags deliberately (and check
    DOMAIN=brickflow.example.com
    POSTGRES_PASSWORD=<openssl rand -hex 24>
    AUTH_SECRET=<openssl rand -base64 48>
+   AUDIT_HMAC_KEY=<openssl rand -base64 32>   # keep a copy in a secret manager; needed to verify the audit log
    DEMO_PASSWORD=<shared password for the demo accounts>
    DEMO_DATASET=standard          # or chandak
    # Optional:
+   # METRICS_TOKEN=<openssl rand -hex 32>   # enables /api/metrics
    # BACKUP_HOUR_UTC=21           # 21:00 UTC = 02:30 IST (default)
    # BACKUP_RETENTION_DAYS=14
    # DATABASE_POOL_MAX=10
