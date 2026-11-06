@@ -36,7 +36,17 @@ export function newSessionId(): string {
   return randomBytes(32).toString("base64url");
 }
 
-export async function createSessionRecord(client: Client, session: NewSession, origin: SessionOrigin, now: Date = new Date()) {
+/**
+ * `lifetime` is only for rotation: the replacement inherits the original issue time and absolute
+ * expiry, so rotating can never extend a session beyond `SESSION_MAX_AGE_MS` from sign-in.
+ */
+export async function createSessionRecord(
+  client: Client,
+  session: NewSession,
+  origin: SessionOrigin,
+  now: Date = new Date(),
+  lifetime?: { createdAt: Date; expiresAt: Date },
+) {
   return client.session.create({
     data: {
       id: newSessionId(),
@@ -44,9 +54,9 @@ export async function createSessionRecord(client: Client, session: NewSession, o
       membershipId: session.membershipId,
       roleKey: session.roleKey,
       mfaVerifiedAt: session.mfaVerifiedAt,
-      createdAt: now,
+      createdAt: lifetime?.createdAt ?? now,
       lastSeenAt: now,
-      expiresAt: new Date(now.getTime() + SESSION_MAX_AGE_MS),
+      expiresAt: lifetime?.expiresAt ?? new Date(now.getTime() + SESSION_MAX_AGE_MS),
       ip: origin.ip,
       userAgent: origin.userAgent?.slice(0, USER_AGENT_MAX) ?? null,
     },
@@ -110,10 +120,15 @@ export async function revokeUserSessions(
   return count;
 }
 
-/** Replaces a session with a fresh id (same user, membership and second-factor state). */
+/**
+ * Replaces an active session with a fresh id (same user, membership and second-factor state). Only the
+ * id and last-seen time are new; the absolute expiry and issue time carry over. The old row is revoked
+ * in the same transaction, and a session that is no longer active cannot be rotated back to life.
+ */
 export async function rotateSessionRecord(tx: Tx, sessionId: string, origin: SessionOrigin, now: Date = new Date()) {
   const current = await tx.session.findUnique({ where: { id: sessionId }, include: { user: { select: { memberships: { include: { role: true } } } } } });
-  if (!current || !(await revokeSession(tx, sessionId, "rotated", now))) return null;
+  if (!current || !isSessionActive(current, now)) return null;
+  if (!(await revokeSession(tx, sessionId, "rotated", now))) return null;
   const membership = current.user.memberships.find((m) => m.id === current.membershipId);
   if (!membership) return null;
   return createSessionRecord(
@@ -121,6 +136,7 @@ export async function rotateSessionRecord(tx: Tx, sessionId: string, origin: Ses
     { userId: current.userId, membershipId: current.membershipId, roleKey: membership.role.key, mfaVerifiedAt: current.mfaVerifiedAt },
     origin,
     now,
+    { createdAt: current.createdAt, expiresAt: current.expiresAt },
   );
 }
 
