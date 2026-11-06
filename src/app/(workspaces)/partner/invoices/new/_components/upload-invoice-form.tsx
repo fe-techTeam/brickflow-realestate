@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition, type DragEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, CircleDashed, Eye, FileText, Loader2, Lock, ScanText, Send, UploadCloud, X } from "lucide-react";
+import { AlertTriangle, Calculator, CheckCircle2, CircleDashed, Eye, FileText, Loader2, Lock, ScanText, Send, UploadCloud, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,21 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { matchBuilder, matchProject, parseInvoiceText, type ExtractedInvoiceFields } from "@/lib/extraction/invoice-fields";
-import { formatINR, parseRupeesToPaise } from "@/lib/money";
+import {
+  AGREEMENT_NUMBER_PATTERN,
+  agreedBrokeragePaise,
+  BOOKING_TOWER_PATTERN,
+  BOOKING_UNIT_PATTERN,
+  brokerageTolerancePaise,
+  BUYER_INITIALS_PATTERN,
+  checkInvoiceConsistency,
+  expectedSupplyMode,
+  invoicedTaxablePaise,
+  normaliseBuyerInitials,
+  splitInclusiveTotal,
+} from "@/lib/invoice-integrity/consistency";
+import { GST_RATES_BPS, GST_STATE_CODES, gstinStateCode, stateName } from "@/lib/invoice-integrity/gst";
+import { formatBps, formatINR, paiseToDecimalString, parsePercentToBps, parseRupeesToPaise } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { submitInvoiceAction } from "@/server/actions/invoices";
 import { Money } from "../../../_components/money";
@@ -27,7 +41,26 @@ export interface UploadBuilder {
   projects: { id: string; name: string; code: string; city: string }[];
 }
 
-type FieldName = "builderId" | "projectId" | "invoiceNumber" | "invoiceDate" | "dueDate" | "amount" | "gstAmount" | "description";
+type DetailField =
+  | "taxableValue"
+  | "cgst"
+  | "sgst"
+  | "igst"
+  | "gstRate"
+  | "placeOfSupply"
+  | "tdsRate"
+  | "irn"
+  | "ackNumber"
+  | "ackDate"
+  | "bookingTower"
+  | "bookingUnit"
+  | "buyerInitials"
+  | "agreementRegistrationNumber"
+  | "agreementDate"
+  | "agreementValue"
+  | "agreementBrokerageRate"
+  | "agreementBrokerageAmount";
+type FieldName = "builderId" | "projectId" | "invoiceNumber" | "invoiceDate" | "dueDate" | "amount" | "gstAmount" | "description" | DetailField;
 type Values = Record<FieldName, string>;
 type Errors = Partial<Record<FieldName | "file", string>>;
 
@@ -37,12 +70,97 @@ type Extraction =
   | { status: "done"; method: "text" | "ocr"; fields: ExtractedInvoiceFields; filled: FieldName[]; builderMatch: "gstin" | "name" | null }
   | { status: "failed"; message: string };
 
-const EMPTY: Values = { builderId: "", projectId: "", invoiceNumber: "", invoiceDate: "", dueDate: "", amount: "", gstAmount: "", description: "" };
+const DETAIL_FIELDS: DetailField[] = [
+  "taxableValue",
+  "cgst",
+  "sgst",
+  "igst",
+  "gstRate",
+  "placeOfSupply",
+  "tdsRate",
+  "irn",
+  "ackNumber",
+  "ackDate",
+  "bookingTower",
+  "bookingUnit",
+  "buyerInitials",
+  "agreementRegistrationNumber",
+  "agreementDate",
+  "agreementValue",
+  "agreementBrokerageRate",
+  "agreementBrokerageAmount",
+];
+const EMPTY: Values = {
+  builderId: "",
+  projectId: "",
+  invoiceNumber: "",
+  invoiceDate: "",
+  dueDate: "",
+  amount: "",
+  gstAmount: "",
+  description: "",
+  ...(Object.fromEntries(DETAIL_FIELDS.map((f) => [f, ""])) as Record<DetailField, string>),
+};
+const AMOUNT_FIELDS: DetailField[] = ["taxableValue", "cgst", "sgst", "igst", "agreementValue", "agreementBrokerageAmount"];
+const PERCENT_FIELDS: DetailField[] = ["gstRate", "tdsRate", "agreementBrokerageRate"];
+const STATE_OPTIONS = Object.entries(GST_STATE_CODES).sort((a, b) => a[1].localeCompare(b[1]));
+const AUTO = "auto";
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_PAISE = 100_00_00_000_00n;
-const FIELD_ORDER: (FieldName | "file")[] = ["file", "builderId", "projectId", "invoiceNumber", "invoiceDate", "dueDate", "amount", "gstAmount", "description"];
+const FIELD_ORDER: (FieldName | "file")[] = ["file", "builderId", "projectId", "invoiceNumber", "invoiceDate", "dueDate", "amount", "gstAmount", "description", ...DETAIL_FIELDS];
 
-function validate(values: Values, file: File | null, today: string): Errors {
+interface Parties {
+  supplierGstin: string | null;
+  recipientGstin: string | null;
+}
+
+const paiseOf = (value: string) => (value.trim() ? parseRupeesToPaise(value) : null);
+const bpsOf = (value: string) => (value.trim() ? parsePercentToBps(value) : null);
+const dateOf = (value: string) => (value ? new Date(`${value}T00:00:00.000Z`) : null);
+
+/** Format checks for the brokerage particulars, then the shared cross-field rules the server also enforces. */
+function validateDetails(values: Values, today: string, parties: Parties, errors: Errors) {
+  for (const field of AMOUNT_FIELDS) {
+    if (values[field].trim() && parseRupeesToPaise(values[field]) === null) errors[field] = "Enter a number with up to 2 decimals";
+  }
+  for (const field of PERCENT_FIELDS) {
+    if (values[field].trim() && parsePercentToBps(values[field]) === null) errors[field] = "Enter a percentage with up to 2 decimals";
+  }
+  if (values.bookingTower.trim() && !BOOKING_TOWER_PATTERN.test(values.bookingTower.trim())) errors.bookingTower = "Use up to 20 letters, numbers, spaces and . _ -";
+  if (values.bookingUnit.trim() && !BOOKING_UNIT_PATTERN.test(values.bookingUnit.trim())) errors.bookingUnit = "Use up to 20 letters, numbers, spaces and / . _ -";
+  if (values.buyerInitials.trim() && !BUYER_INITIALS_PATTERN.test(normaliseBuyerInitials(values.buyerInitials))) errors.buyerInitials = "Initials only, up to 4 letters";
+  if (values.agreementRegistrationNumber.trim() && !AGREEMENT_NUMBER_PATTERN.test(values.agreementRegistrationNumber.trim()))
+    errors.agreementRegistrationNumber = "Use 3–40 letters, numbers, spaces and / . _ -";
+
+  const total = paiseOf(values.amount);
+  if (!values.invoiceDate || total === null || Object.values(errors).some(Boolean)) return;
+  const issues = checkInvoiceConsistency({
+    today: new Date(`${today}T00:00:00.000Z`),
+    invoiceDate: dateOf(values.invoiceDate)!,
+    dueDate: dateOf(values.dueDate),
+    totalPaise: total,
+    gstAmountPaise: paiseOf(values.gstAmount),
+    taxableValuePaise: paiseOf(values.taxableValue),
+    cgstPaise: paiseOf(values.cgst),
+    sgstPaise: paiseOf(values.sgst),
+    igstPaise: paiseOf(values.igst),
+    gstRateBps: bpsOf(values.gstRate),
+    supplierGstin: parties.supplierGstin,
+    recipientGstin: parties.recipientGstin,
+    placeOfSupplyStateCode: values.placeOfSupply || null,
+    agreementDate: dateOf(values.agreementDate),
+    agreementValuePaise: paiseOf(values.agreementValue),
+    agreementBrokerageBps: bpsOf(values.agreementBrokerageRate),
+    agreementBrokeragePaise: paiseOf(values.agreementBrokerageAmount),
+    tdsRateBps: bpsOf(values.tdsRate),
+    irn: values.irn.trim() || null,
+    eInvoiceAckNumber: values.ackNumber.trim() || null,
+    eInvoiceAckDate: dateOf(values.ackDate),
+  });
+  for (const issue of issues) errors[issue.field] ??= issue.message;
+}
+
+function validate(values: Values, file: File | null, today: string, parties: Parties = { supplierGstin: null, recipientGstin: null }): Errors {
   const errors: Errors = {};
   if (!file) errors.file = "Attach the invoice PDF";
   else if (file.size === 0) errors.file = "The selected file is empty";
@@ -73,6 +191,7 @@ function validate(values: Values, file: File | null, today: string): Errors {
     else if (amount !== null && gst >= amount) errors.gstAmount = "GST must be less than the invoice total";
   }
   if (values.description.trim().length > 500) errors.description = "Keep the description under 500 characters";
+  validateDetails(values, today, parties, errors);
   return errors;
 }
 
@@ -108,6 +227,10 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
   }, [values]);
 
   const builder = useMemo(() => builders.find((b) => b.id === values.builderId) ?? null, [builders, values.builderId]);
+  const parties: Parties = { supplierGstin: partnerGstin, recipientGstin: builder?.gstin ?? null };
+  const supplyMode = expectedSupplyMode({ ...parties, placeOfSupplyStateCode: values.placeOfSupply || null });
+  const showIntra = supplyMode !== "INTER" || Boolean(values.cgst || values.sgst);
+  const showInter = supplyMode !== "INTRA" || Boolean(values.igst);
 
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(() => {
@@ -153,6 +276,23 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
         dueDate: fields.dueDate,
         amount: fields.totalAmount,
         gstAmount: fields.taxAmount,
+        taxableValue: fields.taxableAmount,
+        cgst: fields.cgstAmount,
+        sgst: fields.sgstAmount,
+        igst: fields.igstAmount,
+        gstRate: fields.gstRateBps !== undefined ? formatBps(fields.gstRateBps, { suffix: false }) : undefined,
+        placeOfSupply: fields.placeOfSupplyStateCode,
+        irn: fields.irn,
+        ackNumber: fields.ackNumber,
+        ackDate: fields.ackDate,
+        bookingTower: fields.bookingTower,
+        bookingUnit: fields.bookingUnit,
+        buyerInitials: fields.buyerInitials,
+        agreementRegistrationNumber: fields.agreementRegistrationNumber,
+        agreementDate: fields.agreementDate,
+        agreementValue: fields.agreementValue,
+        agreementBrokerageRate: fields.agreementBrokerageRate,
+        tdsRate: fields.tdsRate,
       };
       if (matchedBuilder) {
         proposed.builderId = matchedBuilder.id;
@@ -190,7 +330,7 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
     if (!selected) return;
     setFile(selected);
     setFormError(null);
-    const problem = validate(values, selected, today).file;
+    const problem = validate(values, selected, today, parties).file;
     setErrors((current) => ({ ...current, file: problem }));
     if (problem) {
       setExtraction({ status: "idle" });
@@ -224,7 +364,7 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
-    const found = validate(values, file, today);
+    const found = validate(values, file, today, parties);
     if (Object.values(found).some(Boolean)) {
       setErrors(found);
       focusFirst(found);
@@ -255,6 +395,34 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
   const amountPaise = values.amount.trim() ? parseRupeesToPaise(values.amount) : null;
   const gstPaise = values.gstAmount.trim() ? parseRupeesToPaise(values.gstAmount) : null;
   const busy = submitting;
+  const rateBps = bpsOf(values.gstRate);
+  const canCalculate = amountPaise !== null && amountPaise > 0n && rateBps !== null && supplyMode !== null;
+  const agreed = agreedBrokeragePaise({
+    agreementBrokeragePaise: paiseOf(values.agreementBrokerageAmount),
+    agreementBrokerageBps: bpsOf(values.agreementBrokerageRate),
+    agreementValuePaise: paiseOf(values.agreementValue),
+  });
+  const invoicedTaxable = amountPaise !== null ? invoicedTaxablePaise({ taxableValuePaise: paiseOf(values.taxableValue), totalPaise: amountPaise, gstAmountPaise: gstPaise }) : null;
+  const brokerageGap = agreed !== null && invoicedTaxable !== null ? (agreed > invoicedTaxable ? agreed - invoicedTaxable : invoicedTaxable - agreed) : null;
+  const posHint = values.placeOfSupply
+    ? `${supplyMode === "INTRA" ? "Intra-state" : supplyMode === "INTER" ? "Inter-state" : "Supply type unknown"}`
+    : builder?.gstin
+      ? `Defaults to ${stateName(gstinStateCode(builder.gstin)) ?? "the builder's state"}`
+      : "Defaults to the builder's registered state";
+
+  function calculateSplit() {
+    if (!canCalculate) return;
+    const split = splitInclusiveTotal(amountPaise!, rateBps!, supplyMode!);
+    const tax = split.cgstPaise + split.sgstPaise + split.igstPaise;
+    const next: Partial<Values> = {
+      taxableValue: paiseToDecimalString(split.taxablePaise),
+      cgst: supplyMode === "INTRA" ? paiseToDecimalString(split.cgstPaise) : "",
+      sgst: supplyMode === "INTRA" ? paiseToDecimalString(split.sgstPaise) : "",
+      igst: supplyMode === "INTER" ? paiseToDecimalString(split.igstPaise) : "",
+      gstAmount: paiseToDecimalString(tax),
+    };
+    for (const [key, value] of Object.entries(next) as [FieldName, string][]) setField(key, value);
+  }
 
   return (
     <form onSubmit={submit} noValidate className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -469,6 +637,205 @@ export function UploadInvoiceForm({ builders, partnerGstin, today }: { builders:
           </div>
         </FormSection>
 
+        <FormSection step="4" title="Tax breakdown" description="The GST split as printed on the invoice. Intra-state supplies charge CGST and SGST; inter-state supplies charge IGST.">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field id="taxableValue" label="Taxable value" error={errors.taxableValue} extracted={extracted.has("taxableValue")} hint="Brokerage before GST">
+              <AmountInput id="field-taxableValue" value={values.taxableValue} onChange={(v) => setField("taxableValue", v)} invalid={Boolean(errors.taxableValue)} disabled={busy} />
+            </Field>
+            <Field id="gstRate" label="GST rate" error={errors.gstRate} extracted={extracted.has("gstRate")} hint="Brokerage services are taxed at 18%">
+              <Select value={values.gstRate || undefined} onValueChange={(v) => setField("gstRate", v === AUTO ? "" : v)} disabled={busy}>
+                <SelectTrigger id="field-gstRate" className="h-10 w-full bg-card" aria-invalid={Boolean(errors.gstRate)}>
+                  <SelectValue placeholder="Not stated" />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value={AUTO}>Not stated</SelectItem>
+                  {GST_RATES_BPS.map((bps) => (
+                    <SelectItem key={bps} value={formatBps(bps, { suffix: false })}>
+                      {formatBps(bps)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            {showIntra && (
+              <>
+                <Field id="cgst" label="CGST" error={errors.cgst} extracted={extracted.has("cgst")}>
+                  <AmountInput id="field-cgst" value={values.cgst} onChange={(v) => setField("cgst", v)} invalid={Boolean(errors.cgst)} disabled={busy} />
+                </Field>
+                <Field id="sgst" label="SGST" error={errors.sgst} extracted={extracted.has("sgst")}>
+                  <AmountInput id="field-sgst" value={values.sgst} onChange={(v) => setField("sgst", v)} invalid={Boolean(errors.sgst)} disabled={busy} />
+                </Field>
+              </>
+            )}
+            {showInter && (
+              <Field id="igst" label="IGST" error={errors.igst} extracted={extracted.has("igst")}>
+                <AmountInput id="field-igst" value={values.igst} onChange={(v) => setField("igst", v)} invalid={Boolean(errors.igst)} disabled={busy} />
+              </Field>
+            )}
+            <Field id="placeOfSupply" label="Place of supply" error={errors.placeOfSupply} extracted={extracted.has("placeOfSupply")} hint={posHint}>
+              <Select value={values.placeOfSupply || undefined} onValueChange={(v) => setField("placeOfSupply", v === AUTO ? "" : v)} disabled={busy}>
+                <SelectTrigger id="field-placeOfSupply" className="h-10 w-full bg-card" aria-invalid={Boolean(errors.placeOfSupply)}>
+                  <SelectValue placeholder="Builder's state" />
+                </SelectTrigger>
+                <SelectContent position="popper" className="max-h-72">
+                  <SelectItem value={AUTO}>Builder&apos;s state</SelectItem>
+                  {STATE_OPTIONS.map(([code, name]) => (
+                    <SelectItem key={code} value={code}>
+                      {name} ({code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field id="tdsRate" label="TDS expected" error={errors.tdsRate} extracted={extracted.has("tdsRate")} hint="Percent deducted under section 194H, usually 2">
+              <PercentInput id="field-tdsRate" value={values.tdsRate} onChange={(v) => setField("tdsRate", v)} invalid={Boolean(errors.tdsRate)} disabled={busy} placeholder="2" />
+            </Field>
+          </div>
+          <div className="mt-5 flex flex-col gap-3 rounded-lg border border-hairline bg-glass-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {canCalculate
+                ? `Fill the taxable value and ${supplyMode === "INTRA" ? "CGST + SGST" : "IGST"} from the invoice total at ${formatBps(rateBps!)}.`
+                : "Enter the invoice total and GST rate to fill the split automatically."}
+            </p>
+            <Button type="button" variant="outline" size="sm" onClick={calculateSplit} disabled={busy || !canCalculate} className="shrink-0">
+              <Calculator />
+              Calculate split
+            </Button>
+          </div>
+
+          <div className="mt-7 border-t border-hairline pt-6">
+            <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-fg-muted uppercase">E-invoice</p>
+            <p className="mt-1 mb-5 text-[0.8125rem] text-muted-foreground">Only if the invoice was registered on the Invoice Registration Portal.</p>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field id="irn" label="IRN" error={errors.irn} extracted={extracted.has("irn")} className="sm:col-span-2" hint="64-character reference printed on the e-invoice">
+                <Input
+                  id="field-irn"
+                  value={values.irn}
+                  onChange={(e) => setField("irn", e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  maxLength={80}
+                  className="h-10 bg-card font-mono text-xs"
+                  aria-invalid={Boolean(errors.irn)}
+                  disabled={busy}
+                />
+              </Field>
+              <Field id="ackNumber" label="Acknowledgement no." error={errors.ackNumber} extracted={extracted.has("ackNumber")}>
+                <Input
+                  id="field-ackNumber"
+                  inputMode="numeric"
+                  value={values.ackNumber}
+                  onChange={(e) => setField("ackNumber", e.target.value)}
+                  autoComplete="off"
+                  maxLength={20}
+                  className="figure h-10 bg-card"
+                  aria-invalid={Boolean(errors.ackNumber)}
+                  disabled={busy}
+                />
+              </Field>
+              <Field id="ackDate" label="Acknowledgement date" error={errors.ackDate} extracted={extracted.has("ackDate")}>
+                <Input
+                  id="field-ackDate"
+                  type="date"
+                  value={values.ackDate}
+                  min={values.invoiceDate || undefined}
+                  max={today}
+                  onChange={(e) => setField("ackDate", e.target.value)}
+                  className="h-10 bg-card"
+                  aria-invalid={Boolean(errors.ackDate)}
+                  disabled={busy}
+                />
+              </Field>
+            </div>
+          </div>
+        </FormSection>
+
+        <FormSection step="5" title="Booking & agreement" description="Link the brokerage to the registered agreement for sale. Enter the buyer's initials only, never their name.">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field id="bookingTower" label="Tower / wing" error={errors.bookingTower} extracted={extracted.has("bookingTower")}>
+              <TextInput id="field-bookingTower" value={values.bookingTower} onChange={(v) => setField("bookingTower", v)} invalid={Boolean(errors.bookingTower)} disabled={busy} placeholder="e.g. B" maxLength={20} />
+            </Field>
+            <Field id="bookingUnit" label="Unit" error={errors.bookingUnit} extracted={extracted.has("bookingUnit")}>
+              <TextInput id="field-bookingUnit" value={values.bookingUnit} onChange={(v) => setField("bookingUnit", v)} invalid={Boolean(errors.bookingUnit)} disabled={busy} placeholder="e.g. 1104" maxLength={20} />
+            </Field>
+            <Field id="buyerInitials" label="Buyer initials" error={errors.buyerInitials} extracted={extracted.has("buyerInitials")} hint="Initials only, for example RK">
+              <TextInput
+                id="field-buyerInitials"
+                value={values.buyerInitials}
+                onChange={(v) => setField("buyerInitials", v.toUpperCase())}
+                invalid={Boolean(errors.buyerInitials)}
+                disabled={busy}
+                placeholder="RK"
+                maxLength={8}
+              />
+            </Field>
+            <Field id="agreementDate" label="Agreement date" error={errors.agreementDate} extracted={extracted.has("agreementDate")}>
+              <Input
+                id="field-agreementDate"
+                type="date"
+                value={values.agreementDate}
+                max={values.invoiceDate || today}
+                onChange={(e) => setField("agreementDate", e.target.value)}
+                className="h-10 bg-card"
+                aria-invalid={Boolean(errors.agreementDate)}
+                disabled={busy}
+              />
+            </Field>
+            <Field
+              id="agreementRegistrationNumber"
+              label="Agreement registration no."
+              error={errors.agreementRegistrationNumber}
+              extracted={extracted.has("agreementRegistrationNumber")}
+              className="sm:col-span-2"
+              hint="As registered with the sub-registrar"
+            >
+              <TextInput
+                id="field-agreementRegistrationNumber"
+                value={values.agreementRegistrationNumber}
+                onChange={(v) => setField("agreementRegistrationNumber", v)}
+                invalid={Boolean(errors.agreementRegistrationNumber)}
+                disabled={busy}
+                placeholder="e.g. HVL-2/4821/2026"
+                maxLength={40}
+              />
+            </Field>
+            <Field id="agreementValue" label="Agreement value" error={errors.agreementValue} extracted={extracted.has("agreementValue")} className="sm:col-span-2">
+              <AmountInput id="field-agreementValue" value={values.agreementValue} onChange={(v) => setField("agreementValue", v)} invalid={Boolean(errors.agreementValue)} disabled={busy} />
+            </Field>
+            <Field id="agreementBrokerageRate" label="Brokerage in agreement (%)" error={errors.agreementBrokerageRate} extracted={extracted.has("agreementBrokerageRate")}>
+              <PercentInput
+                id="field-agreementBrokerageRate"
+                value={values.agreementBrokerageRate}
+                onChange={(v) => setField("agreementBrokerageRate", v)}
+                invalid={Boolean(errors.agreementBrokerageRate)}
+                disabled={busy}
+                placeholder="2"
+              />
+            </Field>
+            <Field id="agreementBrokerageAmount" label="or brokerage amount" error={errors.agreementBrokerageAmount} extracted={extracted.has("agreementBrokerageAmount")}>
+              <AmountInput
+                id="field-agreementBrokerageAmount"
+                value={values.agreementBrokerageAmount}
+                onChange={(v) => setField("agreementBrokerageAmount", v)}
+                invalid={Boolean(errors.agreementBrokerageAmount)}
+                disabled={busy}
+              />
+            </Field>
+          </div>
+          {agreed !== null && invoicedTaxable !== null && brokerageGap !== null && (
+            <p
+              className={cn(
+                "mt-5 flex items-start gap-2 rounded-lg px-3.5 py-2.5 text-xs leading-relaxed",
+                brokerageGap <= brokerageTolerancePaise(agreed) ? "bg-leaf-50 text-leaf" : "bg-warning-soft text-warning",
+              )}
+            >
+              {brokerageGap <= brokerageTolerancePaise(agreed) ? <CheckCircle2 className="mt-px size-3.5 shrink-0" /> : <AlertTriangle className="mt-px size-3.5 shrink-0" />}
+              Agreement brokerage {formatINR(agreed)} · invoiced taxable value {formatINR(invoicedTaxable)}
+              {brokerageGap <= brokerageTolerancePaise(agreed) ? " · consistent" : " · differs by more than 1%"}
+            </p>
+          )}
+        </FormSection>
+
         {formError && (
           <div role="alert" className="flex items-start gap-2 rounded-lg border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-danger">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
@@ -595,6 +962,71 @@ function AmountInput({ id, value, onChange, invalid, disabled }: { id: string; v
   );
 }
 
+function TextInput({
+  id,
+  value,
+  onChange,
+  invalid,
+  disabled,
+  placeholder,
+  maxLength,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  invalid: boolean;
+  disabled: boolean;
+  placeholder?: string;
+  maxLength?: number;
+}) {
+  return (
+    <Input
+      id={id}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      maxLength={maxLength}
+      autoComplete="off"
+      className="h-10 bg-card"
+      aria-invalid={invalid}
+      disabled={disabled}
+    />
+  );
+}
+
+function PercentInput({
+  id,
+  value,
+  onChange,
+  invalid,
+  disabled,
+  placeholder,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  invalid: boolean;
+  disabled: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        inputMode="decimal"
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="figure h-10 bg-card pr-8"
+        aria-invalid={invalid}
+        disabled={disabled}
+      />
+      <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+    </div>
+  );
+}
+
 function ExtractionPanel({ extraction, builder, partnerGstin }: { extraction: Extraction; builder: UploadBuilder | null; partnerGstin: string | null }) {
   return (
     <div className="surface overflow-hidden">
@@ -705,6 +1137,10 @@ function ExtractionSummary({
     ["SGST", fields.sgstAmount && money(fields.sgstAmount), true],
     ["IGST", fields.igstAmount && money(fields.igstAmount), true],
     ["Total (incl. GST)", fields.totalAmount && money(fields.totalAmount), true],
+    ["Booking", [fields.bookingTower, fields.bookingUnit].filter(Boolean).join(" · ") || undefined],
+    ["Agreement no.", fields.agreementRegistrationNumber],
+    ["Agreement value", fields.agreementValue && money(fields.agreementValue), true],
+    ["IRN", fields.irn && `${fields.irn.slice(0, 10)}…${fields.irn.slice(-6)}`],
   ];
   const shown = rows.filter(([, value]) => value);
   return (

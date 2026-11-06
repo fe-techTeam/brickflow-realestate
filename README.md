@@ -137,8 +137,12 @@ Open <http://localhost:3000>. `npm run demo:reset` deletes the stored invoice PD
 | `DATABASE_POOL_MAX` | `10` (commented out) | Maximum connections in the app's pool |
 | `TEST_DATABASE_URL` / `E2E_DATABASE_URL` | `…/brickflow_test` / `…/brickflow_e2e` on the same server (commented out) | Databases the Vitest and Playwright runs drop and recreate |
 | `AUTH_SECRET` | placeholder | Session signing secret, at least 32 characters |
-| `STORAGE_DRIVER` | `local` | Document storage driver |
-| `STORAGE_DIR` | `./storage` | Where invoice PDFs are stored |
+| `STORAGE_DRIVER` | `local` | Document storage driver: `local` or `s3` |
+| `STORAGE_DIR` | `./storage` | Where invoice PDFs are stored with the `local` driver |
+| `S3_BUCKET`, `S3_REGION`, `S3_PREFIX`, `S3_SSE`, `S3_SSE_KMS_KEY_ID`, `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE` | unset (commented out) | Private, encrypted bucket for the `s3` driver; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#object-storage-s3). `npm run storage:migrate` copies local files to it |
+| `CLAMAV_HOST`, `CLAMAV_PORT`, `CLAMAV_TIMEOUT_MS` | unset (commented out) | Antivirus scanning of uploads through clamd |
+| `UPLOAD_MAX_PDF_PAGES` | `50` (commented out) | Maximum pages in an uploaded invoice PDF |
+| `INVOICE_DUPLICATE_WINDOW_DAYS` | `7` (commented out) | Window (± days) for flagging possible duplicate invoices |
 | `DEMO_PASSWORD` | `BrickFlow@2026` | Shared password for the seeded accounts |
 | `DEMO_DATASET` | `standard` | Which demo dataset to seed and offer on the sign-in page (see below) |
 | `APP_URL` | `http://localhost:3000` | Public base URL; `https://` enables secure cookies |

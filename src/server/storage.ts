@@ -1,47 +1,24 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { createS3Driver, LocalStorageDriver, storageDriverKind, type StorageDriver } from "./storage-drivers";
 
-/** Pluggable object storage. The local driver is used for development and single-host deployments. */
-export interface StorageDriver {
-  put(key: string, bytes: Uint8Array, contentType: string): Promise<void>;
-  get(key: string): Promise<Uint8Array>;
-  delete(key: string): Promise<void>;
-}
+export type { StorageDriver, StorageObjectStream } from "./storage-drivers";
 
-class LocalStorageDriver implements StorageDriver {
-  constructor(private readonly root: string) {}
-
-  private resolve(key: string): string {
-    const target = path.resolve(this.root, key);
-    if (!target.startsWith(path.resolve(this.root) + path.sep)) throw new Error("Invalid storage key");
-    return target;
-  }
-
-  async put(key: string, bytes: Uint8Array): Promise<void> {
-    const target = this.resolve(key);
-    await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, bytes);
-  }
-
-  async get(key: string): Promise<Uint8Array> {
-    return new Uint8Array(await readFile(this.resolve(key)));
-  }
-
-  async delete(key: string): Promise<void> {
-    await rm(this.resolve(key), { force: true });
-  }
-}
+/** Uploads land under this scope until validation promotes them. */
+export const QUARANTINE_SCOPE = "quarantine";
 
 let driver: StorageDriver | undefined;
 
+/** The configured document store: `local` (default, single host) or `s3` (private, server-side encrypted bucket). */
 export function storage(): StorageDriver {
   if (driver) return driver;
-  const kind = process.env.STORAGE_DRIVER ?? "local";
-  if (kind !== "local") throw new Error(`Unsupported STORAGE_DRIVER: ${kind}`);
-  // The ignore hint keeps output tracing from bundling the whole project into the standalone server.
-  driver = new LocalStorageDriver(path.resolve(/* turbopackIgnore: true */ process.cwd(), process.env.STORAGE_DIR ?? "./storage"));
+  if (storageDriverKind() === "s3") {
+    driver = createS3Driver();
+  } else {
+    // The ignore hint keeps output tracing from bundling the whole project into the standalone server.
+    driver = new LocalStorageDriver(path.resolve(/* turbopackIgnore: true */ process.cwd(), process.env.STORAGE_DIR ?? "./storage"));
+  }
   return driver;
 }
 
@@ -57,5 +34,5 @@ export function sha256(bytes: Uint8Array): string {
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
 export function isPdf(bytes: Uint8Array): boolean {
-  return bytes.length > 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+  return bytes.length > 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 && bytes[4] === 0x2d;
 }

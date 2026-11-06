@@ -12,6 +12,28 @@ import {
   submitInvoice,
   type UploadedFile,
 } from "../services/invoices";
+import { resolveDuplicateFlag, setMatchPolicy } from "../services/invoice-integrity";
+
+const INVOICE_DETAIL_FIELDS = [
+  "bookingTower",
+  "bookingUnit",
+  "buyerInitials",
+  "agreementRegistrationNumber",
+  "agreementDate",
+  "agreementValue",
+  "agreementBrokerageRate",
+  "agreementBrokerageAmount",
+  "taxableValue",
+  "cgst",
+  "sgst",
+  "igst",
+  "gstRate",
+  "tdsRate",
+  "irn",
+  "ackNumber",
+  "ackDate",
+  "placeOfSupply",
+] as const;
 
 async function readFile(formData: FormData, field = "file"): Promise<UploadedFile | null> {
   const value = formData.get(field);
@@ -42,6 +64,7 @@ export async function submitInvoiceAction(formData: FormData): Promise<ActionRes
         amount: text(formData, "amount") ?? "",
         gstAmount: text(formData, "gstAmount"),
         description: text(formData, "description"),
+        ...Object.fromEntries(INVOICE_DETAIL_FIELDS.map((field) => [field, text(formData, field)])),
       },
       await readFile(formData),
     );
@@ -67,7 +90,7 @@ export async function markUnderReviewAction(invoiceId: string): Promise<ActionRe
   }, "Invoice marked as under review.");
 }
 
-export async function approveInvoiceAction(invoiceId: string, input: { approvedAmount?: string; comment?: string }): Promise<ActionResult> {
+export async function approveInvoiceAction(invoiceId: string, input: { approvedAmount?: string; comment?: string; attestations?: string[] }): Promise<ActionResult> {
   return runAction(async () => {
     await approveInvoice(await requireActor(), invoiceId, input);
     refresh();
@@ -89,4 +112,20 @@ export async function requestClarificationAction(invoiceId: string, input: { rea
     refresh();
     return undefined;
   }, "Clarification requested from the channel partner.");
+}
+
+export async function resolveDuplicateFlagAction(flagId: string, resolution: "CLEARED" | "CONFIRMED", input: { note: string }): Promise<ActionResult> {
+  return runAction(async () => {
+    await resolveDuplicateFlag(await requireActor(), flagId, { resolution, note: input.note });
+    refresh();
+    return undefined;
+  }, resolution === "CLEARED" ? "Marked as not a duplicate." : "Recorded as a confirmed duplicate.");
+}
+
+export async function setMatchPolicyAction(programmeId: string, input: { attestationOptional: boolean }): Promise<ActionResult> {
+  return runAction(async () => {
+    await setMatchPolicy(await requireActor(), programmeId, input.attestationOptional);
+    refresh();
+    return undefined;
+  }, input.attestationOptional ? "Three-way match is now optional for this programme." : "Three-way match is now required for this programme.");
 }

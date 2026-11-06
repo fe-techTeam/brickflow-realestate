@@ -14,6 +14,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type FinancingStatus, type InvoiceStatus } from "../src/generated/prisma/client";
 import { calculateDiscount } from "../src/lib/financing";
 import { buildInvoiceDocument, demoClock, GST_RATE_PERCENT, resolveDemoDataset } from "../src/lib/demo/catalogue";
+import { seedInvoiceIntegrity, seedInvoiceParticulars } from "../src/lib/demo/seed-integrity";
 import { renderBrokerageInvoicePdf, splitGstInclusive } from "../src/lib/pdf/brokerage-invoice";
 
 try {
@@ -45,6 +46,9 @@ async function reset() {
     db.disbursement.deleteMany(),
     db.financingRequest.deleteMany(),
     db.financingOffer.deleteMany(),
+    db.invoiceMatchPolicy.deleteMany(),
+    db.invoiceDuplicateFlag.deleteMany(),
+    db.invoiceFingerprint.deleteMany(),
     db.invoiceApproval.deleteMany(),
     db.invoiceDocument.deleteMany(),
     db.invoice.deleteMany(),
@@ -59,6 +63,7 @@ async function reset() {
     db.platformSetting.deleteMany(),
   ]);
   await rm(path.join(STORAGE_ROOT, "invoices"), { recursive: true, force: true });
+  await rm(path.join(STORAGE_ROOT, "quarantine"), { recursive: true, force: true });
 }
 
 const counters = new Map<string, number>();
@@ -228,6 +233,7 @@ async function main() {
         gstAmountPaise: gst.cgstPaise + gst.sgstPaise + gst.igstPaise,
         approvedAmountPaise: approved,
         description: `${inv.description}. ${inv.detail}`,
+        ...seedInvoiceParticulars(inv, DATASET),
         status: inv.status,
         financingStatus: inv.financing?.stage ?? "NOT_REQUESTED",
         latestReviewNote: inv.review?.note ?? null,
@@ -242,6 +248,9 @@ async function main() {
             mimeType: "application/pdf",
             sizeBytes: pdf.byteLength,
             sha256: createHash("sha256").update(pdf).digest("hex"),
+            pageCount: 1,
+            scanStatus: "NOT_SCANNED",
+            validatedAt: inv.submittedAt,
             uploadedById: cpUser.userId,
             createdAt: inv.submittedAt,
           },
@@ -275,6 +284,8 @@ async function main() {
       await approval("CLARIFICATION_REQUESTED", current, "CLARIFICATION_REQUESTED", builderUser, inv.review!.at, inv.review!.note);
       await audit(builderUser, "invoice.clarification_requested", "Invoice", created.id, `Requested clarification on invoice ${inv.invoiceNumber}`, inv.review!.at);
     }
+
+    await seedInvoiceIntegrity(db, created.id);
 
     if (!inv.financing || !approved) continue;
     const f = inv.financing;

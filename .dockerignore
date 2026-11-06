@@ -17,6 +17,7 @@ e2e
 test
 scripts
 !scripts/demo-reset.mjs
+!scripts/storage-migrate.ts
 infra
 docs
 **/*.test.ts

@@ -4,12 +4,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Banknote, FileText, Landmark, MessageSquare, ShieldCheck } from "lucide-react";
 import { DemoBadge, StatusBadge } from "@/components/common/status-badge";
+import { BrokerageParticulars, MatchAttestationSummary } from "@/components/invoice/brokerage-particulars";
+import { DuplicateFlagList } from "@/components/invoice/duplicate-flags";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatBps, formatINR } from "@/lib/money";
 import { FINANCING_STATUS, INVOICE_STATUS } from "@/lib/status";
 import { requireWorkspace } from "@/server/auth/session";
 import { DomainError } from "@/server/errors";
 import { effectiveSettlementStatus, getFinancingRequestDetail, parseOfferTerms } from "@/server/services/financing";
+import { listDuplicateFlags, toDuplicateFlagDtos } from "@/server/services/invoice-integrity";
 import { EventTimeline, type EventItem } from "../../_components/activity";
 import { AdminHeader, Empty, FactList, Panel } from "../../_components/editorial";
 import { GoldRule, Money, Rate } from "../../_components/figures";
@@ -66,6 +69,8 @@ export default async function TransactionDetailPage({ params }: { params: Promis
   const { invoice, offer, programme, disbursement, settlement } = request;
   const terms = parseOfferTerms(offer.termsSnapshot);
   const rateChanged = programme.discountRateBps !== request.discountRateBps;
+  const flags = await listDuplicateFlags(await requireWorkspace("admin"), { invoiceId: invoice.id });
+  const builderApproval = [...invoice.approvals].reverse().find((a) => a.action === "APPROVED");
 
   const timeline: EventItem[] = [
     ...invoice.approvals.map((a) => ({
@@ -281,6 +286,25 @@ export default async function TransactionDetailPage({ params }: { params: Promis
             )}
           </Panel>
         </div>
+      </div>
+
+      <div className="mt-6 grid gap-6">
+        {flags.length > 0 && (
+          <Panel eyebrow="Integrity" title="Possible duplicates" description="Matches found when the invoice was submitted." bodyClassName="px-0 pb-0">
+            <DuplicateFlagList flags={toDuplicateFlagDtos(flags)} canResolve className="border-t hairline" />
+          </Panel>
+        )}
+        <Panel eyebrow="Booking, agreement & tax" title="Brokerage particulars" description="As stated on the invoice, with the platform's arithmetic checks.">
+          <BrokerageParticulars invoice={invoice} />
+          {builderApproval && (
+            <MatchAttestationSummary
+              attestation={builderApproval.attestation}
+              attestedByName={builderApproval.attestedByName}
+              attestedAt={builderApproval.attestedAt}
+              className="mt-8"
+            />
+          )}
+        </Panel>
       </div>
     </>
   );

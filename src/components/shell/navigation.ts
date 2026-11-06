@@ -15,6 +15,7 @@ import {
   ListChecks,
   type LucideIcon,
   Receipt,
+  ScanSearch,
   Settings,
   ShieldCheck,
   UserCircle2,
@@ -122,6 +123,7 @@ export const NAVIGATION: Record<WorkspaceKey, NavSection[]> = {
       items: [
         { title: "Financing Configuration", href: "/admin/financing", icon: BadgePercent },
         { title: "Transactions", href: "/admin/transactions", icon: Receipt },
+        { title: "Invoice Integrity", href: "/admin/integrity", icon: ScanSearch },
         { title: "Audit Logs", href: "/admin/audit", icon: ShieldCheck },
         { title: "Settings", href: "/admin/settings", icon: Settings },
       ],

@@ -57,6 +57,30 @@ describe("renderBrokerageInvoicePdf", () => {
     expect(parsed.getTitle()).toBe("Tax Invoice GFH/2026/001");
   });
 
+  it("keeps booking, agreement and e-invoice particulars on a single page", async () => {
+    const data = buildInvoiceDocument(SAMPLE_INVOICES[0]!);
+    expect(data.booking).toBeTruthy();
+    expect(data.agreement).toBeTruthy();
+    expect(data.eInvoice?.irn).toMatch(/^[0-9a-f]{64}$/);
+    const long = {
+      ...data,
+      lines: [{ ...data.lines[0]!, detail: `${data.lines[0]!.detail} · ${data.lines[0]!.detail}` }],
+      booking: { tower: "Wing C", unit: "2401", buyerInitials: "AJ" },
+    };
+    for (const variant of [data, long, { ...data, gst: { mode: "INTER" as const, ratePercent: 18 } }]) {
+      const bytes = await renderBrokerageInvoicePdf(variant);
+      expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+    }
+  });
+
+  it("omits the particulars band when there is nothing to show", async () => {
+    const data = buildInvoiceDocument(SAMPLE_INVOICES[0]!);
+    const plain = await renderBrokerageInvoicePdf({ ...data, booking: null, agreement: null, eInvoice: null, tdsRateBps: null });
+    const full = await renderBrokerageInvoicePdf(data);
+    expect(plain.byteLength).toBeLessThan(full.byteLength);
+    expect((await PDFDocument.load(plain)).getPageCount()).toBe(1);
+  });
+
   it("renders invoices without GST", async () => {
     const bytes = await renderBrokerageInvoicePdf({ ...buildInvoiceDocument(SAMPLE_INVOICES[1]!), gst: null });
     expect(latin1(bytes.subarray(0, 5))).toBe("%PDF-");
