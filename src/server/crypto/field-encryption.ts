@@ -9,12 +9,16 @@
  * (optional) is accepted for decryption only during a key rotation. Encryption and fingerprint
  * subkeys are derived with HKDF so the master key is never used directly.
  *
+ * Also reads the earlier `v1.<iv>.<ciphertext>.<tag>` format (raw master key, no key id) that held
+ * authenticator secrets before both areas shared this helper; `needsReencryption` flags it.
+ *
  * Self-contained (no server-only import) so the seed and data-migration scripts can use it.
  */
 import { createCipheriv, createDecipheriv, createHash, createHmac, hkdfSync, randomBytes, timingSafeEqual } from "node:crypto";
 
 const VERSION = "v1";
 const PREFIX = `enc:${VERSION}:`;
+const LEGACY_PREFIX = "v1.";
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
 // Non-production fallback so local development and tests work without configuration.
@@ -22,6 +26,8 @@ const DEVELOPMENT_KEY_SEED = "brickflow-development-only-field-encryption-key";
 
 interface KeyMaterial {
   id: string;
+  /** Only for the legacy format, which used the master key directly. */
+  master: Buffer;
   encryptionKey: Buffer;
   fingerprintKey: Buffer;
 }
@@ -45,6 +51,7 @@ function parseKey(raw: string, name: string): Buffer {
 function derive(master: Buffer): KeyMaterial {
   return {
     id: createHash("sha256").update("brickflow-key-id:").update(master).digest("hex").slice(0, 8),
+    master,
     encryptionKey: Buffer.from(hkdfSync("sha256", master, Buffer.alloc(0), "brickflow-field-encryption-v1", 32)),
     fingerprintKey: Buffer.from(hkdfSync("sha256", master, Buffer.alloc(0), "brickflow-field-fingerprint-v1", 32)),
   };
@@ -98,7 +105,32 @@ export function encryptField(plaintext: string, context: string): string {
   return `${PREFIX}${current.id}:${iv.toString("base64url")}:${ciphertext.toString("base64url")}:${tag.toString("base64url")}`;
 }
 
+function isLegacyValue(value: string): boolean {
+  return value.startsWith(LEGACY_PREFIX) && value.split(".").length === 4;
+}
+
+function decryptLegacy(payload: string, context: string): string {
+  const [, ivText, cipherText, tagText] = payload.split(".") as [string, string, string, string];
+  const iv = Buffer.from(ivText, "base64url");
+  const tag = Buffer.from(tagText, "base64url");
+  if (iv.length !== IV_BYTES || tag.length !== TAG_BYTES) throw new FieldEncryptionError("Encrypted field is malformed");
+  const { current, previous } = keys();
+  for (const material of [current, previous]) {
+    if (!material) continue;
+    try {
+      const decipher = createDecipheriv("aes-256-gcm", material.master, iv, { authTagLength: TAG_BYTES });
+      decipher.setAAD(Buffer.from(context, "utf8"));
+      decipher.setAuthTag(tag);
+      return Buffer.concat([decipher.update(Buffer.from(cipherText, "base64url")), decipher.final()]).toString("utf8");
+    } catch {
+      // Try the next key.
+    }
+  }
+  throw new FieldEncryptionError("Encrypted field failed authentication (wrong key or context)");
+}
+
 export function decryptField(payload: string, context: string): string {
+  if (typeof payload === "string" && isLegacyValue(payload)) return decryptLegacy(payload, context);
   if (!isEncryptedValue(payload)) throw new FieldEncryptionError("Value is not an encrypted field");
   const parts = payload.slice(PREFIX.length).split(":");
   if (parts.length !== 4) throw new FieldEncryptionError("Encrypted field is malformed");
@@ -144,4 +176,6 @@ export function fingerprintsEqual(a: string, b: string): boolean {
 export const ENCRYPTION_CONTEXT = {
   bankAccountNumber: (organisationId: string) => `BankAccount.accountNumber:${organisationId}`,
   organisationPan: (organisationId: string) => `Organisation.pan:${organisationId}`,
+  totpSecret: (userId: string) => `user:${userId}:totp`,
+  totpPendingSecret: (userId: string) => `user:${userId}:totp-pending`,
 } as const;

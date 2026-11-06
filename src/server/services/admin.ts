@@ -5,6 +5,8 @@ import { MAX_DISCOUNT_RATE_BPS, MIN_DISCOUNT_RATE_BPS } from "@/lib/financing";
 import { formatBps, parsePercentToBps, parseRupeesToPaise } from "@/lib/money";
 import { DEFAULT_PRICING_TERMS, pricingTermsIssues, type PricingTerms } from "@/lib/pricing";
 import { recordAudit } from "../audit";
+import { authorize } from "../auth/permissions";
+import { revokeUserSessions } from "../auth/sessions";
 import { assertOrgType, type Actor } from "../auth/session";
 import { db, type Tx } from "../db";
 import { conflict, forbidden, invalid, notFound } from "../errors";
@@ -244,6 +246,7 @@ async function supersedeOpenOffers(tx: Tx, programmeId: string): Promise<number>
 
 export async function createProgramme(actor: Actor, raw: CreateProgrammeInput) {
   requireSuperAdmin(actor);
+  authorize(actor, "programme.manage");
   const input = createProgrammeSchema.parse(raw);
   const [builder, financier] = await Promise.all([
     db.organisation.findUnique({ where: { id: input.builderId } }),
@@ -285,6 +288,7 @@ export async function createProgramme(actor: Actor, raw: CreateProgrammeInput) {
 
 export async function updateProgramme(actor: Actor, programmeId: string, raw: UpdateProgrammeInput) {
   requireSuperAdmin(actor);
+  authorize(actor, "programme.manage");
   const input = updateProgrammeSchema.parse(raw);
   const existing = await db.financingProgramme.findUnique({ where: { id: programmeId }, include: { builder: true } });
   if (!existing) throw notFound("Programme not found.");
@@ -345,6 +349,7 @@ export async function updateProgramme(actor: Actor, programmeId: string, raw: Up
 
 export async function listProgrammes(actor: Actor) {
   if (actor.orgType !== "PLATFORM" && actor.orgType !== "FINANCIER" && actor.orgType !== "BUILDER") throw forbidden();
+  authorize(actor, "programme.read");
   const where: Prisma.FinancingProgrammeWhereInput =
     actor.orgType === "FINANCIER" ? { financierId: actor.orgId } : actor.orgType === "BUILDER" ? { builderId: actor.orgId } : {};
   const programmes = await db.financingProgramme.findMany({
@@ -377,6 +382,7 @@ function financierCounterpartyScope(financierId: string): Prisma.OrganisationWhe
 
 export async function listOrganisations(actor: Actor, filters: { type?: OrganisationType; search?: string } = {}) {
   if (actor.orgType !== "PLATFORM" && actor.orgType !== "FINANCIER") throw forbidden();
+  authorize(actor, "organisation.read");
   const where: Prisma.OrganisationWhereInput = {
     ...(filters.type ? { type: filters.type } : {}),
     ...(actor.orgType === "FINANCIER" ? { AND: [financierCounterpartyScope(actor.orgId)] } : {}),
@@ -398,6 +404,7 @@ export async function listOrganisations(actor: Actor, filters: { type?: Organisa
 export type OrganisationListItem = Awaited<ReturnType<typeof listOrganisations>>[number];
 
 export async function getOrganisation(actor: Actor, organisationId: string) {
+  authorize(actor, "organisation.read");
   const scope: Prisma.OrganisationWhereInput =
     actor.orgType === "PLATFORM" || actor.orgId === organisationId
       ? {}
@@ -419,12 +426,20 @@ export async function getOrganisation(actor: Actor, organisationId: string) {
 
 export async function setOrganisationStatus(actor: Actor, organisationId: string, status: RecordStatus) {
   requireSuperAdmin(actor);
+  authorize(actor, "organisation.manage");
   const org = await db.organisation.findUnique({ where: { id: organisationId } });
   if (!org) throw notFound("Organisation not found.");
   if (org.type === "PLATFORM") throw conflict("The platform organisation cannot be deactivated.");
   if (org.status === status) return org;
   return db.$transaction(async (tx) => {
     const updated = await tx.organisation.update({ where: { id: org.id }, data: { status } });
+    if (status === "INACTIVE") {
+      const members = await tx.organisationUser.findMany({ where: { organisationId: org.id }, select: { id: true } });
+      await tx.session.updateMany({
+        where: { revokedAt: null, membershipId: { in: members.map((m) => m.id) } },
+        data: { revokedAt: new Date(), revokedReason: "organisation_deactivated" },
+      });
+    }
     await recordAudit(tx, actor, {
       action: status === "ACTIVE" ? "organisation.activated" : "organisation.deactivated",
       entityType: "Organisation",
@@ -437,11 +452,12 @@ export async function setOrganisationStatus(actor: Actor, organisationId: string
 
 export async function listUsers(actor: Actor, filters: { search?: string } = {}) {
   requireSuperAdmin(actor);
+  authorize(actor, "user.manage");
   const q = filters.search?.trim();
   return db.organisationUser.findMany({
     where: q ? { OR: [{ user: { name: { contains: q, mode: "insensitive" } } }, { user: { email: { contains: q, mode: "insensitive" } } }, { organisation: { name: { contains: q, mode: "insensitive" } } }] } : {},
     include: {
-      user: { select: { id: true, name: true, email: true, status: true, lastLoginAt: true, createdAt: true } },
+      user: { select: { id: true, name: true, email: true, status: true, lastLoginAt: true, createdAt: true, mfaEnabledAt: true } },
       organisation: { select: { id: true, name: true, type: true, status: true } },
       role: true,
     },
@@ -453,17 +469,20 @@ export type UserListItem = Awaited<ReturnType<typeof listUsers>>[number];
 
 export async function setUserStatus(actor: Actor, userId: string, status: RecordStatus) {
   requireSuperAdmin(actor);
+  authorize(actor, "user.manage");
   if (userId === actor.userId) throw conflict("You cannot change the status of your own account.");
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) throw notFound("User not found.");
   if (user.status === status) return user;
   return db.$transaction(async (tx) => {
     const updated = await tx.user.update({ where: { id: user.id }, data: { status } });
+    const sessionsRevoked = status === "INACTIVE" ? await revokeUserSessions(tx, user.id, "user_deactivated") : 0;
     await recordAudit(tx, actor, {
       action: status === "ACTIVE" ? "user.activated" : "user.deactivated",
       entityType: "User",
       entityId: user.id,
       summary: `${status === "ACTIVE" ? "Activated" : "Deactivated"} user ${user.email}`,
+      ...(status === "INACTIVE" ? { metadata: { sessionsRevoked } } : {}),
     });
     return updated;
   });
@@ -499,6 +518,7 @@ const settingValidators: Record<SettingKey, z.ZodType<string>> = {
 
 export async function updateSettings(actor: Actor, values: Partial<Record<SettingKey, string>>) {
   requireSuperAdmin(actor);
+  authorize(actor, "settings.manage");
   const entries = Object.entries(values).filter(([key]) => key in SETTING_DEFINITIONS) as [SettingKey, string][];
   const fieldErrors: Record<string, string[]> = {};
   const parsed: [SettingKey, string][] = [];
@@ -530,6 +550,7 @@ export async function listAuditLogs(
   actor: Actor,
   filters: { entityType?: string; entityId?: string; search?: string; take?: number } = {},
 ) {
+  authorize(actor, "audit.read");
   const scope: Prisma.AuditLogWhereInput = actor.orgType === "PLATFORM" ? {} : { actorOrgId: actor.orgId };
   const q = filters.search?.trim();
   return db.auditLog.findMany({

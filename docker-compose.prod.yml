@@ -44,6 +44,9 @@ services:
       STORAGE_DRIVER: local
       STORAGE_DIR: /app/data/storage
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (at least 32 random characters)}
+      MFA_ENFORCED: ${MFA_ENFORCED:-true}
+      CSP_REPORT_ONLY: ${CSP_REPORT_ONLY:-false}
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       APP_URL: https://${DOMAIN}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-BrickFlow@2026}
       DEMO_DATASET: ${DEMO_DATASET:-standard}

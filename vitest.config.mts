@@ -24,6 +24,8 @@ export default defineConfig({
       DEMO_DATASET: "standard",
       DEMO_PASSWORD: "BrickFlow@2026",
       AUTH_SECRET: "vitest-only-secret-value-that-is-at-least-32-characters",
+      // Fixed test-only field-encryption key; the global setup hands it to the seed so both agree.
+      DATA_ENCRYPTION_KEY: "dml0ZXN0LW9ubHktZmllbGQtZW5jcnlwdGlvbi1rZXk=",
       APP_URL: "http://localhost:3000",
     },
     // Integration tests share one seeded database, so test files run one at a time.

@@ -1,4 +1,5 @@
 import "server-only";
+import { requireStepUp } from "../auth/step-up";
 import { z } from "zod";
 import type { KycStatus, OrganisationType, Prisma, VerificationCheckStatus, VerificationCheckType } from "@/generated/prisma/client";
 import { maskAccountNumber, maskGstin, maskPan, maskUdyam } from "@/lib/verification/masking";
@@ -238,6 +239,8 @@ export async function submitBankAccount(
 ): Promise<CheckOutcome & { bankAccountId: string }> {
   const organisation = await ownOrganisation(actor);
   const input = bankSchema.parse(raw);
+  // Adding an account while a payout account exists is a change of payout details.
+  if (await db.bankAccount.count({ where: { organisationId: organisation.id, isPrimary: true, archivedAt: null } })) await requireStepUp(actor, "bank.change");
   const accountNumber = field("accountNumber", validateAccountNumber(input.accountNumber));
   const ifsc = field("ifsc", validateIfsc(input.ifsc));
   const now = options.now ?? new Date();
@@ -310,6 +313,7 @@ export async function setPrimaryBankAccount(actor: Actor, bankAccountId: string,
   const account = await db.bankAccount.findUnique({ where: { id: bankAccountId }, include: { checks: { orderBy: { checkedAt: "desc" }, take: 10 } } });
   if (!account || account.organisationId !== organisation.id || account.archivedAt) throw notFound("Bank account not found.");
   if (account.isPrimary) throw conflict("This is already your payout account.");
+  await requireStepUp(actor, "bank.change");
   const latest = latestSnapshot(account.checks);
   if (account.verificationStatus !== "VERIFIED" || latest?.status !== "VERIFIED") throw conflict("Only a verified bank account can receive payouts.");
   if (latest.expiresAt && latest.expiresAt <= now) throw conflict("This account's verification has expired. Verify it again first.");

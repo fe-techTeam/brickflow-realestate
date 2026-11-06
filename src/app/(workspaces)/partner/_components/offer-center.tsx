@@ -14,6 +14,7 @@ import { newIdempotencyKey } from "@/lib/idempotency-key";
 import { describeRate } from "@/lib/key-facts";
 import { formatBps } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { useStepUp } from "@/components/security/step-up-dialog";
 import { acceptOfferAction, generateOfferAction } from "@/server/actions/financing";
 import type { OfferDto } from "@/server/dto";
 import { Money } from "./money";
@@ -219,6 +220,7 @@ function OfferDialog({
   const [openedAt] = useState(() => Date.now());
   const acceptKey = useRef<{ offerId: string; key: string } | null>(null);
   const busy = accepting || regenerating;
+  const stepUp = useStepUp();
 
   function accept() {
     if (!consent) {
@@ -229,7 +231,11 @@ function OfferDialog({
     if (acceptKey.current?.offerId !== offer.id) acceptKey.current = { offerId: offer.id, key: newIdempotencyKey() };
     const idempotencyKey = acceptKey.current.key;
     startAccept(async () => {
-      const result = await acceptOfferAction(offer.id, { consent: true, idempotencyKey });
+      const result = await stepUp.run("offer.accept", () => acceptOfferAction(offer.id, { consent: true, idempotencyKey }));
+      if (!result.ok && result.code === "STEP_UP_REQUIRED") {
+        setError({ message: result.error, regenerate: false });
+        return;
+      }
       if (!result.ok) {
         setError({ message: result.error, regenerate: /fresh offer/i.test(result.error) });
         toast.error(result.error);
@@ -262,6 +268,7 @@ function OfferDialog({
   const rateLabel = describeRate(offer.pricingMode, offer.discountRateBps);
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(next) => {
@@ -466,6 +473,8 @@ function OfferDialog({
         )}
       </DialogContent>
     </Dialog>
+      {stepUp.dialog}
+    </>
   );
 }
 

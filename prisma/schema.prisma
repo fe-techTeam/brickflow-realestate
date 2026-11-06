@@ -145,16 +145,25 @@ model Organisation {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String
-  passwordHash String
-  status       RecordStatus @default(ACTIVE)
-  lastLoginAt  DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id                String       @id @default(cuid())
+  email             String       @unique
+  name              String
+  passwordHash      String
+  status            RecordStatus @default(ACTIVE)
+  lastLoginAt       DateTime?
+  passwordChangedAt DateTime?
+  // TOTP secrets are AES-256-GCM ciphertexts (src/server/crypto), never plaintext.
+  mfaSecret         String?
+  mfaPendingSecret  String?
+  mfaEnabledAt      DateTime?
+  // Highest TOTP time step accepted so far; codes at or below it are replays.
+  mfaLastUsedStep   Int?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
-  memberships OrganisationUser[]
+  memberships   OrganisationUser[]
+  sessions      Session[]
+  recoveryCodes AuthRecoveryCode[]
 }
 
 model Role {
@@ -254,8 +263,8 @@ model FinancingProgramme {
 }
 
 model Invoice {
-  id                  String           @id @default(cuid())
-  reference           String           @unique
+  id                  String          @id @default(cuid())
+  reference           String          @unique
   invoiceNumber       String
   cpId                String
   builderId           String
@@ -266,14 +275,14 @@ model Invoice {
   gstAmountPaise      BigInt?
   approvedAmountPaise BigInt?
   description         String?
-  status              InvoiceStatus    @default(DRAFT)
-  financingStatus     FinancingStatus  @default(NOT_REQUESTED)
+  status              InvoiceStatus   @default(DRAFT)
+  financingStatus     FinancingStatus @default(NOT_REQUESTED)
   latestReviewNote    String?
   submittedAt         DateTime?
   decidedAt           DateTime?
   createdById         String
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   cp               Organisation      @relation("InvoiceCp", fields: [cpId], references: [id])
   builder          Organisation      @relation("InvoiceBuilder", fields: [builderId], references: [id])
@@ -374,14 +383,14 @@ model FinancingRequest {
   discountAmountPaise BigInt
   chargesPaise        BigInt          @default(0)
   netPayablePaise     BigInt
-  pricingMode         PricingMode @default(FLAT_PERCENT)
-  pricingRuleVersion  String      @default("flat/2026-04")
+  pricingMode         PricingMode     @default(FLAT_PERCENT)
+  pricingRuleVersion  String          @default("flat/2026-04")
   tenorDays           Int?
   pricedDueDate       DateTime?
-  tdsPaise            BigInt      @default(0)
+  tdsPaise            BigInt          @default(0)
   financedAmountPaise BigInt
-  processingFeePaise  BigInt      @default(0)
-  feeGstPaise         BigInt      @default(0)
+  processingFeePaise  BigInt          @default(0)
+  feeGstPaise         BigInt          @default(0)
   annualisedRateBps   Int?
   pricingSnapshot     Json?
   status              FinancingStatus @default(PENDING_APPROVAL)
@@ -425,12 +434,12 @@ model FinancingEvent {
 }
 
 model InternalComment {
-  id          String   @id @default(cuid())
-  requestId   String
-  body        String
-  authorId    String
-  authorName  String
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  requestId  String
+  body       String
+  authorId   String
+  authorName String
+  createdAt  DateTime @default(now())
 
   request FinancingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
@@ -508,6 +517,52 @@ model PlatformSetting {
   value       String
   updatedById String?
   updatedAt   DateTime @updatedAt
+}
+
+/// Server-side session. The signed session cookie carries only this id; every request re-validates the row.
+model Session {
+  id            String    @id
+  userId        String
+  membershipId  String
+  roleKey       RoleKey
+  createdAt     DateTime  @default(now())
+  lastSeenAt    DateTime  @default(now())
+  expiresAt     DateTime
+  ip            String?
+  userAgent     String?
+  mfaVerifiedAt DateTime?
+  stepUpAt      DateTime?
+  revokedAt     DateTime?
+  revokedReason String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+/// Failed-attempt counters for sign-in, second-factor and password checks, keyed per account or per client IP.
+model AuthAttempt {
+  key           String    @id
+  failures      Int       @default(0)
+  lastFailureAt DateTime?
+  lockedUntil   DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@index([updatedAt])
+}
+
+/// One-time recovery codes for two-step verification, stored as SHA-256 digests.
+model AuthRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String    @unique
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
 }
 
 /// Bank holidays maintained by the platform admin; due dates on these days roll forward when a programme asks for it.

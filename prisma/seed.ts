@@ -61,6 +61,7 @@ async function reset() {
     db.organisation.deleteMany(),
     db.sequence.deleteMany(),
     db.platformSetting.deleteMany(),
+    db.authAttempt.deleteMany(),
   ]);
   await rm(path.join(STORAGE_ROOT, "invoices"), { recursive: true, force: true });
 }

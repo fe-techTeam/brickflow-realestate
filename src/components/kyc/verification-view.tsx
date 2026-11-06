@@ -212,6 +212,7 @@ export function VerificationView({ overview }: { overview: VerificationOverview 
                             confirmLabel="Change payout account"
                             confirmVariant="default"
                             action={setPrimaryBankAccountAction.bind(null, account.id)}
+                            stepUpPurpose="bank.change"
                           />
                         </div>
                       )}

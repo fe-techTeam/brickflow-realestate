@@ -8,5 +8,7 @@
 		-Server
 	}
 
+	# Caddy replaces any client-sent X-Forwarded-For with the connecting address (no trusted_proxies
+	# configured), which the app relies on for sign-in throttling (TRUSTED_PROXY_HOPS=1).
 	reverse_proxy app:3000
 }

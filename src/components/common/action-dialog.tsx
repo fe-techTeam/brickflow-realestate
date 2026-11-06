@@ -19,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/server/action-result";
+import type { StepUpPurpose } from "@/server/auth/step-up";
+import { useStepUp } from "@/components/security/step-up-dialog";
 
 type ButtonVariant = "default" | "accent" | "success" | "outline" | "secondary" | "ghost" | "destructive" | "link";
 
@@ -42,6 +44,7 @@ export interface ActionDialogField {
  * Confirmation dialog that invokes a bound server action, shows toasts and refreshes the route.
  * When `field` is given, a textarea value is passed to the action as `{ [field.name]: value }`.
  * The header shows a tone medallion derived from `confirmVariant`; override with `icon`, or hide with `icon={null}`.
+ * With `stepUpPurpose`, a step-up request from the action opens the identity check and retries.
  */
 export function ActionDialog<T, I = Record<string, string>>({
   trigger,
@@ -59,6 +62,7 @@ export function ActionDialog<T, I = Record<string, string>>({
   disabled,
   eyebrow,
   icon,
+  stepUpPurpose,
 }: {
   trigger: ReactNode;
   triggerVariant?: ButtonVariant;
@@ -75,6 +79,7 @@ export function ActionDialog<T, I = Record<string, string>>({
   disabled?: boolean;
   eyebrow?: string;
   icon?: LucideIcon | null;
+  stepUpPurpose?: StepUpPurpose;
 }) {
   const medallion = MEDALLION[confirmVariant];
   const MedallionIcon = icon === null ? null : (icon ?? medallion?.icon ?? null);
@@ -83,6 +88,7 @@ export function ActionDialog<T, I = Record<string, string>>({
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const stepUp = useStepUp();
 
   function submit() {
     setError(null);
@@ -91,7 +97,12 @@ export function ActionDialog<T, I = Record<string, string>>({
       return;
     }
     startTransition(async () => {
-      const result = await action((field ? { [field.name]: value } : {}) as I);
+      const input = (field ? { [field.name]: value } : {}) as I;
+      const result = stepUpPurpose ? await stepUp.run(stepUpPurpose, () => action(input)) : await action(input);
+      if (!result.ok && result.code === "STEP_UP_REQUIRED" && stepUpPurpose) {
+        setError(result.error);
+        return;
+      }
       if (!result.ok) {
         const fieldError = field ? result.fieldErrors?.[field.name]?.[0] : undefined;
         setError(fieldError ?? result.error);
@@ -107,6 +118,7 @@ export function ActionDialog<T, I = Record<string, string>>({
   }
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(next) => {
@@ -173,5 +185,7 @@ export function ActionDialog<T, I = Record<string, string>>({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+      {stepUpPurpose && stepUp.dialog}
+    </>
   );
 }

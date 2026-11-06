@@ -36,6 +36,7 @@ services:
       STORAGE_DRIVER: local
       STORAGE_DIR: /app/data/storage
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (at least 32 random characters) in your shell or .env}
+      MFA_ENFORCED: ${MFA_ENFORCED:-false}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-BrickFlow@2026}
       DEMO_DATASET: ${DEMO_DATASET:-standard}
       APP_URL: ${APP_URL:-http://localhost:3000}

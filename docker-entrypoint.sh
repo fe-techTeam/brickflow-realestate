@@ -13,6 +13,11 @@ if [ -z "${AUTH_SECRET:-}" ]; then
   exit 1
 fi
 
+if ! node -e 'const v = (process.env.DATA_ENCRYPTION_KEY || "").trim(); const k = /^[0-9a-fA-F]{64}$/.test(v) ? Buffer.from(v, "hex") : Buffer.from(v, "base64"); process.exit(k.length === 32 ? 0 : 1)'; then
+  echo "DATA_ENCRYPTION_KEY must be 32 random bytes as base64 or hex (openssl rand -base64 32); refusing to start" >&2
+  exit 1
+fi
+
 mkdir -p "${STORAGE_DIR:-/app/data/storage}"
 
 echo "Waiting for the database"

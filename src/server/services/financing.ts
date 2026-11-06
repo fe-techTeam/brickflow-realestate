@@ -9,6 +9,7 @@ import { serialiseQuote, type PricingQuote } from "@/lib/pricing";
 import { assertTransition, sourcesFor } from "@/lib/state-machines";
 import { recordAudit } from "../audit";
 import { assertOrgType, type Actor } from "../auth/session";
+import { authorize, type Permission } from "../auth/permissions";
 import { db, type Tx } from "../db";
 import { conflict, forbidden, notFound } from "../errors";
 import { nextReference } from "../sequence";
@@ -115,6 +116,7 @@ export function offerValidUntil(
 /** "GET DISCOUNTED AMOUNT": creates (or returns the still-valid) offer priced on the server from the programme's terms. */
 export async function generateOffer(actor: Actor, invoiceId: string) {
   assertOrgType(actor, "CHANNEL_PARTNER");
+  authorize(actor, "offer.generate");
   const invoice = await db.invoice.findUnique({ where: { id: invoiceId } });
   if (!invoice || invoice.cpId !== actor.orgId) throw notFound("Invoice not found.");
 
@@ -162,6 +164,7 @@ export async function generateOffer(actor: Actor, invoiceId: string) {
 }
 
 export async function getOfferForActor(actor: Actor, offerId: string) {
+  authorize(actor, "financing.read");
   const offer = await db.financingOffer.findUnique({
     where: { id: offerId },
     include: { invoice: { include: { builder: true, project: true, cp: true } }, programme: { include: { financier: true } } },
@@ -211,6 +214,7 @@ async function withdrawOffer(offerId: string, invoiceId: string) {
  */
 export async function acceptOffer(actor: Actor, offerId: string, raw: { consent: boolean; idempotencyKey?: string }) {
   assertOrgType(actor, "CHANNEL_PARTNER");
+  authorize(actor, "offer.accept");
   const input = acceptSchema.parse(raw);
   const offer = await db.financingOffer.findUnique({ where: { id: offerId }, include: { invoice: true, programme: true } });
   if (!offer || offer.invoice.cpId !== actor.orgId) throw notFound("Offer not found.");
@@ -298,8 +302,9 @@ export async function acceptOffer(actor: Actor, offerId: string, raw: { consent:
  * Financier operations
  * -------------------------------------------------------------------------------------------- */
 
-async function loadRequestForFinancier(actor: Actor, requestId: string) {
+async function loadRequestForFinancier(actor: Actor, requestId: string, permission: Permission) {
   assertOrgType(actor, "FINANCIER");
+  authorize(actor, permission);
   const request = await db.financingRequest.findUnique({
     where: { id: requestId },
     include: { invoice: true, cp: true, programme: { select: { holidayRule: true } } },
@@ -323,7 +328,7 @@ const keyOnlySchema = z.object({ idempotencyKey: optionalKey });
 
 export async function approveFinancingRequest(actor: Actor, requestId: string, raw: { note?: string; idempotencyKey?: string }) {
   const { note, idempotencyKey } = noteSchema.parse(raw);
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "financing.decide");
   await assertStepUp(actor, "financing.approve");
   await runIdempotent(
     { actor, scope: "request.approve", key: idempotencyKey, payload: { requestId: request.id, note: note || null } },
@@ -350,7 +355,7 @@ export async function approveFinancingRequest(actor: Actor, requestId: string, r
 
 export async function rejectFinancingRequest(actor: Actor, requestId: string, raw: { reason: string; idempotencyKey?: string }) {
   const { reason, idempotencyKey } = reasonSchema.parse(raw);
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "financing.decide");
   await assertStepUp(actor, "financing.reject");
   await runIdempotent(
     { actor, scope: "request.reject", key: idempotencyKey, payload: { requestId: request.id, reason } },
@@ -379,7 +384,7 @@ const commentSchema = z.object({ body: z.string().trim().min(2, "Comment is too 
 
 export async function addInternalComment(actor: Actor, requestId: string, raw: { body: string }) {
   const { body } = commentSchema.parse(raw);
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "financing.comment");
   await db.$transaction(async (tx) => {
     await tx.internalComment.create({ data: { requestId: request.id, body, authorId: actor.userId, authorName: actor.name } });
     await recordAudit(tx, actor, {
@@ -399,7 +404,7 @@ function maskAccount(account: string | null): string {
 /** Payout step 1: books the disbursement instruction for the request's net payable. */
 export async function initiateDisbursement(actor: Actor, requestId: string, raw: { idempotencyKey?: string } = {}) {
   const { idempotencyKey } = keyOnlySchema.parse(raw);
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "payout.release");
   await assertStepUp(actor, "disbursement.initiate");
   return runIdempotent(
     { actor, scope: "disbursement.initiate", key: idempotencyKey, payload: { requestId: request.id } },
@@ -462,7 +467,7 @@ export async function agreedSettlementDueDate(
  */
 export async function completeDisbursement(actor: Actor, requestId: string, raw: { idempotencyKey?: string } = {}) {
   const { idempotencyKey } = keyOnlySchema.parse(raw);
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "payout.release");
   await assertStepUp(actor, "disbursement.complete");
   await runIdempotent(
     { actor, scope: "disbursement.complete", key: idempotencyKey, payload: { requestId: request.id } },
@@ -515,7 +520,7 @@ const settleSchema = z.object({
 /** Records that the builder has paid the financier. Performed by the financier's operations user. */
 export async function markSettlementSettled(actor: Actor, requestId: string, raw: { reference: string; note?: string; idempotencyKey?: string }) {
   const input = settleSchema.parse(raw);
-  const request = await loadRequestForFinancier(actor, requestId);
+  const request = await loadRequestForFinancier(actor, requestId, "settlement.record");
   await assertStepUp(actor, "settlement.settle");
   await runIdempotent(
     { actor, scope: "settlement.settle", key: input.idempotencyKey, payload: { requestId: request.id, reference: input.reference, note: input.note || null } },
@@ -550,6 +555,7 @@ export async function markSettlementSettled(actor: Actor, requestId: string, raw
  * -------------------------------------------------------------------------------------------- */
 
 export function requestScope(actor: Actor): Prisma.FinancingRequestWhereInput {
+  authorize(actor, "financing.read");
   switch (actor.orgType) {
     case "CHANNEL_PARTNER":
       return { cpId: actor.orgId };
@@ -626,6 +632,7 @@ export type FinancingRequestDetail = Awaited<ReturnType<typeof getFinancingReque
 /** Open (not accepted/expired) offers for a channel partner. Expired offers are flagged on read. */
 export async function listOpenOffers(actor: Actor) {
   assertOrgType(actor, "CHANNEL_PARTNER");
+  authorize(actor, "offer.generate");
   const now = new Date();
   await db.financingOffer.updateMany({
     where: { status: "OFFERED", validUntil: { lte: now }, invoice: { cpId: actor.orgId } },

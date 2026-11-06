@@ -22,13 +22,16 @@ No AWS resources exist yet. Every command below is for the AWS account owner to 
 | `DATABASE_URL` | Yes | `postgresql://brickflow:<password>@postgres:5432/brickflow` | PostgreSQL connection URL. Percent-encode special characters in the password, or use a hex password (`openssl rand -hex 24`). Append `?sslmode=require` for a managed database reached over the network. |
 | `DATABASE_POOL_MAX` | No | `10` | Maximum connections in the app's pool. Keep the sum across all app containers below the server's `max_connections` (100 by default). |
 | `AUTH_SECRET` | Yes | — | Signs session tokens (HS256). At least 32 random characters: `openssl rand -base64 48`. Store in a secret manager, never in the repository. Rotating it signs everyone out. |
+| `MFA_ENFORCED` | No | `true` in production, `false` otherwise | Makes two-step verification mandatory for builder accounts, finance operations and super admins; they enrol at their next sign-in. Set `false` only for a public demo; the app logs a warning when it is off in production. |
+| `CSP_REPORT_ONLY` | No | `false` | `true` sends the Content Security Policy as `Content-Security-Policy-Report-Only`, so violations are only reported (to `/api/security/csp-report`, logged as `[csp] violation`). Use for a staged rollout, then remove. |
+| `TRUSTED_PROXY_HOPS` | No | `1` | Number of reverse proxies between the internet and the app. The client IP for sign-in throttling is the entry this many places from the right of `X-Forwarded-For`. Keep `1` behind Caddy alone; see [Client IP and proxies](#client-ip-and-proxies). |
 | `DEMO_PASSWORD` | Yes | `BrickFlow@2026` | Shared password the seed gives every demo account. Treat it as a secret on public deployments. |
 | `DEMO_DATASET` | No | `standard` | Demo dataset to seed and offer on the sign-in page: `standard` or `chandak` (builder pitch). Takes effect on the next seed. |
 | `STORAGE_DRIVER` | No | `local` | Only `local` is implemented today. |
 | `STORAGE_DIR` | Yes | `/app/data/storage` | Uploaded and seeded invoice PDFs. Must be on a persistent volume. |
 | `APP_URL` | Yes | `https://brickflow.example.com` | Public base URL. When it starts with `https://`, session cookies are marked `Secure`. |
 | `SEED_ON_START` | No | `false` | `true` wipes and reseeds the demo data on every container start. The database is always seeded when it is empty. |
-| `DATA_ENCRYPTION_KEY` | Yes | — | 32 random bytes, base64 or hex: `openssl rand -base64 32`. Encrypts bank account numbers and PAN at rest (AES-256-GCM) and keys the account fingerprints. Store in a secret manager; losing it makes the encrypted values unreadable. |
+| `DATA_ENCRYPTION_KEY` | Yes | — | 32 random bytes, base64 or hex: `openssl rand -base64 32`. Encrypts bank account numbers, PAN and authenticator (TOTP) secrets at rest (AES-256-GCM, `src/server/crypto/field-encryption.ts`) and keys the account fingerprints. Store in a secret manager; losing it makes the encrypted values unreadable (users would also have to set up two-step verification again). |
 | `DATA_ENCRYPTION_KEY_PREVIOUS` | No | — | During a key rotation: the old key, accepted for decryption only. Then run `scripts/migrate-kyc-data.ts --reencrypt` and remove it. |
 | `VERIFICATION_PROVIDER` | Yes | — | `cashfree` for live checks, or `sandbox` with `ALLOW_SANDBOX_VERIFICATION=true` for a non-customer environment. Provider credentials and the e-invoice provider are listed in [INTEGRATIONS.md](INTEGRATIONS.md#configuration). |
 | `ALLOW_SANDBOX_VERIFICATION` | No | `false` | `true` permits the offline sandbox verification provider in production (logs a warning on every use). Demo server only. |
@@ -55,12 +58,27 @@ The verification migration keeps the legacy plaintext columns `Organisation.pan`
 
 On start, `docker-entrypoint.sh`:
 
-1. checks that `DATABASE_URL` is a `postgresql://` URL and `AUTH_SECRET` is set, then waits up to 60 seconds for the database to accept connections;
+1. checks that `DATABASE_URL` is a `postgresql://` URL and that `AUTH_SECRET` and `DATA_ENCRYPTION_KEY` (32 bytes, base64 or hex) are set, then waits up to 60 seconds for the database to accept connections;
 2. runs `prisma migrate deploy` (forward-only migrations) against `DATABASE_URL`, then `scripts/migrate-kyc-data.ts`, which encrypts any plaintext PAN and bank account numbers still in the legacy `Organisation` columns (idempotent; it needs `DATA_ENCRYPTION_KEY`);
 3. runs the demo seed only when the database has no users yet (first start) or when `SEED_ON_START=true`, so data persists across restarts and upgrades by default;
 4. starts the Next.js standalone server with `node server.js`.
 
 The container runs as a non-root user (uid/gid `1001`) and declares a `HEALTHCHECK` on `GET /api/health`, which returns `{"status":"ok","db":"ok"}` after a `SELECT 1`, or HTTP 503 when the database is unreachable. The endpoint needs no authentication and exposes no configuration.
+
+### Client IP and proxies
+
+Sign-in throttling counts failures per account and per client IP. The app never sees the TCP peer directly, so it reads the client IP from `X-Forwarded-For`, trusting exactly `TRUSTED_PROXY_HOPS` proxies:
+
+- Each proxy appends the address of whoever connected to it, so with *N* trusted proxies the client is the entry *N* places from the right. Entries further left are supplied by the client and ignored.
+- In `docker-compose.prod.yml` Caddy is the only proxy (`TRUSTED_PROXY_HOPS=1`, the default). Caddy discards a client-sent `X-Forwarded-For` unless the peer is in its `trusted_proxies`, so the header holds exactly the connecting address.
+- The app port must not be reachable except through the proxy (the compose stack publishes only Caddy). If a CDN or load balancer is added in front of Caddy, add its ranges to Caddy's `trusted_proxies` and set `TRUSTED_PROXY_HOPS=2`.
+
+### Security controls (operations)
+
+- **Sessions** are stored in the `Session` table. They end after 30 minutes without activity or 8 hours after sign-in, on sign-out, on "Sign out of all devices", on a password change (other sessions), and when an administrator deactivates the user or organisation.
+- **Sign-in throttling** (table `AuthAttempt`): per account, delays of 1, 2 and 4 seconds after consecutive failures and a 15-minute lockout at the fifth; per IP, a 15-minute block after 30 failures. Lockouts are written to the audit log as `security.lockout`. To lift one early, delete the row: `DELETE FROM "AuthAttempt" WHERE key = 'login:email:<address>';`.
+- **Two-step verification** (TOTP, RFC 6238): if a user loses both the authenticator and the recovery codes, a super admin uses **Users → Reset 2-step** after verifying the user's identity out of band.
+- **Housekeeping:** `purgeEndedSessions()` and `purgeStaleAuthAttempts()` (in `src/server/auth/`) delete ended sessions after 30 days and idle throttle rows after a day. They are not required for correctness; run them from the job scheduler once it exists.
 
 ---
 
@@ -122,6 +140,8 @@ All images are pinned to exact versions. Update the tags deliberately (and check
    # BACKUP_HOUR_UTC=21           # 21:00 UTC = 02:30 IST (default)
    # BACKUP_RETENTION_DAYS=14
    # DATABASE_POOL_MAX=10
+   # MFA_ENFORCED=true            # set false only for a public demo
+   # CSP_REPORT_ONLY=false
    # BRICKFLOW_VERSION=latest     # tag given to the locally built image
    ```
 
@@ -225,6 +245,7 @@ The demo environment runs the [single-server stack](#2-single-server-with-docker
 | Stack | `~/brickflow` on the instance: `docker-compose.prod.yml`, `infra/compose/*` and a `chmod 600` `.env` |
 | Secrets | `.env` on the instance; a recovery copy is in Secrets Manager `brickflow/demo/env` (same account) |
 | Dataset | `DEMO_DATASET=chandak`, `SEED_ON_START=false` (seeded once on first start) |
+| Security settings | `MFA_ENFORCED=false` so visitors can use the shared demo accounts without an authenticator. Cloudflare is DNS-only, so Caddy is the only proxy (`TRUSTED_PROXY_HOPS=1`). |
 | Backups | Nightly `pg_dump` to the `postgres-backups` volume (14 days), plus Lightsail automatic instance snapshots daily at 22:00 UTC |
 | Cost | About $12/month for the instance, plus snapshot storage |
 
@@ -273,6 +294,7 @@ docker compose -f docker-compose.prod.yml exec app node scripts/demo-reset.mjs -
 - Least privilege: the execution role can read only the two application secrets; the task role can only mount the EFS access point; the deploy role can only push to one repository, register task definitions, update one service and pass the two task roles.
 - Network: the task accepts traffic only from the load balancer security group; EFS accepts NFS only from the task security group; the EFS policy denies unencrypted transport.
 - Single server: only Caddy publishes ports (80/443); PostgreSQL sits on an internal Docker network with no published port and a generated password.
+- `DATA_ENCRYPTION_KEY` is set and stored like `AUTH_SECRET`; `MFA_ENFORCED` is on (the default) for any real deployment; the Content Security Policy is enforced (`CSP_REPORT_ONLY` unset).
 - The container runs as a non-root user; ECS Exec is disabled.
 - Images are scanned on push; CI fails on high or critical advisories in production dependencies.
 - Disbursements are simulated: no bank integration or payment credentials exist in any environment.

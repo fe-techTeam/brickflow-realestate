@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatINR } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { useStepUp } from "@/components/security/step-up-dialog";
 import {
   approveFinancingRequestAction,
   completeDisbursementAction,
@@ -193,6 +194,7 @@ export interface DisbursementSummary {
 }
 
 export function InitiateDisbursementButton({ summary, size = "default", className }: { summary: DisbursementSummary; size?: Size; className?: string }) {
+  const stepUp = useStepUp();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -202,7 +204,11 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
   function confirm() {
     setError(null);
     startTransition(async () => {
-      const result = await initiateDisbursementAction(summary.requestId, { idempotencyKey: idempotencyKey() });
+      const result = await stepUp.run("payout.release", () => initiateDisbursementAction(summary.requestId, { idempotencyKey: idempotencyKey() }));
+      if (!result.ok && result.code === "STEP_UP_REQUIRED") {
+        setError(result.error);
+        return;
+      }
       if (!result.ok) {
         setError(result.error);
         toast.error(result.error);
@@ -215,6 +221,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(next) => {
         if (pending) return;
         setOpen(next);
@@ -262,6 +269,8 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
         </DialogFooter>
       </DialogContent>
     </Dialog>
+      {stepUp.dialog}
+    </>
   );
 }
 
@@ -287,6 +296,7 @@ export function ConfirmTransferButton({
   const [step, setStep] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const processing = step >= 0;
+  const stepUp = useStepUp();
   const idempotencyKey = useIdempotencyKey();
 
   async function run() {
@@ -296,7 +306,12 @@ export function ConfirmTransferButton({
     setStep(1);
     await wait(650);
     setStep(2);
-    const result = await completeDisbursementAction(requestId, { idempotencyKey: idempotencyKey() });
+    const result = await stepUp.run("payout.release", () => completeDisbursementAction(requestId, { idempotencyKey: idempotencyKey() }));
+    if (!result.ok && result.code === "STEP_UP_REQUIRED") {
+      setStep(-1);
+      setError(result.error);
+      return;
+    }
     if (!result.ok) {
       setStep(-1);
       setError(result.error);
@@ -312,6 +327,7 @@ export function ConfirmTransferButton({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(next) => {
         if (processing) return;
         setOpen(next);
@@ -384,6 +400,8 @@ export function ConfirmTransferButton({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+      {stepUp.dialog}
+    </>
   );
 }
 

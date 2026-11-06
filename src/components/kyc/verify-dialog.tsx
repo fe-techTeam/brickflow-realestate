@@ -10,6 +10,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useStepUp } from "@/components/security/step-up-dialog";
 import { validateAccountNumber, validateGstin, validateIfsc, validatePan, validateReraAgentNumber, validateUdyam } from "@/lib/verification/validation";
 import type { ActionResult } from "@/server/action-result";
 import { submitBankAccountAction, submitGstinAction, submitPanAction, submitReraAction, submitUdyamAction } from "@/server/actions/kyc";
@@ -76,6 +77,7 @@ export function VerifyDialog({
   const [notRegistered, setNotRegistered] = useState(false);
   const [makePrimary, setMakePrimary] = useState(false);
   const [pending, startTransition] = useTransition();
+  const stepUp = useStepUp();
   const copy = COPY[kind];
   const fid = (name: string) => `${id}-${name}`;
 
@@ -132,7 +134,11 @@ export function VerifyDialog({
     setErrors(found);
     if (Object.values(found).some(Boolean)) return;
     startTransition(async () => {
-      const result = await send();
+      const result = kind === "BANK_ACCOUNT" ? await stepUp.run("bank.change", send) : await send();
+      if (!result.ok && result.code === "STEP_UP_REQUIRED") {
+        setFormError(result.error);
+        return;
+      }
       if (!result.ok) {
         setErrors(firstErrors(result.fieldErrors));
         setFormError(result.error);
@@ -168,6 +174,7 @@ export function VerifyDialog({
   );
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(next) => {
@@ -290,5 +297,7 @@ export function VerifyDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+      {stepUp.dialog}
+    </>
   );
 }
