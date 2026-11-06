@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { auditChainHealth, SEAL_COMMAND, type AuditChainHealth } from "@/lib/audit-chain";
 import { db } from "../db";
 import { storage } from "../storage";
 import { logger } from "./logger";
@@ -11,7 +12,9 @@ export type MigrationStatus = "ok" | "pending" | "failed" | "unknown" | "fail";
 
 export interface ReadinessReport {
   ready: boolean;
-  checks: { database: CheckStatus; migrations: MigrationStatus; storage: CheckStatus };
+  checks: { database: CheckStatus; migrations: MigrationStatus; storage: CheckStatus; auditChain: AuditChainHealth | "fail" };
+  /** Operator action when the audit chain has not been initialised. */
+  reason?: string;
 }
 
 const CHECK_TIMEOUT_MS = 3_000;
@@ -92,20 +95,30 @@ async function settle<T>(label: string, run: () => Promise<T>): Promise<{ ok: tr
 export async function evaluateReadiness(options: { migrationsDir?: string } = {}): Promise<ReadinessReport> {
   const [database, storageResult] = await Promise.all([settle("database", checkDatabase), settle("storage", checkStorage)]);
   const migrations = database.ok ? await settle("migrations", () => checkMigrations(options.migrationsDir)) : { ok: false as const };
+  const migrationsUsable = migrations.ok && (migrations.value === "ok" || migrations.value === "unknown");
+  const chain = migrationsUsable ? await settle("auditChain", () => auditChainHealth(db)) : { ok: false as const };
   const checks: ReadinessReport["checks"] = {
     database: database.ok ? "ok" : "fail",
     migrations: migrations.ok ? migrations.value : "fail",
     storage: storageResult.ok ? "ok" : "fail",
+    auditChain: chain.ok ? chain.value.status : "fail",
   };
-  const ready = checks.database === "ok" && (checks.migrations === "ok" || checks.migrations === "unknown") && checks.storage === "ok";
+  const ready = checks.database === "ok" && migrationsUsable && checks.storage === "ok" && checks.auditChain === "ok";
   if (checks.migrations === "unknown" && !warnedUnverifiable) {
     warnedUnverifiable = true;
     logger.warn("readiness.migrations_unverifiable", { migrationsDir: options.migrationsDir ?? defaultMigrationsDir() });
   }
-  return { ready, checks };
+  if (chain.ok && chain.value.status !== lastChainStatus) {
+    lastChainStatus = chain.value.status;
+    if (chain.value.status === "unsealed") logger.error("readiness.audit_chain_unsealed", { detail: chain.value.detail, command: SEAL_COMMAND });
+    else if (chain.value.status === "broken") logger.error("readiness.audit_chain_broken", { detail: chain.value.detail });
+  }
+  const reason = checks.auditChain === "unsealed" ? `Audit chain not initialised: run \`${SEAL_COMMAND}\` once.` : undefined;
+  return { ready, checks, ...(reason ? { reason } : {}) };
 }
 
 let warnedUnverifiable = false;
+let lastChainStatus: AuditChainHealth | undefined;
 
 const CACHE_MS = 2_000;
 let cached: { at: number; report: Promise<ReadinessReport> } | undefined;

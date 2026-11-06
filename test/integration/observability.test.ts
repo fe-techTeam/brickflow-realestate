@@ -43,7 +43,7 @@ describe("GET /api/ready", () => {
     const response = await readyGET();
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(await response.json()).toEqual({ status: "ready", checks: { database: "ok", migrations: "ok", storage: "ok" } });
+    expect(await response.json()).toEqual({ status: "ready", checks: { database: "ok", migrations: "ok", storage: "ok", auditChain: "ok" } });
   });
 
   it("compares the bundled migration folders with _prisma_migrations", async () => {
@@ -63,7 +63,7 @@ describe("GET /api/ready", () => {
       await mkdir(path.join(dir, "not_a_migration"));
       expect(await checkMigrations(dir)).toBe("pending");
       const report = await evaluateReadiness({ migrationsDir: dir });
-      expect(report).toEqual({ ready: false, checks: { database: "ok", migrations: "pending", storage: "ok" } });
+      expect(report).toEqual({ ready: false, checks: { database: "ok", migrations: "pending", storage: "ok", auditChain: "fail" } });
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -80,12 +80,33 @@ describe("GET /api/ready", () => {
     }
   });
 
+  it("is not ready, naming the operator command, while the audit chain is unsealed or its state is tampered with", async () => {
+    const state = await db.auditChainState.findUniqueOrThrow({ where: { id: 1 } });
+    try {
+      await db.auditChainState.update({ where: { id: 1 }, data: { legacySealedAt: null, keyId: null, signature: null } });
+      const unsealed = await readyGET();
+      expect(unsealed.status).toBe(503);
+      const body = await unsealed.json();
+      expect(body.checks.auditChain).toBe("unsealed");
+      expect(body.reason).toContain("npm run audit:seal-legacy");
+      expect(logs.some((l) => l.message === "readiness.audit_chain_unsealed" && l.level === "error")).toBe(true);
+
+      resetReadinessCache();
+      await db.auditChainState.update({ where: { id: 1 }, data: { ...state, legacyCutoffSeq: state.legacyCutoffSeq + 10n } });
+      const tampered = await (await readyGET()).json();
+      expect(tampered).toMatchObject({ status: "not_ready", checks: { auditChain: "broken" } });
+      expect(tampered.reason).toBeUndefined();
+    } finally {
+      await db.auditChainState.update({ where: { id: 1 }, data: state });
+    }
+  });
+
   it("returns 503 without error details when the database is unreachable", async () => {
     vi.spyOn(db, "$queryRaw").mockRejectedValue(new Error("connect ECONNREFUSED postgresql://brickflow:secret@db/brickflow"));
     const response = await readyGET();
     expect(response.status).toBe(503);
     const body = await response.json();
-    expect(body).toEqual({ status: "not_ready", checks: { database: "fail", migrations: "fail", storage: "ok" } });
+    expect(body).toEqual({ status: "not_ready", checks: { database: "fail", migrations: "fail", storage: "ok", auditChain: "fail" } });
     expect(JSON.stringify(body)).not.toContain("secret");
     expect(JSON.stringify(logs)).not.toContain("secret");
     expect(logs.some((l) => l.message === "readiness.check_failed" && l.check === "database")).toBe(true);

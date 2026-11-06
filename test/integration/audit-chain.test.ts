@@ -4,8 +4,10 @@ import type { Prisma } from "@/generated/prisma/client";
 import {
   anchorAuditHead,
   appendAuditEntry,
+  auditChainHealth,
   AuditChainIntegrityError,
   auditHashInput,
+  rotateAuditKey,
   canonicalJson,
   computeAuditHash,
   listSignedAnchors,
@@ -16,7 +18,7 @@ import {
   verifyAuditChain,
   type ChainVerification,
 } from "@/lib/audit-chain";
-import { auditKeyring } from "@/lib/audit-keys";
+import { auditKeyring, DEV_AUDIT_KEY_ID, type AuditKeyring } from "@/lib/audit-keys";
 import { recordAudit } from "@/server/audit";
 import type { Actor } from "@/server/auth/session";
 import { db } from "@/server/db";
@@ -154,13 +156,13 @@ describe("audit chain", () => {
     expectBroken(result.verification, result.seq, "hash_mismatch");
   });
 
-  it("reports an entry sealed with an unknown key", async () => {
+  it("reports an entry that claims a key outside its range", async () => {
     const result = await inRolledBackTx(async (tx) => {
       const row = await middleRow(tx);
       await tx.auditLog.update({ where: { id: row.id }, data: { hashKeyId: "retired-unknown" } });
       return { verification: await verifyAuditChain(tx), seq: row.seq };
     });
-    expectBroken(result.verification, result.seq, "unknown_key");
+    expectBroken(result.verification, result.seq, "key_out_of_range");
   });
 
   it("detects a deleted entry in the middle", async () => {
@@ -306,35 +308,166 @@ describe("audit chain", () => {
     expect(logs.find((l) => l.message === "audit.chain_append_refused")).toMatchObject({ level: "error", action: "test.refused" });
   });
 
-  it("seals rows up to the legacy cutoff exactly once and never beyond it", async () => {
+});
+
+const SYSTEM_ENTRY = { actorUserId: null, actorName: "System", actorOrgId: null, actorRole: null, entityType: "Session", metadata: null } as const;
+
+/** Rewinds the chain to the state right after the migration on a database with `cutoff` pre-chain rows. */
+async function simulatePreChainDatabase(tx: Prisma.TransactionClient, cutoff: bigint) {
+  await tx.auditLog.deleteMany({ where: { seq: { gt: cutoff } } });
+  await tx.auditLog.updateMany({ data: { hash: null, prevHash: null, hashKeyId: null } });
+  await tx.auditKeyEpoch.deleteMany();
+  await tx.auditAnchor.deleteMany();
+  await tx.auditChainCheck.deleteMany();
+  await tx.auditChainState.update({ where: { id: 1 }, data: { legacyCutoffSeq: cutoff, legacySealedAt: null, keyId: null, signature: null } });
+}
+
+describe("one-time legacy sealing", () => {
+  it("refuses writes until the operator seals, then seals once and anchors the legacy head", async () => {
     await inRolledBackTx(async (tx) => {
-      const original = await tx.auditLog.findMany({ where: { seq: { lte: 6n } }, orderBy: { seq: "asc" } });
-      await tx.auditChainState.update({ where: { id: 1 }, data: { legacyCutoffSeq: 5n, legacySealedAt: null } });
-      await tx.auditLog.updateMany({ where: { seq: { lte: 5n } }, data: { hash: null, prevHash: null, hashKeyId: null } });
-      expectBroken(await verifyAuditChain(tx), 1n, "unsealed");
+      const original = await tx.auditLog.findMany({ where: { seq: { lte: 5n } }, orderBy: { seq: "asc" } });
+      await simulatePreChainDatabase(tx, 5n);
 
-      expect(await sealLegacyAuditRows(tx)).toEqual({ status: "sealed", cutoffSeq: 5n, sealed: 5 });
-      const resealed = await tx.auditLog.findMany({ where: { seq: { lte: 6n } }, orderBy: { seq: "asc" } });
+      const refused = await appendAuditEntry(tx, { ...SYSTEM_ENTRY, action: "test.before_seal", entityId: "b", summary: "Before sealing" }).catch((e: unknown) => e);
+      expect(refused).toBeInstanceOf(AuditChainIntegrityError);
+      expect((refused as AuditChainIntegrityError).code).toBe("chain_unsealed");
+      expect((refused as Error).message).toContain("npm run audit:seal-legacy");
+      expect(await auditChainHealth(tx)).toMatchObject({ status: "unsealed" });
+      expect(await verifyAuditChain(tx)).toMatchObject({ status: "BROKEN", broken: { seq: 0n, reason: "chain_unsealed" } });
+
+      const sealed = await sealLegacyAuditRows(tx, undefined, new Date("2099-03-01T00:00:00Z"));
+      expect(sealed).toMatchObject({ status: "sealed", cutoffSeq: 5n, sealed: 5 });
+      expect(sealed.anchor?.statement).toMatchObject({ seq: "5", day: "2099-03-01" });
+      expect(verifyAnchorSignature(sealed.anchor!)).toBe(true);
+      const resealed = await tx.auditLog.findMany({ where: { seq: { lte: 5n } }, orderBy: { seq: "asc" } });
       expect(resealed.map((r) => r.hash)).toEqual(original.map((r) => r.hash));
-      expect((await verifyAuditChain(tx)).status).toBe("VERIFIED");
+      expect(await verifyAuditChain(tx)).toMatchObject({ status: "VERIFIED", checkedRows: 5, anchorsChecked: 1 });
 
-      await tx.auditLog.update({ where: { seq: 2n }, data: { hash: null } });
       expect(await sealLegacyAuditRows(tx)).toMatchObject({ status: "already_sealed", sealed: 0 });
-      expectBroken(await verifyAuditChain(tx), 2n, "unsealed");
+      await appendAuditEntry(tx, { ...SYSTEM_ENTRY, action: "test.after_seal", entityId: "a", summary: "After sealing" });
+      expect(await auditChainHealth(tx)).toEqual({ status: "ok" });
     });
   });
 
-  it("refuses to seal when a row beyond the cutoff is unsealed or the legacy range has a gap", async () => {
+  type Tamper = (tx: Prisma.TransactionClient) => Promise<unknown>;
+  const sealRefusals: [string, Tamper, RegExp][] = [
+    ["a raised cutoff", (tx) => tx.auditChainState.update({ where: { id: 1 }, data: { legacyCutoffSeq: 6n } }), /cutoff \(6\) does not match/],
+    ["a gap in the legacy range", (tx) => tx.auditLog.delete({ where: { seq: 3n } }), /does not match/],
+    ["a row that already carries a key", (tx) => tx.auditLog.update({ where: { seq: 2n }, data: { hashKeyId: "k9" } }), /already carry/],
+    [
+      "an existing anchor",
+      (tx) => tx.auditAnchor.create({ data: { day: "2099-01-01", seq: 5n, hash: "0".repeat(64), keyId: "k9", signature: "0".repeat(64) } }),
+      /anchors already exist/,
+    ],
+    ["a successful verification in the history", (tx) => tx.auditChainCheck.create({ data: { status: "VERIFIED", checkedRows: 5, durationMs: 1, triggeredByName: "x" } }), /verification history/],
+  ];
+
+  it.each(sealRefusals)("refuses to seal with %s", async (_label, tamper, message) => {
     await inRolledBackTx(async (tx) => {
-      await tx.auditChainState.update({ where: { id: 1 }, data: { legacyCutoffSeq: 3n, legacySealedAt: null } });
-      await tx.auditLog.updateMany({ where: { seq: { lte: 4n } }, data: { hash: null, prevHash: null, hashKeyId: null } });
-      await expect(sealLegacyAuditRows(tx)).rejects.toThrow(/does not link/);
+      await simulatePreChainDatabase(tx, 5n);
+      await tamper(tx);
+      await expect(sealLegacyAuditRows(tx)).rejects.toThrow(message);
+    });
+  });
+
+  it("still seals when earlier verifications only reported the unsealed chain", async () => {
+    await inRolledBackTx(async (tx) => {
+      await simulatePreChainDatabase(tx, 5n);
+      await tx.auditChainCheck.create({ data: { status: "BROKEN", brokenReason: "chain_unsealed", brokenSeq: 0n, checkedRows: 0, durationMs: 1, triggeredByName: "Command line" } });
+      expect(await sealLegacyAuditRows(tx)).toMatchObject({ status: "sealed", sealed: 5 });
+    });
+  });
+
+  it.each([
+    ["raising the cutoff", { legacyCutoffSeq: 999n }],
+    ["resetting legacySealedAt", { legacySealedAt: null }],
+    ["changing the seal date", { legacySealedAt: new Date("2000-01-01T00:00:00Z") }],
+    ["swapping the signature", { signature: "0".repeat(64) }],
+  ] as const)("detects tampering with the signed state row: %s", async (_label, change) => {
+    await inRolledBackTx(async (tx) => {
+      await tx.auditChainState.update({ where: { id: 1 }, data: change });
+      expect(await verifyAuditChain(tx)).toMatchObject({ status: "BROKEN", broken: { seq: 0n, reason: "state_invalid" } });
+      await expect(sealLegacyAuditRows(tx)).rejects.toThrow(/Refusing to seal/);
+      const refused = await appendAuditEntry(tx, { ...SYSTEM_ENTRY, action: "test.state", entityId: "s", summary: "Must not be written" }).catch((e: unknown) => e);
+      expect((refused as AuditChainIntegrityError).code).toBe("state_invalid");
+      expect(await auditChainHealth(tx)).toMatchObject({ status: "broken" });
+    });
+  });
+
+  it("cannot be tricked into re-sealing by wiping the state row", async () => {
+    await inRolledBackTx(async (tx) => {
+      const count = BigInt(await tx.auditLog.count());
+      await tx.auditChainState.update({ where: { id: 1 }, data: { legacyCutoffSeq: count, legacySealedAt: null, keyId: null, signature: null } });
+      await tx.auditKeyEpoch.deleteMany();
+      await expect(sealLegacyAuditRows(tx)).rejects.toThrow(/already carry/);
+    });
+  });
+});
+
+describe("audit key rotation", () => {
+  const devRing = () => auditKeyring();
+  const rotatedRing = (): AuditKeyring => ({
+    currentKeyId: "k2",
+    keys: new Map([
+      [DEV_AUDIT_KEY_ID, devRing().keys.get(DEV_AUDIT_KEY_ID)!],
+      ["k2", randomBytes(32)],
+    ]),
+    insecure: false,
+  });
+
+  it("closes the old key's range, switches to the new key and keeps the chain verifiable", async () => {
+    await inRolledBackTx(async (tx) => {
+      const ring = rotatedRing();
+      const head = await tx.auditLog.findFirstOrThrow({ orderBy: { seq: "desc" } });
+      const result = await rotateAuditKey(tx, ring);
+      expect(result).toEqual({ fromKeyId: DEV_AUDIT_KEY_ID, toKeyId: "k2", retiredThroughSeq: head.seq, rotationEntrySeq: head.seq + 1n });
+      const epochs = await tx.auditKeyEpoch.findMany({ orderBy: { fromSeq: "asc" } });
+      expect(epochs.map((e) => [e.keyId, e.fromSeq, e.toSeq, e.signedByKeyId])).toEqual([
+        [DEV_AUDIT_KEY_ID, 1n, head.seq, "k2"],
+        ["k2", head.seq + 1n, null, "k2"],
+      ]);
+      expect((await tx.auditLog.findFirstOrThrow({ orderBy: { seq: "desc" } })).hashKeyId).toBe("k2");
+      expect((await verifyAuditChain(tx, { keyring: ring })).status).toBe("VERIFIED");
+      await appendAuditEntry(tx, { ...SYSTEM_ENTRY, action: "test.after_rotation", entityId: "r", summary: "After rotation" }, ring);
+      expect(await auditChainHealth(tx, ring)).toEqual({ status: "ok" });
+
+      // Forward only: the retired key can no longer write or verify the current chain.
+      const stale = await appendAuditEntry(tx, { ...SYSTEM_ENTRY, action: "test.stale_key", entityId: "x", summary: "Old key" }, devRing()).catch((e: unknown) => e);
+      expect((stale as AuditChainIntegrityError).code).toBe("state_invalid");
+      await expect(rotateAuditKey(tx, ring)).rejects.toThrow(/already the current key/);
+      const back: AuditKeyring = { ...ring, currentKeyId: DEV_AUDIT_KEY_ID };
+      await expect(rotateAuditKey(tx, back)).rejects.toThrow(/only move forward/);
+    });
+  });
+
+  it("rejects a row forged with a retired key after its range", async () => {
+    await inRolledBackTx(async (tx) => {
+      const ring = rotatedRing();
+      await rotateAuditKey(tx, ring);
+      const head = await tx.auditLog.findFirstOrThrow({ orderBy: { seq: "desc" } });
+      const forged = { ...SYSTEM_ENTRY, seq: head.seq + 1n, createdAt: new Date(), action: "test.forged", entityId: "f", summary: "Forged with the retired key", prevHash: head.hash };
+      await tx.auditLog.create({ data: { ...forged, hash: computeAuditHash(forged, DEV_AUDIT_KEY_ID, ring), hashKeyId: DEV_AUDIT_KEY_ID } });
+      expect(await verifyAuditChain(tx, { keyring: ring })).toMatchObject({ status: "BROKEN", broken: { seq: forged.seq, reason: "key_out_of_range" } });
+      const refused = await appendAuditEntry(tx, { ...SYSTEM_ENTRY, action: "test.after_forgery", entityId: "x", summary: "x" }, ring).catch((e: unknown) => e);
+      expect((refused as AuditChainIntegrityError).code).toBe("head_invalid");
+    });
+  });
+
+  it("rejects an extended retired range and an anchor signed by a retired key past its range", async () => {
+    await inRolledBackTx(async (tx) => {
+      const ring = rotatedRing();
+      await rotateAuditKey(tx, ring);
+      await tx.auditKeyEpoch.update({ where: { keyId: DEV_AUDIT_KEY_ID }, data: { toSeq: 1_000_000n } });
+      expect(await verifyAuditChain(tx, { keyring: ring })).toMatchObject({ status: "BROKEN", broken: { reason: "key_epoch_invalid" } });
     });
     await inRolledBackTx(async (tx) => {
-      await tx.auditChainState.update({ where: { id: 1 }, data: { legacyCutoffSeq: 3n, legacySealedAt: null } });
-      await tx.auditLog.updateMany({ where: { seq: { lte: 3n } }, data: { hash: null, prevHash: null, hashKeyId: null } });
-      await tx.auditLog.delete({ where: { seq: 2n } });
-      await expect(sealLegacyAuditRows(tx)).rejects.toThrow(/missing/);
+      const ring = rotatedRing();
+      await rotateAuditKey(tx, ring);
+      const head = await tx.auditLog.findFirstOrThrow({ orderBy: { seq: "desc" } });
+      const statement = { type: "brickflow.audit.anchor" as const, v: 1 as const, day: "2099-05-01", seq: head.seq.toString(), headHash: head.hash!, keyId: DEV_AUDIT_KEY_ID, anchoredAt: "2099-05-01T00:00:00.000Z" };
+      const signature = createHmac("sha256", ring.keys.get(DEV_AUDIT_KEY_ID)!).update(canonicalJson({ ...statement })).digest("hex");
+      await tx.auditAnchor.create({ data: { day: statement.day, seq: head.seq, hash: statement.headHash, keyId: DEV_AUDIT_KEY_ID, signature, anchoredAt: new Date(statement.anchoredAt) } });
+      expect(await verifyAuditChain(tx, { keyring: ring })).toMatchObject({ status: "BROKEN", broken: { seq: head.seq, reason: "anchor_key_out_of_range" } });
     });
   });
 });

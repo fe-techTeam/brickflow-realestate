@@ -147,7 +147,7 @@ Open <http://localhost:3000>. `npm run demo:reset` deletes the stored invoice PD
 | `LOG_LEVEL` | `info` (commented out) | JSON log level: `debug`, `info`, `warn`, `error`, `silent` |
 | `APP_VERSION` / `SERVICE_NAME` | package version / `brickflow-web` (commented out) | Stamped on log lines and metrics |
 
-Operational endpoints and the audit chain commands (`npm run audit:verify`, `audit:anchor`, `audit:backfill`) are described in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#health-readiness-and-metrics).
+Operational endpoints and the audit chain commands (`npm run audit:verify`, `audit:anchor`, `audit:export-anchors`, `audit:seal-legacy`, `audit:rotate-key`) are described in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#health-readiness-and-metrics).
 
 ## Demo datasets
 

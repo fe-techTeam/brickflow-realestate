@@ -10,7 +10,9 @@ const count = new Intl.NumberFormat("en-IN");
 function Headline({ overview }: { overview: AuditIntegrityOverview }) {
   const latest = overview.latest;
   if (!latest) return <>Not verified yet</>;
-  if (latest.status === "BROKEN" && latest.broken) return <>Broken link at entry {count.format(Number(latest.broken.seq))}</>;
+  if (latest.status === "BROKEN" && latest.broken) {
+    return latest.broken.seq === "0" ? <>{latest.broken.label}</> : <>Broken link at entry {count.format(Number(latest.broken.seq))}</>;
+  }
   if (latest.status === "EMPTY") return <>No entries recorded yet</>;
   return <>Verified through entry {count.format(Number(latest.verifiedThroughSeq ?? 0))}</>;
 }
@@ -61,7 +63,13 @@ export function IntegrityPanel({ overview, canVerify }: { overview: AuditIntegri
             {latest?.broken && (
               <div className="mt-4 rounded-lg border-l-2 border-danger/70 bg-danger-soft px-4 py-3 text-[0.8125rem] leading-relaxed text-fg-soft">
                 <p className="font-semibold text-danger">{latest.broken.label}</p>
-                {latest.broken.summary ? (
+                {latest.broken.seq === "0" ? (
+                  <p className="mt-0.5">
+                    {latest.broken.reason === "chain_unsealed"
+                      ? "The entries that predate the chain have not been sealed yet. An operator must run npm run audit:seal-legacy once; until then no changes can be recorded."
+                      : "The signed chain state or key ranges no longer match the audit key. No changes can be recorded until this is investigated."}
+                  </p>
+                ) : latest.broken.summary ? (
                   <p className="mt-0.5">
                     Entry {count.format(Number(latest.broken.seq))}: “{latest.broken.summary}”
                     {latest.broken.createdAt && <span className="text-muted-foreground"> · recorded {formatDateTime(latest.broken.createdAt)}</span>}
@@ -69,7 +77,9 @@ export function IntegrityPanel({ overview, canVerify }: { overview: AuditIntegri
                 ) : (
                   <p className="mt-0.5">Entry {count.format(Number(latest.broken.seq))} is missing from the log.</p>
                 )}
-                <p className="mt-1 text-muted-foreground">Entries up to {count.format(Number(latest.verifiedThroughSeq ?? 0))} are intact. Restore from backup and investigate access to the database.</p>
+                {latest.broken.seq !== "0" && (
+                  <p className="mt-1 text-muted-foreground">Entries up to {count.format(Number(latest.verifiedThroughSeq ?? 0))} are intact. Restore from backup and investigate access to the database.</p>
+                )}
               </div>
             )}
           </div>

@@ -81,7 +81,7 @@ test.describe("operations", () => {
     expect(health.headers()["x-request-id"]).toBe("e2e-request-0001");
     const ready = await request.get("/api/ready");
     expect(ready.ok()).toBe(true);
-    expect(await ready.json()).toEqual({ status: "ready", checks: { database: "ok", migrations: "ok", storage: "ok" } });
+    expect(await ready.json()).toEqual({ status: "ready", checks: { database: "ok", migrations: "ok", storage: "ok", auditChain: "ok" } });
     expect((await request.get("/login")).headers()["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
   });
 

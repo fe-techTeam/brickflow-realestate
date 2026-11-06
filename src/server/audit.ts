@@ -38,7 +38,7 @@ export async function recordAudit(tx: Tx, actor: Actor | null, entry: AuditEntry
   } catch (error) {
     // Fail closed: the state change is rolled back together with the refused audit entry.
     if (error instanceof AuditChainIntegrityError) {
-      logger.error("audit.chain_append_refused", { err: error, seq: error.seq, action: entry.action, entityType: entry.entityType, entityId: entry.entityId });
+      logger.error("audit.chain_append_refused", { err: error, code: error.code, seq: error.seq, action: entry.action, entityType: entry.entityType, entityId: entry.entityId });
     }
     throw error;
   }

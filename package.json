@@ -23,9 +23,10 @@
     "db:reset": "prisma migrate reset --force",
     "demo:reset": "node scripts/demo-reset.mjs",
     "audit:verify": "tsx scripts/audit-chain.ts verify",
-    "audit:backfill": "tsx scripts/audit-chain.ts backfill",
+    "audit:seal-legacy": "tsx scripts/audit-chain.ts seal-legacy",
     "audit:anchor": "tsx scripts/audit-chain.ts anchor",
     "audit:export-anchors": "tsx scripts/audit-chain.ts export-anchors",
+    "audit:rotate-key": "tsx scripts/audit-chain.ts rotate-key",
     "setup": "prisma migrate deploy && prisma db seed",
     "postinstall": "prisma generate"
   },

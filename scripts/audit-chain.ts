@@ -1,13 +1,15 @@
 /**
- * Audit chain maintenance.
+ * Audit chain maintenance (operator commands; nothing here runs automatically).
  *
  *   npm run audit:verify [-- --anchors <file>]   verify every link (and, optionally, an exported anchor
  *                                                file), record the result, exit 1 when the chain is broken
- *   npm run audit:backfill                       seal the rows that predate the chain; does its work once
- *                                                (later runs report "already_sealed" and change nothing)
+ *   npm run audit:seal-legacy [-- --dry-run]     ONE-TIME: seal the entries that predate the chain, sign
+ *                                                the chain state and publish an anchor of the legacy head
  *   npm run audit:anchor                         verify, then sign and record today's chain head
  *   npm run audit:export-anchors [-- --out <file>]
  *                                                write every signed anchor (JSON lines) for write-once storage
+ *   npm run audit:rotate-key                     close the old key's range and switch to the new key
+ *                                                (new key in AUDIT_HMAC_KEY/_ID, old in AUDIT_HMAC_PREVIOUS_KEYS)
  *
  * Output is one JSON line per event so it can be shipped with the application logs.
  */
@@ -20,8 +22,10 @@ import {
   ANCHOR_LOG_EVENT,
   anchorAuditHead,
   CHAIN_BREAK_LABELS,
+  describeLegacySeal,
   listSignedAnchors,
   parseAnchorFile,
+  rotateAuditKeyInTransaction,
   runAuditChainCheck,
   sealLegacyAuditRowsInTransaction,
   serialiseAnchorFile,
@@ -35,7 +39,7 @@ try {
   // Environment supplied externally.
 }
 
-const COMMANDS = ["verify", "backfill", "anchor", "export-anchors"] as const;
+const COMMANDS = ["verify", "seal-legacy", "anchor", "export-anchors", "rotate-key"] as const;
 type Command = (typeof COMMANDS)[number];
 
 function emit(level: "info" | "warn" | "error", message: string, fields: Record<string, unknown>) {
@@ -47,10 +51,13 @@ function emit(level: "info" | "warn" | "error", message: string, fields: Record<
 }
 
 async function main(): Promise<number> {
-  const { positionals, values } = parseArgs({ allowPositionals: true, options: { anchors: { type: "string" }, out: { type: "string" } } });
+  const { positionals, values } = parseArgs({
+    allowPositionals: true,
+    options: { anchors: { type: "string" }, out: { type: "string" }, "dry-run": { type: "boolean" } },
+  });
   const command = positionals[0] as Command | undefined;
   if (!command || !COMMANDS.includes(command)) {
-    process.stderr.write(`Usage: tsx scripts/audit-chain.ts <${COMMANDS.join("|")}> [--anchors <file>] [--out <file>]\n`);
+    process.stderr.write(`Usage: tsx scripts/audit-chain.ts <${COMMANDS.join("|")}> [--anchors <file>] [--out <file>] [--dry-run]\n`);
     return 2;
   }
   const url = process.env.DATABASE_URL;
@@ -63,9 +70,19 @@ async function main(): Promise<number> {
 
   const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
   try {
-    if (command === "backfill") {
+    if (command === "seal-legacy") {
+      if (values["dry-run"]) {
+        emit("info", "audit.seal_legacy.plan", { ...(await describeLegacySeal(db)), keyId: keyring.currentKeyId });
+        return 0;
+      }
       const result = await sealLegacyAuditRowsInTransaction(db);
-      emit("info", "audit.backfill.completed", { ...result });
+      emit("info", "audit.seal_legacy.completed", { status: result.status, cutoffSeq: result.cutoffSeq, sealed: result.sealed, keyId: keyring.currentKeyId });
+      if (result.anchor) emit("info", ANCHOR_LOG_EVENT, { created: true, ...result.anchor });
+      return 0;
+    }
+    if (command === "rotate-key") {
+      const result = await rotateAuditKeyInTransaction(db);
+      emit("info", "audit.key_rotated", { ...result });
       return 0;
     }
     if (command === "anchor") {

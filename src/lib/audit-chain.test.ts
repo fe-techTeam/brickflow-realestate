@@ -86,7 +86,7 @@ describe("audit hash", () => {
   });
 
   it("refuses an unknown key id", () => {
-    expect(() => computeAuditHash(ROW, "nope", ringA)).toThrow(/Unknown audit key/);
+    expect(() => computeAuditHash(ROW, "nope", ringA)).toThrow(/"nope" is not configured/);
   });
 });
 

@@ -12,7 +12,7 @@ import path from "node:path";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type FinancingStatus, type InvoiceStatus } from "../src/generated/prisma/client";
-import { appendAuditEntry } from "../src/lib/audit-chain";
+import { appendAuditEntry, initialiseEmptyAuditChain } from "../src/lib/audit-chain";
 import { calculateDiscount } from "../src/lib/financing";
 import { buildInvoiceDocument, demoClock, GST_RATE_PERCENT, resolveDemoDataset } from "../src/lib/demo/catalogue";
 import { renderBrokerageInvoicePdf, splitGstInclusive } from "../src/lib/pdf/brokerage-invoice";
@@ -61,9 +61,8 @@ async function reset() {
     db.sequence.deleteMany(),
     db.platformSetting.deleteMany(),
   ]);
-  // The audit log was emptied, so there are no pre-chain rows left to seal.
-  const sealed = { legacyCutoffSeq: 0n, legacySealedAt: new Date() };
-  await db.auditChainState.upsert({ where: { id: 1 }, create: { id: 1, ...sealed }, update: sealed });
+  // The audit log was emptied: start a fresh chain signed with the configured audit key.
+  await db.$transaction((tx) => initialiseEmptyAuditChain(tx));
   await rm(path.join(STORAGE_ROOT, "invoices"), { recursive: true, force: true });
 }
 

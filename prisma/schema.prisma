@@ -466,12 +466,26 @@ model AuditAnchor {
   @@index([seq])
 }
 
-/// Singleton (id = 1). Rows with seq <= legacyCutoffSeq predate the chain and are sealed exactly once
-/// by `npm run audit:backfill`; any other row without a hash is an integrity failure.
+/// Singleton (id = 1). `legacyCutoffSeq` is fixed by the migration: rows up to it predate the chain and
+/// are sealed once by the operator (`npm run audit:seal-legacy`), which then HMAC-signs this row with
+/// the current audit key. Until it is signed, appends are refused.
 model AuditChainState {
   id              Int       @id @default(1)
   legacyCutoffSeq BigInt
   legacySealedAt  DateTime?
+  keyId           String?
+  signature       String?
+}
+
+/// The sequence range each audit key sealed. Closed ranges are signed by the successor key, the open
+/// range by its own key, so a retired key cannot validate rows written after its retirement.
+model AuditKeyEpoch {
+  keyId         String   @id
+  fromSeq       BigInt   @unique
+  toSeq         BigInt?
+  signedByKeyId String
+  signature     String
+  recordedAt    DateTime @default(now())
 }
 
 enum AuditChainStatus {

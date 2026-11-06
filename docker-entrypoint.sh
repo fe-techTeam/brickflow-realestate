@@ -39,10 +39,6 @@ const deadline = Date.now() + 60_000;
 echo "Applying database migrations"
 node node_modules/prisma/build/index.js migrate deploy
 
-# One-time sealing of audit rows that predate the hash chain. The database records when it ran, so
-# every later start only reads that marker and changes nothing.
-node node_modules/tsx/dist/cli.mjs scripts/audit-chain.ts backfill
-
 user_count=$(node -e '
 const { Client } = require("pg");
 const client = new Client({ connectionString: process.env.DATABASE_URL });

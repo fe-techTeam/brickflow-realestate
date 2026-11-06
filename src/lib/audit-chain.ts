@@ -18,23 +18,31 @@
  *   numbers are rejected so two different rows can never serialise to the same text;
  * - `metadata` is hashed as the exact text stored in the column (it is already serialised JSON).
  *
- * Appends take a transaction-scoped PostgreSQL advisory lock, so concurrent writers are serialised
- * into a single chain, and refuse to extend a head that is unsealed or fails its HMAC (fail closed).
- * Rows that predate the chain (seq <= AuditChainState.legacyCutoffSeq) are sealed exactly once by
- * `sealLegacyAuditRows`; a missing hash anywhere else is reported as a broken link and never re-sealed.
- * Daily anchors are HMAC-signed statements of the head; they are also exported for write-once storage
- * so that removal of the newest rows can be detected even if the database copy is altered.
+ * Trust anchors, all HMAC-signed so database access alone cannot change them:
+ * - AuditChainState: the legacy cutoff fixed by the migration and when it was sealed, signed by the
+ *   current key. Unsigned means the chain is not initialised and every append is refused.
+ * - AuditKeyEpoch: the seq range each key sealed. Closed ranges are signed by the successor key, the
+ *   open range by its own (current) key, so key ids only move forward and a retired key cannot
+ *   validate rows after its range.
+ * - AuditAnchor: daily signed statements of the head, also exported for write-once storage.
+ *
+ * Appends take a transaction-scoped PostgreSQL advisory lock (one global chain under concurrency) and
+ * fail closed: they are refused unless the state, the key ranges and the head all verify. Nothing is
+ * ever sealed implicitly; legacy rows are sealed only by the explicit operator command.
  *
  * This module has no server-only imports so the seed and the CLI scripts can use it directly.
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { AuditLog, Prisma } from "../generated/prisma/client";
+import type { AuditKeyEpoch, AuditLog, Prisma } from "../generated/prisma/client";
 import { auditKeyring, type AuditKeyring } from "./audit-keys";
 
 export const AUDIT_HASH_VERSION = 1;
 export const ANCHOR_STATEMENT_TYPE = "brickflow.audit.anchor";
+const STATE_STATEMENT_TYPE = "brickflow.audit.state";
+const EPOCH_STATEMENT_TYPE = "brickflow.audit.key_epoch";
 /** Fixed log event name for published anchors, so log pipelines can route them to archival storage. */
 export const ANCHOR_LOG_EVENT = "audit.anchor.published";
+export const SEAL_COMMAND = "npm run audit:seal-legacy";
 
 /** Advisory lock key for the audit chain ("BFAUDIT1" as a 64-bit integer). */
 const AUDIT_CHAIN_LOCK_SQL = "SELECT pg_advisory_xact_lock(4775576289346671665)";
@@ -113,26 +121,37 @@ function sameHex(a: string, b: string): boolean {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
+function signWith(keyring: AuditKeyring, keyId: string, input: string): string {
+  const key = keyring.keys.get(keyId);
+  if (!key) throw new AuditChainIntegrityError("key_unknown", `Audit key "${keyId}" is not configured`);
+  return hmacHex(key, input);
+}
+
+function validSignature(keyring: AuditKeyring, keyId: string, input: string, signature: string): boolean {
+  const key = keyring.keys.get(keyId);
+  return Boolean(key) && sameHex(hmacHex(key!, input), signature);
+}
+
 /** HMAC of a row under the given key (defaults to the current key). */
 export function computeAuditHash(row: AuditHashFields, keyId?: string, keyring: AuditKeyring = auditKeyring()): string {
   const id = keyId ?? keyring.currentKeyId;
-  const key = keyring.keys.get(id);
-  if (!key) throw new AuditChainIntegrityError(`Unknown audit key id "${id}"`);
-  return hmacHex(key, auditHashInput(row, id));
+  return signWith(keyring, id, auditHashInput(row, id));
 }
 
-type RowCheck = { ok: true } | { ok: false; reason: "unsealed" | "unknown_key" | "hash_mismatch" };
+export type AuditChainErrorCode =
+  | "chain_unsealed"
+  | "state_invalid"
+  | "epoch_invalid"
+  | "head_invalid"
+  | "key_unknown"
+  | "seal_refused"
+  | "rotation_refused"
+  | "anchor_refused";
 
-function checkRowHash(row: AuditHashFields & { hash: string | null; hashKeyId: string | null }, keyring: AuditKeyring): RowCheck {
-  if (row.hash === null || row.hashKeyId === null) return { ok: false, reason: "unsealed" };
-  const key = keyring.keys.get(row.hashKeyId);
-  if (!key) return { ok: false, reason: "unknown_key" };
-  return sameHex(hmacHex(key, auditHashInput(row, row.hashKeyId)), row.hash) ? { ok: true } : { ok: false, reason: "hash_mismatch" };
-}
-
-/** Raised when the chain cannot be safely extended; the caller's transaction must roll back. */
+/** Raised when the chain cannot be safely extended or changed; the caller's transaction must roll back. */
 export class AuditChainIntegrityError extends Error {
   constructor(
+    readonly code: AuditChainErrorCode,
     message: string,
     readonly seq: bigint | null = null,
   ) {
@@ -148,6 +167,120 @@ async function lockChain(tx: AuditClient): Promise<void> {
   await tx.$executeRawUnsafe(AUDIT_CHAIN_LOCK_SQL);
 }
 
+/* ----------------------------------------------------------------------------------------------
+ * Signed chain state and key epochs
+ * -------------------------------------------------------------------------------------------- */
+
+type StateRow = { legacyCutoffSeq: bigint; legacySealedAt: Date | null; keyId: string | null; signature: string | null };
+
+function stateStatement(cutoff: bigint, sealedAt: Date, keyId: string): string {
+  return canonicalJson({ type: STATE_STATEMENT_TYPE, v: 1, legacyCutoffSeq: cutoff, legacySealedAt: sealedAt, keyId });
+}
+
+type EpochRow = Pick<AuditKeyEpoch, "keyId" | "fromSeq" | "toSeq" | "signedByKeyId" | "signature">;
+
+function epochStatement(epoch: Pick<EpochRow, "keyId" | "fromSeq" | "toSeq" | "signedByKeyId">): string {
+  return canonicalJson({ type: EPOCH_STATEMENT_TYPE, v: 1, keyId: epoch.keyId, fromSeq: epoch.fromSeq, toSeq: epoch.toSeq, signedByKeyId: epoch.signedByKeyId });
+}
+
+function signEpoch(keyring: AuditKeyring, epoch: Pick<EpochRow, "keyId" | "fromSeq" | "toSeq" | "signedByKeyId">): string {
+  return signWith(keyring, epoch.signedByKeyId, epochStatement(epoch));
+}
+
+type Check = { ok: true } | { ok: false; code: AuditChainErrorCode; detail: string };
+
+/** The state row must be signed by `expectedKeyId` (normally the current key) and mark the chain sealed. */
+function checkState(state: StateRow | null, keyring: AuditKeyring, expectedKeyId: string = keyring.currentKeyId): Check {
+  if (!state) return { ok: false, code: "state_invalid", detail: "the audit chain state row is missing" };
+  if (state.signature === null && state.keyId === null && state.legacySealedAt === null) {
+    return { ok: false, code: "chain_unsealed", detail: `the audit chain has not been initialised; run \`${SEAL_COMMAND}\` once` };
+  }
+  if (state.signature === null || state.keyId === null || state.legacySealedAt === null) {
+    return { ok: false, code: "state_invalid", detail: "the audit chain state is incomplete (signature, key or seal date missing)" };
+  }
+  if (!validSignature(keyring, state.keyId, stateStatement(state.legacyCutoffSeq, state.legacySealedAt, state.keyId), state.signature)) {
+    return { ok: false, code: "state_invalid", detail: "the audit chain state signature does not verify" };
+  }
+  if (state.keyId !== expectedKeyId) return { ok: false, code: "state_invalid", detail: `the audit chain state is signed with "${state.keyId}", not the current key "${expectedKeyId}"` };
+  return { ok: true };
+}
+
+/**
+ * Key ranges must start at 1, be contiguous, have exactly one open (last) range, never reuse a key id,
+ * and carry valid signatures: a closed range by its successor's key, the open range by its own key.
+ */
+function checkEpochs(epochs: EpochRow[], keyring: AuditKeyring, expectedOpenKeyId: string = keyring.currentKeyId): Check {
+  if (epochs.length === 0) return { ok: false, code: "epoch_invalid", detail: "no audit key range is recorded" };
+  const sorted = [...epochs].sort((a, b) => (a.fromSeq < b.fromSeq ? -1 : 1));
+  let expectedFrom = 1n;
+  for (const [i, epoch] of sorted.entries()) {
+    const last = i === sorted.length - 1;
+    if (epoch.fromSeq !== expectedFrom) return { ok: false, code: "epoch_invalid", detail: `the range of key "${epoch.keyId}" starts at ${epoch.fromSeq}, expected ${expectedFrom}` };
+    if (last !== (epoch.toSeq === null)) return { ok: false, code: "epoch_invalid", detail: `only the newest key range may be open (key "${epoch.keyId}")` };
+    if (epoch.toSeq !== null && epoch.toSeq < epoch.fromSeq - 1n) return { ok: false, code: "epoch_invalid", detail: `the range of key "${epoch.keyId}" ends before it starts` };
+    const signer = last ? epoch.keyId : sorted[i + 1]!.keyId;
+    if (epoch.signedByKeyId !== signer) return { ok: false, code: "epoch_invalid", detail: `the range of key "${epoch.keyId}" must be signed by "${signer}"` };
+    if (!keyring.keys.has(epoch.keyId)) return { ok: false, code: "epoch_invalid", detail: `audit key "${epoch.keyId}" is not configured (keep retired keys in AUDIT_HMAC_PREVIOUS_KEYS)` };
+    if (!validSignature(keyring, signer, epochStatement(epoch), epoch.signature)) return { ok: false, code: "epoch_invalid", detail: `the range of key "${epoch.keyId}" has an invalid signature` };
+    if (epoch.toSeq !== null) expectedFrom = epoch.toSeq + 1n;
+  }
+  const open = sorted.at(-1)!;
+  if (open.keyId !== expectedOpenKeyId) return { ok: false, code: "epoch_invalid", detail: `the open key range belongs to "${open.keyId}", not the current key "${expectedOpenKeyId}"` };
+  return { ok: true };
+}
+
+function epochFor(epochs: EpochRow[], seq: bigint): EpochRow | undefined {
+  return epochs.find((e) => e.fromSeq <= seq && (e.toSeq === null || seq <= e.toSeq));
+}
+
+async function loadTrust(client: AuditClient) {
+  const [state, epochs] = await Promise.all([client.auditChainState.findUnique({ where: { id: 1 } }), client.auditKeyEpoch.findMany({ orderBy: { fromSeq: "asc" } })]);
+  return { state, epochs };
+}
+
+type RowCheck = { ok: true } | { ok: false; reason: "unsealed" | "key_out_of_range" | "hash_mismatch" };
+
+function checkRow(row: AuditHashFields & { hash: string | null; hashKeyId: string | null }, epochs: EpochRow[], keyring: AuditKeyring): RowCheck {
+  if (row.hash === null || row.hashKeyId === null) return { ok: false, reason: "unsealed" };
+  if (epochFor(epochs, row.seq)?.keyId !== row.hashKeyId) return { ok: false, reason: "key_out_of_range" };
+  return validSignature(keyring, row.hashKeyId, auditHashInput(row, row.hashKeyId), row.hash) ? { ok: true } : { ok: false, reason: "hash_mismatch" };
+}
+
+/** Everything an append relies on: signed state, valid key ranges and a verifiable head. */
+async function assertWritable(client: AuditClient, keyring: AuditKeyring): Promise<AuditLog | null> {
+  const { state, epochs } = await loadTrust(client);
+  for (const check of [checkState(state, keyring), checkEpochs(epochs, keyring)]) {
+    if (!check.ok) throw new AuditChainIntegrityError(check.code, `Refusing to write audit entries: ${check.detail}`);
+  }
+  const head = await client.auditLog.findFirst({ orderBy: { seq: "desc" } });
+  if (!head) return null;
+  const check = checkRow(head, epochs, keyring);
+  if (!check.ok) {
+    const why = check.reason === "unsealed" ? "has no hash" : check.reason === "key_out_of_range" ? `is sealed with key "${head.hashKeyId}", which does not own that position` : "does not match its hash";
+    throw new AuditChainIntegrityError("head_invalid", `Refusing to write audit entries: the newest entry (${head.seq}) ${why}`, head.seq);
+  }
+  const open = epochs.at(-1)!;
+  if (head.seq < open.fromSeq - 1n) throw new AuditChainIntegrityError("head_invalid", `Refusing to write audit entries: entries ${head.seq + 1n}–${open.fromSeq - 1n} are missing`, head.seq);
+  return head;
+}
+
+export type AuditChainHealth = "ok" | "unsealed" | "broken";
+
+/** Cheap readiness check: could an audit entry be written right now? Never throws for integrity problems. */
+export async function auditChainHealth(client: AuditClient, keyring: AuditKeyring = auditKeyring()): Promise<{ status: AuditChainHealth; detail?: string }> {
+  try {
+    await assertWritable(client, keyring);
+    return { status: "ok" };
+  } catch (error) {
+    if (error instanceof AuditChainIntegrityError) return { status: error.code === "chain_unsealed" ? "unsealed" : "broken", detail: error.message };
+    throw error;
+  }
+}
+
+/* ----------------------------------------------------------------------------------------------
+ * Appending
+ * -------------------------------------------------------------------------------------------- */
+
 export interface AuditEntryData {
   actorUserId: string | null;
   actorName: string;
@@ -162,21 +295,13 @@ export interface AuditEntryData {
 }
 
 /**
- * Appends one row to the chain. Must be called with an interactive-transaction client: the advisory
- * lock is held until that transaction commits or rolls back, so the next writer always sees this row
- * as the head. Refuses (AuditChainIntegrityError) when the head is unsealed or fails its HMAC, so a
- * damaged chain is never extended or silently repaired.
+ * Appends one row, sealed with the current key. Must be called with an interactive-transaction client:
+ * the advisory lock is held until that transaction ends, so the next writer sees this row as the head.
+ * Refuses (AuditChainIntegrityError) unless the signed state, the key ranges and the head all verify.
  */
 export async function appendAuditEntry(client: AuditClient, entry: AuditEntryData, keyring: AuditKeyring = auditKeyring()): Promise<AuditLog> {
   await lockChain(client);
-  const head = await client.auditLog.findFirst({ orderBy: { seq: "desc" } });
-  if (head) {
-    const check = checkRowHash(head, keyring);
-    if (!check.ok) {
-      const why = check.reason === "unsealed" ? "has no hash" : check.reason === "unknown_key" ? `was sealed with an unknown key (${head.hashKeyId})` : "does not match its hash";
-      throw new AuditChainIntegrityError(`Audit chain head (entry ${head.seq}) ${why}; refusing to append`, head.seq);
-    }
-  }
+  const head = await assertWritable(client, keyring);
   const fields: AuditHashFields = {
     seq: (head?.seq ?? 0n) + 1n,
     createdAt: entry.createdAt ?? new Date(),
@@ -195,48 +320,184 @@ export async function appendAuditEntry(client: AuditClient, entry: AuditEntryDat
   return client.auditLog.create({ data: { ...fields, hash: computeAuditHash(fields, keyId, keyring), hashKeyId: keyId } });
 }
 
+/* ----------------------------------------------------------------------------------------------
+ * One-time legacy sealing (operator command) and key rotation
+ * -------------------------------------------------------------------------------------------- */
+
+export interface LegacySealPlan {
+  cutoffSeq: bigint;
+  rows: number;
+  maxSeq: bigint;
+  oldest: Date | null;
+  newest: Date | null;
+  sealed: boolean;
+}
+
+/** Read-only summary for the operator before sealing (`--dry-run`). */
+export async function describeLegacySeal(client: AuditClient): Promise<LegacySealPlan> {
+  const [state, agg] = await Promise.all([
+    client.auditChainState.findUnique({ where: { id: 1 } }),
+    client.auditLog.aggregate({ _count: { _all: true }, _max: { seq: true, createdAt: true }, _min: { createdAt: true } }),
+  ]);
+  return {
+    cutoffSeq: state?.legacyCutoffSeq ?? 0n,
+    rows: agg._count._all,
+    maxSeq: agg._max.seq ?? 0n,
+    oldest: agg._min.createdAt ?? null,
+    newest: agg._max.createdAt ?? null,
+    sealed: Boolean(state?.signature),
+  };
+}
+
 export interface LegacySealResult {
-  status: "sealed" | "already_sealed" | "nothing_to_seal";
+  status: "sealed" | "already_sealed";
   cutoffSeq: bigint;
   sealed: number;
+  anchor: SignedAnchor | null;
+}
+
+function refuseSeal(message: string): never {
+  throw new AuditChainIntegrityError("seal_refused", `Refusing to seal legacy audit entries: ${message}`);
 }
 
 /**
- * Seals the rows that existed before the chain (seq <= legacyCutoffSeq), in seq order, exactly once:
- * the state row is claimed with a conditional update in the same transaction, so a second run (or a
- * concurrent one) does nothing. Rows above the cutoff are never touched.
+ * Operator command: seals the rows that predate the chain (seq 1..legacyCutoffSeq) with the current key,
+ * records the first key range, signs the state row and anchors the legacy head. It runs once. Once the
+ * state is signed, later runs only verify that signature. It refuses if the state was tampered with, if any
+ * row already carries a key, if anchors or successful checks exist, or if the cutoff does not match
+ * the rows that exist (a raised cutoff).
  */
-export async function sealLegacyAuditRows(tx: AuditClient, keyring: AuditKeyring = auditKeyring()): Promise<LegacySealResult> {
+export async function sealLegacyAuditRows(tx: AuditClient, keyring: AuditKeyring = auditKeyring(), now: Date = new Date()): Promise<LegacySealResult> {
   await lockChain(tx);
   const state = await tx.auditChainState.findUnique({ where: { id: 1 } });
-  if (!state) throw new AuditChainIntegrityError("AuditChainState is missing; apply the database migrations first");
-  if (state.legacySealedAt) return { status: "already_sealed", cutoffSeq: state.legacyCutoffSeq, sealed: 0 };
-  const claimed = await tx.auditChainState.updateMany({ where: { id: 1, legacySealedAt: null }, data: { legacySealedAt: new Date() } });
-  if (claimed.count !== 1) return { status: "already_sealed", cutoffSeq: state.legacyCutoffSeq, sealed: 0 };
-  if (state.legacyCutoffSeq === 0n) return { status: "nothing_to_seal", cutoffSeq: 0n, sealed: 0 };
+  if (!state) refuseSeal("the chain state row is missing; apply the database migrations first");
 
+  if (state.signature !== null || state.keyId !== null || state.legacySealedAt !== null) {
+    const check = checkState(state, keyring, state.keyId ?? keyring.currentKeyId);
+    if (!check.ok) refuseSeal(check.detail);
+    return { status: "already_sealed", cutoffSeq: state.legacyCutoffSeq, sealed: 0, anchor: null };
+  }
+
+  const [keyed, epochs, anchors, checks, agg] = await Promise.all([
+    tx.auditLog.count({ where: { OR: [{ hashKeyId: { not: null } }, { hash: { not: null } }] } }),
+    tx.auditKeyEpoch.count(),
+    tx.auditAnchor.count(),
+    tx.auditChainCheck.count({ where: { NOT: { status: "BROKEN", brokenReason: { in: ["unsealed", "chain_unsealed"] } } } }),
+    tx.auditLog.aggregate({ _count: { _all: true }, _max: { seq: true } }),
+  ]);
+  if (keyed > 0) refuseSeal(`${keyed} entries already carry a hash or key id`);
+  if (epochs > 0) refuseSeal("audit key ranges already exist");
+  if (anchors > 0) refuseSeal("daily anchors already exist");
+  if (checks > 0) refuseSeal("verification history shows the chain was already in use");
+  const cutoff = state.legacyCutoffSeq;
+  const maxSeq = agg._max.seq ?? 0n;
+  if (cutoff !== maxSeq || BigInt(agg._count._all) !== cutoff) {
+    refuseSeal(`the recorded cutoff (${cutoff}) does not match the entries present (${agg._count._all} entries, highest ${maxSeq})`);
+  }
+
+  const keyId = keyring.currentKeyId;
   let prevHash: string | null = null;
   let cursor = 1n;
-  let sealed = 0;
-  const keyId = keyring.currentKeyId;
   for (;;) {
-    const rows = await tx.auditLog.findMany({ where: { seq: { gte: cursor, lte: state.legacyCutoffSeq } }, orderBy: { seq: "asc" }, take: 500 });
+    const rows = await tx.auditLog.findMany({ where: { seq: { gte: cursor, lte: cutoff } }, orderBy: { seq: "asc" }, take: 500 });
     if (rows.length === 0) break;
     for (const row of rows) {
-      if (row.seq !== cursor) throw new AuditChainIntegrityError(`Legacy audit entry ${cursor} is missing; refusing to seal`, cursor);
-      if (row.hash !== null) throw new AuditChainIntegrityError(`Legacy audit entry ${row.seq} already has a hash; refusing to seal`, row.seq);
+      if (row.seq !== cursor) refuseSeal(`entry ${cursor} is missing`);
       const hash = computeAuditHash({ ...row, prevHash }, keyId, keyring);
       await tx.auditLog.update({ where: { id: row.id }, data: { prevHash, hash, hashKeyId: keyId } });
       prevHash = hash;
       cursor += 1n;
-      sealed += 1;
     }
   }
-  if (cursor !== state.legacyCutoffSeq + 1n) throw new AuditChainIntegrityError(`Legacy audit entries end at ${cursor - 1n}, expected ${state.legacyCutoffSeq}`, cursor);
-  // The first post-cutoff row (if any) must have been written after sealing, i.e. it links to the legacy head.
-  const next = await tx.auditLog.findUnique({ where: { seq: state.legacyCutoffSeq + 1n } });
-  if (next && next.prevHash !== prevHash) throw new AuditChainIntegrityError(`Audit entry ${next.seq} does not link to the sealed legacy entries`, next.seq);
-  return { status: "sealed", cutoffSeq: state.legacyCutoffSeq, sealed };
+
+  const epoch = { keyId, fromSeq: 1n, toSeq: null, signedByKeyId: keyId };
+  await tx.auditKeyEpoch.create({ data: { ...epoch, signature: signEpoch(keyring, epoch), recordedAt: now } });
+  await tx.auditChainState.update({ where: { id: 1 }, data: { legacySealedAt: now, keyId, signature: signWith(keyring, keyId, stateStatement(cutoff, now, keyId)) } });
+  const anchored = cutoff > 0n ? await anchorAuditHead(tx, now, keyring) : null;
+  return { status: "sealed", cutoffSeq: cutoff, sealed: Number(cutoff), anchor: anchored?.anchor ?? null };
+}
+
+/** Starts a fresh, empty chain (used by the demo seed after it wipes the audit log). */
+export async function initialiseEmptyAuditChain(tx: AuditClient, keyring: AuditKeyring = auditKeyring(), now: Date = new Date()): Promise<LegacySealResult> {
+  await lockChain(tx);
+  if ((await tx.auditLog.count()) > 0) throw new AuditChainIntegrityError("seal_refused", "Refusing to initialise the audit chain: the audit log is not empty");
+  await tx.auditKeyEpoch.deleteMany();
+  await tx.auditAnchor.deleteMany();
+  await tx.auditChainCheck.deleteMany();
+  const blank = { legacyCutoffSeq: 0n, legacySealedAt: null, keyId: null, signature: null };
+  await tx.auditChainState.upsert({ where: { id: 1 }, create: { id: 1, ...blank }, update: blank });
+  return sealLegacyAuditRows(tx, keyring, now);
+}
+
+export interface KeyRotationResult {
+  fromKeyId: string;
+  toKeyId: string;
+  retiredThroughSeq: bigint;
+  rotationEntrySeq: bigint;
+}
+
+function refuseRotation(message: string): never {
+  throw new AuditChainIntegrityError("rotation_refused", `Refusing to rotate the audit key: ${message}`);
+}
+
+/**
+ * Operator command, run with the NEW key as AUDIT_HMAC_KEY / AUDIT_HMAC_KEY_ID and the old one in
+ * AUDIT_HMAC_PREVIOUS_KEYS. Closes the old key's range at the current head (signed by the new key),
+ * opens the new key's range, re-signs the state and records an `audit.key_rotated` entry with the new
+ * key. Key ids can only move forward: a key id that sealed earlier entries can never be used again.
+ */
+export async function rotateAuditKey(tx: AuditClient, keyring: AuditKeyring = auditKeyring(), now: Date = new Date()): Promise<KeyRotationResult> {
+  await lockChain(tx);
+  const { state, epochs } = await loadTrust(tx);
+  const open = epochs.at(-1);
+  if (!state || !open) refuseRotation(`the audit chain has not been initialised; run \`${SEAL_COMMAND}\` first`);
+  const newKeyId = keyring.currentKeyId;
+  if (open.keyId === newKeyId) refuseRotation(`"${newKeyId}" is already the current key; set the new key as AUDIT_HMAC_KEY with a new AUDIT_HMAC_KEY_ID`);
+  if (epochs.some((e) => e.keyId === newKeyId)) refuseRotation(`key id "${newKeyId}" was used before; key ids may only move forward`);
+  if (!keyring.keys.has(open.keyId)) refuseRotation(`the retiring key "${open.keyId}" must be listed in AUDIT_HMAC_PREVIOUS_KEYS`);
+  for (const check of [checkState(state, keyring, open.keyId), checkEpochs(epochs, keyring, open.keyId)]) if (!check.ok) refuseRotation(check.detail);
+  const head = await tx.auditLog.findFirst({ orderBy: { seq: "desc" } });
+  if (head) {
+    const check = checkRow(head, epochs, keyring);
+    if (!check.ok) refuseRotation(`the newest entry (${head.seq}) does not verify (${check.reason})`);
+  }
+  const retiredThroughSeq = head?.seq ?? 0n;
+  if (retiredThroughSeq < open.fromSeq - 1n) refuseRotation("the chain is shorter than the open key range");
+
+  const closed = { keyId: open.keyId, fromSeq: open.fromSeq, toSeq: retiredThroughSeq, signedByKeyId: newKeyId };
+  await tx.auditKeyEpoch.update({ where: { keyId: open.keyId }, data: { toSeq: closed.toSeq, signedByKeyId: newKeyId, signature: signEpoch(keyring, closed) } });
+  const opened = { keyId: newKeyId, fromSeq: retiredThroughSeq + 1n, toSeq: null, signedByKeyId: newKeyId };
+  await tx.auditKeyEpoch.create({ data: { ...opened, signature: signEpoch(keyring, opened), recordedAt: now } });
+  await tx.auditChainState.update({
+    where: { id: 1 },
+    data: { keyId: newKeyId, signature: signWith(keyring, newKeyId, stateStatement(state.legacyCutoffSeq, state.legacySealedAt!, newKeyId)) },
+  });
+  const entry = await appendAuditEntry(
+    tx,
+    {
+      actorUserId: null,
+      actorName: "System",
+      actorOrgId: null,
+      actorRole: null,
+      action: "audit.key_rotated",
+      entityType: "AuditLog",
+      entityId: newKeyId,
+      summary: `Rotated the audit key from "${open.keyId}" to "${newKeyId}" after entry ${retiredThroughSeq}`,
+      metadata: JSON.stringify({ fromKeyId: open.keyId, toKeyId: newKeyId, retiredThroughSeq: retiredThroughSeq.toString() }),
+      createdAt: now,
+    },
+    keyring,
+  );
+  return { fromKeyId: open.keyId, toKeyId: newKeyId, retiredThroughSeq, rotationEntrySeq: entry.seq };
+}
+
+/** Convenience wrappers for scripts holding a root client. */
+export async function sealLegacyAuditRowsInTransaction(client: RootClient): Promise<LegacySealResult> {
+  return client.$transaction((tx) => sealLegacyAuditRows(tx), { timeout: 10 * 60_000, maxWait: 30_000 });
+}
+
+export async function rotateAuditKeyInTransaction(client: RootClient): Promise<KeyRotationResult> {
+  return client.$transaction((tx) => rotateAuditKey(tx), { timeout: 10 * 60_000, maxWait: 30_000 });
 }
 
 /* ----------------------------------------------------------------------------------------------
@@ -258,16 +519,9 @@ export interface SignedAnchor {
   signature: string;
 }
 
-function signStatement(statement: AnchorStatement, keyring: AuditKeyring): string {
-  const key = keyring.keys.get(statement.keyId);
-  if (!key) throw new AuditChainIntegrityError(`Unknown audit key id "${statement.keyId}"`);
-  return hmacHex(key, canonicalJson({ ...statement }));
-}
-
 export function verifyAnchorSignature(anchor: SignedAnchor, keyring: AuditKeyring = auditKeyring()): boolean {
-  const key = keyring.keys.get(anchor.statement.keyId);
-  if (!key || anchor.statement.type !== ANCHOR_STATEMENT_TYPE || typeof anchor.signature !== "string") return false;
-  return sameHex(hmacHex(key, canonicalJson({ ...anchor.statement })), anchor.signature);
+  if (anchor.statement?.type !== ANCHOR_STATEMENT_TYPE || typeof anchor.signature !== "string") return false;
+  return validSignature(keyring, anchor.statement.keyId, canonicalJson({ ...anchor.statement }), anchor.signature);
 }
 
 export function anchorFromRow(row: { day: string; seq: bigint; hash: string; keyId: string; signature: string; anchoredAt: Date }): SignedAnchor {
@@ -312,16 +566,21 @@ export async function listSignedAnchors(client: AuditClient): Promise<SignedAnch
  * -------------------------------------------------------------------------------------------- */
 
 export type ChainBreakReason =
+  | "chain_unsealed"
+  | "state_invalid"
+  | "key_epoch_invalid"
   | "sequence_gap"
   | "unsealed"
-  | "unknown_key"
+  | "key_out_of_range"
   | "prev_hash_mismatch"
   | "hash_mismatch"
   | "anchor_signature_invalid"
+  | "anchor_key_out_of_range"
   | "anchor_mismatch"
   | "truncated";
 
 export interface ChainBreak {
+  /** Position of the broken link; 0 when the chain state or key ranges themselves fail. */
   seq: bigint;
   auditId: string | null;
   reason: ChainBreakReason;
@@ -339,12 +598,16 @@ export interface ChainVerification {
 }
 
 export const CHAIN_BREAK_LABELS: Record<ChainBreakReason, string> = {
+  chain_unsealed: "Audit chain not initialised",
+  state_invalid: "Audit chain state does not verify",
+  key_epoch_invalid: "Audit key ranges do not verify",
   sequence_gap: "Missing entry (sequence gap)",
   unsealed: "Entry without a hash",
-  unknown_key: "Entry sealed with an unknown key",
+  key_out_of_range: "Entry sealed with a key outside its range",
   prev_hash_mismatch: "Link to the previous entry does not match",
   hash_mismatch: "Entry content does not match its hash",
   anchor_signature_invalid: "Daily anchor signature is invalid",
+  anchor_key_out_of_range: "Daily anchor signed with a retired key",
   anchor_mismatch: "Entry differs from its signed daily anchor",
   truncated: "Entries removed after a signed daily anchor",
 };
@@ -375,6 +638,14 @@ export async function verifyAuditChain(client: AuditClient, options: VerifyOptio
     broken,
   });
 
+  const { state, epochs } = await loadTrust(client);
+  const stateCheck = checkState(state, keyring);
+  if (!stateCheck.ok) {
+    return withHead(client, result({ seq: 0n, auditId: null, reason: stateCheck.code === "chain_unsealed" ? "chain_unsealed" : "state_invalid", detail: stateCheck.detail }));
+  }
+  const epochCheck = checkEpochs(epochs, keyring);
+  if (!epochCheck.ok) return withHead(client, result({ seq: 0n, auditId: null, reason: "key_epoch_invalid", detail: epochCheck.detail }));
+
   for (;;) {
     const rows = await client.auditLog.findMany({ where: { seq: { gte: expectedSeq } }, orderBy: { seq: "asc" }, take: batchSize });
     if (rows.length === 0) break;
@@ -383,17 +654,16 @@ export async function verifyAuditChain(client: AuditClient, options: VerifyOptio
         const missing = row.seq - expectedSeq === 1n ? `entry ${expectedSeq} is missing` : `entries ${expectedSeq}–${row.seq - 1n} are missing`;
         return withHead(client, result({ seq: expectedSeq, auditId: row.id, reason: "sequence_gap", detail: missing }));
       }
-      const check = checkRowHash(row, keyring);
-      if (!check.ok && check.reason !== "hash_mismatch") {
-        const detail = check.reason === "unsealed" ? `entry ${row.seq} has no hash` : `entry ${row.seq} was sealed with unknown key "${row.hashKeyId}"`;
-        return withHead(client, result({ seq: row.seq, auditId: row.id, reason: check.reason, detail }));
+      const check = checkRow(row, epochs, keyring);
+      if (!check.ok && check.reason === "unsealed") return withHead(client, result({ seq: row.seq, auditId: row.id, reason: "unsealed", detail: `entry ${row.seq} has no hash` }));
+      if (!check.ok && check.reason === "key_out_of_range") {
+        const owner = epochFor(epochs, row.seq)?.keyId;
+        return withHead(client, result({ seq: row.seq, auditId: row.id, reason: "key_out_of_range", detail: `entry ${row.seq} is sealed with key "${row.hashKeyId}", but that position belongs to "${owner}"` }));
       }
       if (row.prevHash !== prevHash) {
         return withHead(client, result({ seq: row.seq, auditId: row.id, reason: "prev_hash_mismatch", detail: `entry ${row.seq} does not link to entry ${row.seq - 1n}` }));
       }
-      if (!check.ok) {
-        return withHead(client, result({ seq: row.seq, auditId: row.id, reason: "hash_mismatch", detail: `entry ${row.seq} was modified after it was recorded` }));
-      }
+      if (!check.ok) return withHead(client, result({ seq: row.seq, auditId: row.id, reason: "hash_mismatch", detail: `entry ${row.seq} was modified after it was recorded` }));
       prevHash = row.hash;
       verifiedThroughSeq = row.seq;
       checkedRows += 1;
@@ -413,6 +683,10 @@ export async function verifyAuditChain(client: AuditClient, options: VerifyOptio
     const seq = BigInt(anchor.statement.seq);
     if (!verifyAnchorSignature(anchor, keyring)) {
       return result({ seq, auditId: null, reason: "anchor_signature_invalid", detail: `the anchor of ${anchor.statement.day} is not signed by a known key` }, checked);
+    }
+    const signer = epochs.find((e) => e.keyId === anchor.statement.keyId);
+    if (!signer || seq < signer.fromSeq - 1n || (signer.toSeq !== null && seq > signer.toSeq)) {
+      return result({ seq, auditId: null, reason: "anchor_key_out_of_range", detail: `the anchor of ${anchor.statement.day} is signed with key "${anchor.statement.keyId}", which did not seal entry ${seq}` }, checked);
     }
     if (seq > head) {
       return result({ seq: head + 1n, auditId: null, reason: "truncated", detail: `the anchor of ${anchor.statement.day} covers entry ${seq}, but the chain ends at entry ${head}` }, checked);
@@ -459,13 +733,13 @@ export interface AuditAnchorResult {
 }
 
 /**
- * Records an HMAC-signed statement of the current chain head for the given UTC day (once per day;
- * existing anchors are never changed). Refuses to anchor a chain that fails verification. Callers
- * should publish the returned anchor (log line `audit.anchor.published`, `npm run audit:export-anchors`).
+ * Records a statement of the current chain head for the given UTC day, signed with the current key
+ * (once per day; existing anchors are never changed). Refuses to anchor a chain that fails
+ * verification. Callers publish the result (log line `audit.anchor.published`, `audit:export-anchors`).
  */
 export async function anchorAuditHead(client: AuditClient, now: Date = new Date(), keyring: AuditKeyring = auditKeyring()): Promise<AuditAnchorResult | null> {
   const verification = await verifyAuditChain(client, { keyring });
-  if (verification.status === "BROKEN") throw new AuditChainIntegrityError(`Audit chain is broken at entry ${verification.broken?.seq}; refusing to anchor`, verification.broken?.seq ?? null);
+  if (verification.status === "BROKEN") throw new AuditChainIntegrityError("anchor_refused", `Audit chain is broken at entry ${verification.broken?.seq}; refusing to anchor`, verification.broken?.seq ?? null);
   if (verification.verifiedThroughSeq === null || verification.headHash === null) return null;
   const day = now.toISOString().slice(0, 10);
   const existing = await client.auditAnchor.findUnique({ where: { day } });
@@ -479,7 +753,7 @@ export async function anchorAuditHead(client: AuditClient, now: Date = new Date(
     keyId: keyring.currentKeyId,
     anchoredAt: now.toISOString(),
   };
-  const signature = signStatement(statement, keyring);
+  const signature = signWith(keyring, statement.keyId, canonicalJson({ ...statement }));
   try {
     await client.auditAnchor.create({ data: { day, seq: verification.verifiedThroughSeq, hash: verification.headHash, keyId: statement.keyId, signature, anchoredAt: now } });
     return { anchor: { statement, signature }, created: true };
@@ -488,9 +762,4 @@ export async function anchorAuditHead(client: AuditClient, now: Date = new Date(
     if (raced) return { anchor: anchorFromRow(raced), created: false };
     throw error;
   }
-}
-
-/** Convenience for scripts holding a root client. */
-export async function sealLegacyAuditRowsInTransaction(client: RootClient): Promise<LegacySealResult> {
-  return client.$transaction((tx) => sealLegacyAuditRows(tx), { timeout: 10 * 60_000, maxWait: 30_000 });
 }

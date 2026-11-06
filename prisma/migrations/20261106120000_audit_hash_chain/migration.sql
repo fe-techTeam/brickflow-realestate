@@ -2,8 +2,9 @@
 -- HMAC-signed daily anchors of the chain head, and a record of every verification run.
 --
 -- Existing rows receive seq in (createdAt, id) order here, and the highest such seq is fixed as the
--- legacy cutoff in "AuditChainState". Those rows (and only those) are sealed once by
--- `npm run audit:backfill`, which needs AUDIT_HMAC_KEY and therefore cannot run in SQL.
+-- legacy cutoff in "AuditChainState". Those rows (and only those) are sealed once by the operator
+-- command `npm run audit:seal-legacy`, which needs AUDIT_HMAC_KEY and signs the state row.
+-- Audited writes are refused until then.
 
 -- CreateEnum
 CREATE TYPE "AuditChainStatus" AS ENUM ('VERIFIED', 'BROKEN', 'EMPTY');
@@ -33,14 +34,30 @@ CREATE TABLE "AuditChainState" (
     "id" INTEGER NOT NULL DEFAULT 1,
     "legacyCutoffSeq" BIGINT NOT NULL,
     "legacySealedAt" TIMESTAMP(3),
+    "keyId" TEXT,
+    "signature" TEXT,
 
     CONSTRAINT "AuditChainState_pkey" PRIMARY KEY ("id")
 );
 
--- Fix the legacy cutoff once; an empty log has nothing to seal.
-INSERT INTO "AuditChainState" ("id", "legacyCutoffSeq", "legacySealedAt")
-SELECT 1, COALESCE(MAX("seq"), 0), CASE WHEN COUNT(*) = 0 THEN CURRENT_TIMESTAMP ELSE NULL END
-FROM "AuditLog";
+-- Fix the legacy cutoff. It stays unsigned until the operator runs `npm run audit:seal-legacy`.
+INSERT INTO "AuditChainState" ("id", "legacyCutoffSeq")
+SELECT 1, COALESCE(MAX("seq"), 0) FROM "AuditLog";
+
+-- CreateTable
+CREATE TABLE "AuditKeyEpoch" (
+    "keyId" TEXT NOT NULL,
+    "fromSeq" BIGINT NOT NULL,
+    "toSeq" BIGINT,
+    "signedByKeyId" TEXT NOT NULL,
+    "signature" TEXT NOT NULL,
+    "recordedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "AuditKeyEpoch_pkey" PRIMARY KEY ("keyId")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "AuditKeyEpoch_fromSeq_key" ON "AuditKeyEpoch"("fromSeq");
 
 -- CreateTable
 CREATE TABLE "AuditAnchor" (

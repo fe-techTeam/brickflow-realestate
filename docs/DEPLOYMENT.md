@@ -34,7 +34,7 @@ No AWS resources exist yet. Every command below is for the AWS account owner to 
 | `NEXT_TELEMETRY_DISABLED` | No | `1` | Disables Next.js telemetry. |
 | `AUDIT_HMAC_KEY` | Yes (production) | — | Key that seals the audit chain and signs daily anchors (HMAC-SHA256). Base64 of at least 32 random bytes: `openssl rand -base64 32`. The app and the entrypoint refuse to start without it in production, and refuse the public development key. Store it in a secret manager, separately from database backups: anyone holding both the key and write access to the database could forge entries. Losing it makes existing entries unverifiable. |
 | `AUDIT_HMAC_KEY_ID` | No | `k1` | Identifier stored on every audit row and anchor sealed with the current key. Change it whenever the key changes. |
-| `AUDIT_HMAC_PREVIOUS_KEYS` | No | — | Retired keys still needed to verify older rows: `id:base64key,id:base64key`. To rotate: move the current key here under its id, then set a new `AUDIT_HMAC_KEY` and `AUDIT_HMAC_KEY_ID`. |
+| `AUDIT_HMAC_PREVIOUS_KEYS` | No | — | Retired keys still needed to verify older rows: `id:base64key,id:base64key`. Each one validates only the entries in the range recorded for it at rotation. Rotate with `npm run audit:rotate-key` (see Audit chain). |
 | `METRICS_TOKEN` | No | — | Enables `GET /api/metrics` (Prometheus) for scrapers sending `Authorization: Bearer <token>`. At least 32 random characters: `openssl rand -hex 32`. Unset (or shorter than 32 characters) the endpoint answers 404. |
 | `LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, `error` or `silent`. Logs are JSON lines on stdout/stderr. |
 | `APP_VERSION` | No | `package.json` version | Version stamped on every log line and on `brickflow_build_info`; set it to the release tag or commit in CI. |
@@ -47,9 +47,10 @@ On start, `docker-entrypoint.sh`:
 
 1. checks that `DATABASE_URL` is a `postgresql://` URL and that `AUTH_SECRET` and `AUDIT_HMAC_KEY` are set, then waits up to 60 seconds for the database to accept connections;
 2. runs `prisma migrate deploy` (forward-only migrations) against `DATABASE_URL`;
-3. runs the one-time audit backfill (`scripts/audit-chain.ts backfill`). On the first start after the hash-chain migration it seals the audit rows that existed before it (up to the cutoff recorded by the migration) and records that it ran; every later start only reads that marker and changes nothing;
-4. runs the demo seed only when the database has no users yet (first start) or when `SEED_ON_START=true`, so data persists across restarts and upgrades by default;
-5. starts the Next.js standalone server with `node server.js`.
+3. runs the demo seed only when the database has no users yet (first start) or when `SEED_ON_START=true`, so data persists across restarts and upgrades by default. The seed wipes the audit log and starts a fresh chain signed with `AUDIT_HMAC_KEY`;
+4. starts the Next.js standalone server with `node server.js`.
+
+The entrypoint never seals or signs audit entries based on what is in the database. If the database already held audit entries before the hash-chain migration, an operator must run the one-time `audit:seal-legacy` command (see [Audit chain](#audit-chain)). Until then, `/api/ready` reports `"auditChain": "unsealed"` and every audited change is refused.
 
 The container runs as a non-root user (uid/gid `1001`) and declares a `HEALTHCHECK` on `GET /api/health`, which returns `{"status":"ok","db":"ok"}` after a `SELECT 1`, or HTTP 503 when the database is unreachable. The endpoint needs no authentication and exposes no configuration.
 
@@ -58,7 +59,7 @@ The container runs as a non-root user (uid/gid `1001`) and declares a `HEALTHCHE
 | Endpoint | Auth | Purpose |
 | --- | --- | --- |
 | `GET /api/health` | none | Liveness: the process serves requests and the database answers `SELECT 1`. |
-| `GET /api/ready` | none | Readiness: database reachable, every migration bundled in the image applied (compared with `_prisma_migrations`; a failed migration blocks readiness), and the document store accepts a write/read/delete probe. Returns `{"status":"ready","checks":{…}}` or HTTP 503 with the failing check; never error details. Results are cached for 2 seconds. Docker Compose (production) uses it as the app healthcheck. |
+| `GET /api/ready` | none | Readiness: database reachable, every migration bundled in the image applied (compared with `_prisma_migrations`; a failed migration blocks readiness), the document store accepts a write/read/delete probe, and audit entries can be written. That last check (`auditChain`) is `ok`, `unsealed` or `broken`. It covers the signed chain state, the key ranges and the newest entry. Returns `{"status":"ready","checks":{…}}`, or HTTP 503 with the failing check. When the chain is unsealed, a `reason` names `npm run audit:seal-legacy`. Error details are never returned. Results are cached for 2 seconds. Docker Compose (production) uses it as the app healthcheck. |
 | `GET /api/metrics` | `Bearer $METRICS_TOKEN` | Prometheus text format: process and Node.js runtime (`process_*`, `nodejs_*`), `http_requests_total` and `http_request_duration_seconds` by route group, database pool, and business gauges (`brickflow_invoices{status}`, `brickflow_financing_requests{status}`, `brickflow_settlements_overdue`, `brickflow_oldest_pending_approval_age_seconds{queue}`, `brickflow_audit_chain_intact`). 404 when `METRICS_TOKEN` is unset. Metrics are per process; scrape each instance. |
 
 ### Logs and request IDs
@@ -69,22 +70,65 @@ The app writes one JSON object per line: `level`, `time`, `message`, `service`, 
 
 Audit log entries form a single chain. Each entry stores `HMAC-SHA256(AUDIT_HMAC_KEY, entry content + previous hash)` and the id of the key used. See `src/lib/audit-chain.ts` for the exact serialisation.
 
-Without the key, an edit, deletion or reordering cannot be hidden by recomputing hashes. The app also fails closed:
+Without the key, an edit, deletion or reordering cannot be hidden by recomputing hashes. Three records are signed with the key, so database access alone cannot change them:
 
-- If the newest entry has no hash, fails its HMAC or names an unknown key, every state change is refused. The refusal is logged at error level (`audit.chain_append_refused`) until the chain is investigated.
-- An entry without a hash is reported as a broken link and is never re-sealed. Only the rows that existed before the chain was introduced are sealed, once, by the backfill.
+- **Chain state** (`AuditChainState`): the legacy cutoff fixed by the migration, and when the chain was sealed.
+- **Key ranges** (`AuditKeyEpoch`): the entries each key sealed. A closed range is signed by the next key; the open range by the current key.
+- **Daily anchors.**
 
-Administrators can check the chain under **Audit logs → Audit integrity → Verify now**. From a shell:
+The app fails closed:
+
+- Every audited state change is refused while any of these holds:
+  - the chain state is unsigned or does not verify;
+  - the key ranges do not verify;
+  - the newest entry has no hash, fails its HMAC, or was sealed by a key that does not own its position.
+
+  The refusal is logged at error level (`audit.chain_append_refused`), and `/api/ready` reports not ready.
+- An entry without a hash is reported as a broken link. Nothing is ever re-sealed automatically.
+
+Commands (run them as an operator; none runs automatically):
 
 ```bash
 npm run audit:verify                              # exit code 1 and the first broken link when the chain is broken
 npm run audit:verify -- --anchors anchors.jsonl   # also check an exported (e.g. write-once) anchor file
 npm run audit:anchor                              # sign and record today's chain head; run daily from a scheduler
 npm run audit:export-anchors -- --out anchors.jsonl  # every signed anchor as JSON lines, for publishing
-npm run audit:backfill                            # one-time sealing of pre-chain rows (run by the entrypoint)
-# inside the container:
+npm run audit:seal-legacy -- --dry-run            # show the legacy entries that would be sealed
+npm run audit:seal-legacy                         # ONE-TIME: seal pre-chain entries, sign the state, anchor the legacy head
+npm run audit:rotate-key                          # switch to a new key (see below)
+# inside the container, e.g.:
 docker compose exec app node node_modules/tsx/dist/cli.mjs scripts/audit-chain.ts verify
 ```
+
+Administrators can also check the chain under **Audit logs → Audit integrity → Verify now**.
+
+**Upgrading a database that already has audit entries (one time).** After deploying the release with the hash-chain migration:
+
+1. Review the plan: `docker compose exec app node node_modules/tsx/dist/cli.mjs scripts/audit-chain.ts seal-legacy --dry-run`. It shows the cutoff, the number of entries and their date range.
+2. Seal: run the same command without `--dry-run`. It signs the state and logs an `audit.anchor.published` line for the legacy head.
+3. Export the anchors and store the file off the host: `… scripts/audit-chain.ts export-anchors --out /app/data/storage/anchors.jsonl`, then copy it out.
+
+The seal command refuses if:
+
+- the state was already signed (it only verifies the signature and reports `already_sealed`);
+- any entry already carries a hash or key id;
+- anchors or successful verifications exist;
+- the cutoff does not match the entries present.
+
+New installations need no action, because the seed signs a fresh chain.
+
+**Rotating the key.**
+
+1. Stop the app, or accept that audited changes are refused during the switch.
+2. Generate a new key and pick a new, never-used id.
+3. Run `npm run audit:rotate-key` with:
+   - the new key in `AUDIT_HMAC_KEY` and its id in `AUDIT_HMAC_KEY_ID`;
+   - the old key added as `oldid:oldkey` to `AUDIT_HMAC_PREVIOUS_KEYS`.
+
+   The command closes the old key's range at the current newest entry, signs that with the new key, opens the new key's range, re-signs the chain state and records an `audit.key_rotated` entry.
+4. Restart the app with the same variables.
+
+Keep every retired key in `AUDIT_HMAC_PREVIOUS_KEYS`; verification needs them. A retired key only validates entries inside its recorded range: a leaked retired key cannot forge later entries or anchors. Key ids can never be reused.
 
 **Anchors.** Each daily anchor is a statement `{type, v, day, seq, headHash, keyId, anchoredAt}` signed with the audit key. It is written to the `AuditAnchor` table and also logged as `audit.anchor.published` at info level, so it reaches external log storage. Anchors let verification detect removal of the newest entries.
 
