@@ -21,13 +21,14 @@ Workspace roots: `/partner` (channel partner), `/builder`, `/finance` (Veefin), 
 - Use `formatBps(bps)` for percentages.
 - Never pass `bigint` to a client component — convert with `.toString()` and format on the client with the same helpers.
 - Apply the `tabular` utility to numeric table cells and figures.
-- The discount formula lives only in `@/lib/financing#calculateDiscount`; the server recomputes all values.
+- Early-payment pricing lives only in `@/lib/pricing#priceEarlyPayment` (flat percentage or annual rate × days ÷ 365, TDS-aware financed amount, minimum discount, processing fee with GST, all-in annualised rate). `@/lib/financing#calculateDiscount` remains for the flat formula. The server recomputes all values and stores the full snapshot on the offer and the request.
+- Dates without a time (due dates, holidays) are ISO calendar dates handled by `@/lib/calendar`; "today" is always the date in Asia/Kolkata (`istToday()`). Never compare stored dates with `getUTCDate()`.
 
 ## Status
 
 - Use `<StatusBadge kind="invoice|financing|settlement|programme|offer|disbursement|record" status={...} />`.
 - Invoice, financing and settlement statuses are separate fields; never infer one from another in the UI.
-- For settlement status always use `effectiveSettlementStatus()` (derives NOT_DUE / DUE / OVERDUE from the due date).
+- For settlement status always use `effectiveSettlementStatus()` (derives NOT_DUE / DUE / OVERDUE from the due date on the IST calendar). `recomputeSettlementStatuses(now)` persists the time-driven transitions.
 
 ## Pages
 
@@ -89,7 +90,9 @@ Toasts (`sonner`) are already themed: call `toast.success`, `toast.error` and so
 
 - Authorise in services (organisation ownership + organisation type), not only in the UI.
 - Scope every read with `invoiceScope(actor)` / `requestScope(actor)`; return "not found" rather than "forbidden" for records in another organisation.
-- State changes use conditional `updateMany` with the expected current status to prevent double processing.
+- State changes use conditional `updateMany` with the expected current status to prevent double processing, and only along the edges in `@/lib/state-machines` (`assertTransition`, `sourcesFor`).
+- Money-moving actions (offer acceptance, financier approval and rejection, disbursement initiation and completion, settlement) take a client-generated idempotency key (`useIdempotencyKey()` in the component); a resubmission with the same key returns the original result.
+- `npm run check:invariants` scans the database for financing inconsistencies (for example a disbursement that differs from the net payable) and exits non-zero on any error.
 - Record an audit entry for every state change via `recordAudit(tx, actor, …)` inside the same transaction.
 
 ## Git workflow
