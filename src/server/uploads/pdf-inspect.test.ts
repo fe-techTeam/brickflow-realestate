@@ -480,6 +480,40 @@ describe("inspectPdf — object stream candidates", () => {
     expect(scanPdfStructure(bytes)).toEqual({ reason: "unreadable", detail: "object stream marked as an image" });
   });
 
+  it("bounds cross-reference streams before reading their rows", () => {
+    const xref = (dict: string, data: Buffer) => handPdf([CATALOG, ...PAGE_TREE, stream(dict, data)]);
+    const started = Date.now();
+
+    expect(scanPdfStructure(xref("/Type /XRef /W [1 1 1] /Size 2000000000", Buffer.from([1, 0, 0])))).toEqual({
+      reason: "unreadable",
+      detail: "cross-reference stream too large",
+    });
+    expect(scanPdfStructure(xref("/Type /XRef /W [1 1 1] /Size 4 /Index [0 900000 900000 900000]", Buffer.from([1, 0, 0])))).toEqual({
+      reason: "unreadable",
+      detail: "cross-reference stream too large",
+    });
+    expect(scanPdfStructure(xref("/Type /XRef /W [1 9 1] /Size 1", Buffer.from([1, 0, 0])))).toEqual({ reason: "unreadable", detail: "cross-reference stream /W" });
+    expect(scanPdfStructure(xref("/Type /XRef /W [0 0 0] /Size 1", Buffer.from([])))).toEqual({ reason: "unreadable", detail: "cross-reference stream /W" });
+    expect(scanPdfStructure(xref("/Type /XRef /W [1 1 1] /Size 900000", Buffer.from([1, 0, 0])))).toEqual({
+      reason: "unreadable",
+      detail: "cross-reference stream is shorter than its /Index",
+    });
+
+    // A compressed stream that expands to 200,000 distinct type-2 containers.
+    const rows = 200_000;
+    const table = Buffer.alloc(rows * 5);
+    for (let r = 0; r < rows; r += 1) {
+      table[r * 5] = 2;
+      table.writeUIntBE(r + 10, r * 5 + 1, 3);
+    }
+    const compressed = deflateSync(table);
+    expect(scanPdfStructure(xref(`/Type /XRef /W [1 3 1] /Size ${rows} /Filter /FlateDecode`, compressed))).toEqual({
+      reason: "unreadable",
+      detail: "too many object stream containers",
+    });
+    expect(Date.now() - started).toBeLessThan(5_000);
+  });
+
   it("fails closed on indirect or conflicting stream types", () => {
     const indirect = handPdf([CATALOG, ...PAGE_TREE, stream("/Type 5 0 R /Filter /FlateDecode", payload), "/ObjStm"]);
     expect(scanPdfStructure(indirect)).toEqual({ reason: "unreadable", detail: "indirect /Type" });

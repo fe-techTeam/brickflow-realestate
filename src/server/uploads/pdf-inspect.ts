@@ -701,39 +701,52 @@ export function scanPdfStructure(bytes: Uint8Array): Verdict {
   }
 }
 
-/** Object numbers that cross-reference streams declare as object-stream containers (type 2 entries). */
-function xrefContainers(decoded: Buffer, dict: RawDict): number[] {
+/** Upper bounds for cross-reference streams; an invoice has a few hundred objects at most. */
+export const MAX_XREF_ROWS = 1_000_000;
+export const MAX_OBJECT_STREAM_CONTAINERS = 100_000;
+
+/**
+ * Adds the object numbers a cross-reference stream declares as object-stream containers (type 2
+ * entries) to `containers`. Row counts, field widths and the container set are all bounded.
+ */
+function collectXrefContainers(decoded: Buffer, dict: RawDict, containers: Set<number>): void {
   const widths = entry(dict, "W");
   if (widths?.kind !== "array" || widths.items.length !== 3 || !widths.items.every((w) => w.kind === "number" && w.integer && w.value >= 0 && w.value <= 8)) {
     throw new Malformed("cross-reference stream /W");
   }
   const [w0, w1, w2] = widths.items.map((w) => (w as { value: number }).value) as [number, number, number];
   const rowLength = w0 + w1 + w2;
+  if (rowLength === 0) throw new Malformed("cross-reference stream /W");
+
+  const size = integerEntry(dict, "Size");
+  if (size === null || size < 0) throw new Malformed("cross-reference stream /Size");
+  if (size > MAX_XREF_ROWS) throw new Malformed("cross-reference stream too large");
   const index = entry(dict, "Index");
-  let rows: number;
-  if (index === undefined) {
-    const size = integerEntry(dict, "Size");
-    if (size === null) throw new Malformed("cross-reference stream /Size");
-    rows = size;
-  } else {
-    if (index.kind !== "array" || index.items.length % 2 !== 0 || !index.items.every((v) => v.kind === "number" && v.integer)) {
+  let rows = size;
+  if (index !== undefined) {
+    if (index.kind !== "array" || index.items.length % 2 !== 0 || !index.items.every((v) => v.kind === "number" && v.integer && v.value >= 0)) {
       throw new Malformed("cross-reference stream /Index");
     }
-    rows = index.items.reduce((sum, v, i) => (i % 2 === 1 ? sum + (v as { value: number }).value : sum), 0);
+    rows = 0;
+    for (let i = 1; i < index.items.length; i += 2) {
+      rows += (index.items[i] as { value: number }).value;
+      if (rows > MAX_XREF_ROWS) throw new Malformed("cross-reference stream too large");
+    }
   }
-  if (rowLength === 0 || rows * rowLength > decoded.length) throw new Malformed("cross-reference stream is shorter than its /Index");
+  if (rows * rowLength > decoded.length) throw new Malformed("cross-reference stream is shorter than its /Index");
+
   const field = (offset: number, width: number) => {
     let value = 0;
     for (let k = 0; k < width; k += 1) value = value * 256 + decoded[offset + k]!;
     return value;
   };
-  const containers: number[] = [];
   for (let r = 0; r < rows; r += 1) {
     const at = r * rowLength;
     const type = w0 === 0 ? 1 : field(at, w0);
-    if (type === 2) containers.push(field(at + w0, w1));
+    if (type !== 2) continue;
+    containers.add(field(at + w0, w1));
+    if (containers.size > MAX_OBJECT_STREAM_CONTAINERS) throw new Malformed("too many object stream containers");
   }
-  return containers;
 }
 
 function scanRaw(text: string): void {
@@ -830,7 +843,7 @@ function scanRaw(text: string): void {
   for (const span of spans) {
     if (nameEntry(span.dict, "Type") !== "XRef") continue;
     if (hasObjStmKeys(span)) throw new Malformed("conflicting stream markers");
-    for (const num of xrefContainers(decode(span), span.dict)) containers.add(num);
+    collectXrefContainers(decode(span), span.dict, containers);
   }
 
   // Object streams hold dictionaries (the catalog, actions, annotations): any stream that looks like one is decoded and parsed.
