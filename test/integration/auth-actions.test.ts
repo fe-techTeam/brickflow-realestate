@@ -71,8 +71,24 @@ describe("sign-in actions", () => {
     const { pendingMfaClaims } = await import("@/server/auth/session");
     const { manualKey } = await startLoginEnrolment((await pendingMfaClaims())!);
     const result = await auth.confirmLoginEnrolmentAction({ code: totpCode(manualKey.replace(/\s/g, "")) });
-    expect(result).toMatchObject({ ok: true, data: { destination: "/admin" } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.recoveryCodes).toHaveLength(10);
+    // No session until the codes have been shown and the user continues.
+    expect(cookieJar.has(SESSION_COOKIE)).toBe(false);
+
+    // The completion token alone, or a token for another sign-in, is not enough.
+    expect(await auth.finishLoginEnrolmentAction("forged")).toMatchObject({ error: expect.stringMatching(/expired/) });
+    const pendingCookie = cookieJar.get(MFA_PENDING_COOKIE)!;
+    cookieJar.delete(MFA_PENDING_COOKIE);
+    expect(await auth.finishLoginEnrolmentAction(result.data.completionToken)).toMatchObject({ error: expect.stringMatching(/expired/) });
+    // The pending cookie cannot stand in for the completion token.
+    cookieJar.set(MFA_PENDING_COOKIE, pendingCookie);
+    expect(await auth.finishLoginEnrolmentAction(pendingCookie)).toMatchObject({ error: expect.stringMatching(/expired/) });
+
+    expect(await redirectTarget(() => auth.finishLoginEnrolmentAction(result.data.completionToken))).toBe("/admin");
     expect((await getActor())?.role).toBe("SUPER_ADMIN");
+    expect(cookieJar.has(MFA_PENDING_COOKIE)).toBe(false);
   });
 
   it("revokes the session row on sign-out", async () => {

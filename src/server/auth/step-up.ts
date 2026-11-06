@@ -31,7 +31,7 @@ export function isStepUpPurpose(value: unknown): value is StepUpPurpose {
 
 export class StepUpRequiredError extends DomainError {
   constructor(readonly purpose: StepUpPurpose) {
-    super("STEP_UP_REQUIRED", `Confirm it's you to ${STEP_UP_PURPOSE_LABELS[purpose]}.`);
+    super("STEP_UP_REQUIRED", `Verify your identity to ${STEP_UP_PURPOSE_LABELS[purpose]}.`);
   }
 }
 

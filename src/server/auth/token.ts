@@ -18,7 +18,8 @@ export interface SessionClaims {
   sid: string;
 }
 
-export type MfaPendingPurpose = "challenge" | "enrol";
+/** `enrolled` is handed to the browser (not a cookie) after first-time set-up, to finish signing in. */
+export type MfaPendingPurpose = "challenge" | "enrol" | "enrolled";
 
 export interface MfaPendingClaims {
   sub: string;
@@ -68,13 +69,17 @@ export async function signMfaPendingToken(claims: MfaPendingClaims): Promise<str
     .sign(secretKey());
 }
 
-export async function verifyMfaPendingToken(token: string | undefined): Promise<MfaPendingClaims | null> {
+export async function verifyMfaPendingToken(
+  token: string | undefined,
+  allowed: readonly MfaPendingPurpose[] = ["challenge", "enrol"],
+): Promise<MfaPendingClaims | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secretKey(), { issuer: ISSUER, audience: MFA_AUDIENCE, algorithms: ["HS256"] });
     const purpose = payload.purpose;
-    if (typeof payload.sub !== "string" || typeof payload.mid !== "string" || (purpose !== "challenge" && purpose !== "enrol")) return null;
-    return { sub: payload.sub, mid: payload.mid, purpose };
+    if (typeof payload.sub !== "string" || typeof payload.mid !== "string") return null;
+    if (typeof purpose !== "string" || !(allowed as readonly string[]).includes(purpose)) return null;
+    return { sub: payload.sub, mid: payload.mid, purpose: purpose as MfaPendingPurpose };
   } catch {
     return null;
   }

@@ -7,7 +7,7 @@ import { workspaceForOrgType } from "@/lib/workspaces";
 import { runAction, type ActionResult } from "../action-result";
 import { recordAudit } from "../audit";
 import { endSession, getActor, pendingMfaClaims, requestOrigin, startSession } from "../auth/session";
-import { MFA_PENDING_COOKIE, MFA_PENDING_TTL_SECONDS, signMfaPendingToken } from "../auth/token";
+import { MFA_PENDING_COOKIE, MFA_PENDING_TTL_SECONDS, signMfaPendingToken, verifyMfaPendingToken } from "../auth/token";
 import { db } from "../db";
 import { DomainError, unauthenticated } from "../errors";
 import { authenticate, completeLoginEnrolment, completeMfaLogin } from "../services/auth";
@@ -67,15 +67,46 @@ export async function verifyMfaLoginAction(_prev: MfaChallengeState, formData: F
   redirect(destination);
 }
 
-/** Finishes first-time authenticator set-up during sign-in; returns the recovery codes to show once. */
-export async function confirmLoginEnrolmentAction(input: { code: string }): Promise<ActionResult<{ recoveryCodes: string[]; destination: string }>> {
+/**
+ * Finishes first-time authenticator set-up during sign-in and returns the recovery codes to show once,
+ * with a short-lived completion token. No cookie changes here: that would re-render the page and
+ * replace the codes before the user saved them. `finishLoginEnrolmentAction` exchanges the token.
+ */
+export async function confirmLoginEnrolmentAction(input: { code: string }): Promise<ActionResult<{ recoveryCodes: string[]; completionToken: string }>> {
   return runAction(async () => {
     const claims = await pendingMfaClaims();
     if (!claims) throw unauthenticated("Your sign-in has expired. Please sign in again.");
     const result = await completeLoginEnrolment(claims, input.code, await requestOrigin());
-    await startSession(result.userId, result.membershipId, { mfaVerified: true });
-    return { recoveryCodes: result.recoveryCodes, destination: workspaceForOrgType(result.orgType).basePath };
+    const completionToken = await signMfaPendingToken({ sub: result.userId, mid: result.membershipId, purpose: "enrolled" });
+    return { recoveryCodes: result.recoveryCodes, completionToken };
   }, "Two-step verification is on.");
+}
+
+/** Opens the session once the recovery codes were shown; needs both the pending cookie and the completion token. */
+export async function finishLoginEnrolmentAction(completionToken: string): Promise<LoginState> {
+  let destination: string;
+  try {
+    const claims = await pendingMfaClaims();
+    const done = await verifyMfaPendingToken(String(completionToken ?? ""), ["enrolled"]);
+    if (!claims || claims.purpose !== "enrol" || !done || done.sub !== claims.sub || done.mid !== claims.mid) {
+      throw unauthenticated("Your sign-in has expired. Please sign in again.");
+    }
+    const membership = await db.organisationUser.findUnique({ where: { id: done.mid }, include: { user: true, organisation: true } });
+    if (
+      !membership ||
+      membership.userId !== done.sub ||
+      membership.user.status !== "ACTIVE" ||
+      membership.organisation.status !== "ACTIVE" ||
+      !membership.user.mfaEnabledAt
+    ) {
+      throw unauthenticated("Your sign-in has expired. Please sign in again.");
+    }
+    await startSession(done.sub, done.mid, { mfaVerified: true });
+    destination = workspaceForOrgType(membership.organisation.type).basePath;
+  } catch (error) {
+    return failure(error);
+  }
+  redirect(destination);
 }
 
 export async function cancelMfaLoginAction(): Promise<void> {

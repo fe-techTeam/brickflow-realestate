@@ -20,7 +20,7 @@ export interface SessionRow {
 export function SessionsPanel({ sessions }: { sessions: SessionRow[] }) {
   return (
     <div className="grid gap-5">
-      <ul className="-mx-5 divide-y divide-border/70 border-y border-border/70 sm:-mx-6">
+      <ul className="-mx-5 -mt-5 divide-y divide-border/70 border-b border-border/70 sm:-mx-6">
         {sessions.map((session) => {
           const Icon = isMobileUserAgent(session.userAgent) ? Smartphone : Monitor;
           return (

@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useState, useTransition } from "react";
 import { ArrowRight, CircleAlert, Loader2 } from "lucide-react";
 import { AuthenticatorSetup, type AuthenticatorSecret } from "@/components/security/authenticator-setup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cancelMfaLoginAction, confirmLoginEnrolmentAction, verifyMfaLoginAction, type MfaChallengeState } from "@/server/actions/auth";
+import { cancelMfaLoginAction, confirmLoginEnrolmentAction, finishLoginEnrolmentAction, verifyMfaLoginAction, type MfaChallengeState } from "@/server/actions/auth";
 
 export function MfaChallengeForm() {
   const [state, formAction, pending] = useActionState<MfaChallengeState, FormData>(verifyMfaLoginAction, {});
@@ -60,22 +59,42 @@ export function MfaChallengeForm() {
 }
 
 export function LoginEnrolment({ secret, email }: { secret: AuthenticatorSecret; email: string }) {
-  const router = useRouter();
-  const [destination, setDestination] = useState<string | null>(null);
+  const [completionToken, setCompletionToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
   return (
     <AuthenticatorSetup
       secret={secret}
       email={email}
       confirm={async (code) => {
         const result = await confirmLoginEnrolmentAction({ code });
-        if (result.ok) setDestination(result.data.destination);
+        if (result.ok) setCompletionToken(result.data.completionToken);
         return result;
       }}
       done={() => (
-        <Button size="lg" className="h-12 w-full" onClick={() => router.replace(destination ?? "/login")}>
-          I have saved my codes — continue
-          <ArrowRight className="size-4" />
-        </Button>
+        <div className="grid gap-3">
+          {error && (
+            <p role="alert" className="flex items-start gap-2.5 rounded-lg border border-danger/15 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
+              <CircleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={1.75} />
+              {error}
+            </p>
+          )}
+          <Button
+            size="lg"
+            className="h-12 w-full"
+            disabled={pending || !completionToken}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await finishLoginEnrolmentAction(completionToken ?? "");
+                if (result?.error) setError(result.error);
+              })
+            }
+          >
+            {pending && <Loader2 className="size-4 animate-spin" />}
+            I have saved my codes — continue
+            <ArrowRight className="size-4" />
+          </Button>
+        </div>
       )}
     />
   );

@@ -137,6 +137,10 @@ Open <http://localhost:3000>. `npm run demo:reset` deletes the stored invoice PD
 | `DATABASE_POOL_MAX` | `10` (commented out) | Maximum connections in the app's pool |
 | `TEST_DATABASE_URL` / `E2E_DATABASE_URL` | `…/brickflow_test` / `…/brickflow_e2e` on the same server (commented out) | Databases the Vitest and Playwright runs drop and recreate |
 | `AUTH_SECRET` | placeholder | Session signing secret, at least 32 characters |
+| `DATA_ENCRYPTION_KEY` | placeholder | 32-byte base64 key for encrypting secrets at rest (`openssl rand -base64 32`) |
+| `MFA_ENFORCED` | unset (commented out) | Mandatory two-step verification for builder, finance and admin users; defaults to `true` in production, `false` in development and tests |
+| `CSP_REPORT_ONLY` | unset (commented out) | `true` sends the Content Security Policy as Report-Only |
+| `TRUSTED_PROXY_HOPS` | unset (commented out) | Reverse proxies in front of the app (default `1`); used to read the client IP |
 | `STORAGE_DRIVER` | `local` | Document storage driver |
 | `STORAGE_DIR` | `./storage` | Where invoice PDFs are stored |
 | `DEMO_PASSWORD` | `BrickFlow@2026` | Shared password for the seeded accounts |
@@ -248,13 +252,16 @@ When a programme's rate or terms change, open offers priced on it are superseded
 
 ## Security
 
-- Passwords hashed with bcrypt (cost 12); unknown accounts are compared against a dummy hash so timing does not reveal which emails exist.
-- Sessions are HS256-signed JWTs in an httpOnly, `SameSite=Lax` cookie valid for 8 hours, marked `Secure` when `APP_URL` is HTTPS. User and organisation status are re-checked on every request, so deactivation takes effect immediately.
-- Authorisation is enforced in the service layer by organisation type and ownership. Reads are scoped to the actor's organisation, and records of other organisations return "not found" rather than "forbidden".
+- Passwords hashed with bcrypt (cost 12); unknown accounts are compared against a dummy hash so timing does not reveal which emails exist. New passwords need at least 12 characters, are checked against a built-in list of common passwords and the user's name and email, and cannot repeat the current one.
+- Sign-in is throttled in PostgreSQL per account (progressive 1/2/4-second delays, then a 15-minute lockout after 5 failures) and per client IP (30 failures). Unknown and real accounts get identical responses. Lockouts are audited.
+- Server-side sessions: the httpOnly, `SameSite=Lax` cookie carries a signed session id; every request re-validates the `Session` row, the user, the organisation and the role. Sessions end after 30 minutes idle or 8 hours, and are revoked on sign-out, "Sign out of all devices", password change (other sessions) and administrator deactivation. The session id is rotated (keeping the original expiry) after a password or two-step verification change.
+- Two-step verification with an authenticator app (TOTP, RFC 6238, ±1 step drift, replay-protected), 10 single-use recovery codes stored as hashes, secrets encrypted with AES-256-GCM (`DATA_ENCRYPTION_KEY`). Mandatory for builder, finance and admin users when `MFA_ENFORCED` is on (default in production); optional for channel partners. Each user manages it, their sessions and their password on the **Security** page in the account menu.
+- Step-up confirmation (`requireStepUp(actor, purpose)` in `src/server/auth/step-up.ts`): sensitive actions require a fresh authenticator code (or the password, for accounts without two-step verification) within the last 5 minutes.
+- Authorisation is enforced in the service layer by a central permission map (`can(actor, permission)`, deny by default) together with organisation type and ownership. Reads are scoped to the actor's organisation, and records of other organisations return "not found" rather than "forbidden".
 - State changes use conditional updates on the expected current status, which prevents double approval, double acceptance and duplicate disbursement. One financing request per invoice is also enforced by unique constraints.
 - An audit entry is written in the same transaction as every state change.
 - Uploads must be real PDFs (magic-byte check), at most 10 MB; duplicate invoice numbers and duplicate PDFs (SHA-256) are refused. Storage keys are server-generated and path traversal is blocked. Documents are only served through an authorised route with `no-store` caching.
-- Security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`); the `X-Powered-By` header is disabled.
+- Security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) and a nonce-based Content Security Policy per request (`src/proxy.ts`, `src/server/security/csp.ts`), switchable to Report-Only with `CSP_REPORT_ONLY`; the `X-Powered-By` header is disabled.
 - CI fails on high or critical advisories in production dependencies; dependency versions are pinned and the lockfile is committed.
 
 ## Testing

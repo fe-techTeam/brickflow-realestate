@@ -17,6 +17,8 @@ env:
   # Test suites recreate brickflow_test / brickflow_e2e on the same service (see scripts/prepare-db.mjs).
   DATABASE_URL: postgresql://brickflow:brickflow@localhost:5432/brickflow
   AUTH_SECRET: ci-only-secret-value-that-is-at-least-32-characters-long
+  # Test-only key (32 zero bytes); never used outside CI.
+  DATA_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
   DEMO_PASSWORD: BrickFlow@2026
   STORAGE_DIR: ./storage
   NEXT_TELEMETRY_DISABLED: "1"
