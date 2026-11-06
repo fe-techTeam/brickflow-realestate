@@ -67,7 +67,7 @@ Every state change is recorded in the audit log.
 | Validation | zod |
 | Documents | pdf-lib (invoice PDF generation), tesseract.js and pdfjs-dist (in-browser text extraction, see [A14](docs/ASSUMPTIONS.md)) |
 | Testing | Vitest (unit and service integration), Playwright (end-to-end, Chromium) |
-| Delivery | Docker (Next.js standalone output), GitHub Actions, AWS ECS Fargate template |
+| Delivery | Docker (Next.js standalone output), Docker Compose (Caddy, PostgreSQL, backups), GitHub Actions CI |
 
 ## Architecture
 
@@ -103,7 +103,7 @@ src/
 prisma/                      schema, migrations, seed
 test/                        Vitest setup and service integration tests
 e2e/                         Playwright smoke tests
-infra/aws/                   CloudFormation template for ECS Fargate
+infra/compose/               Caddy configuration and backup script for the Compose stack
 docs/                        conventions, assumptions, deployment, progress
 ```
 
