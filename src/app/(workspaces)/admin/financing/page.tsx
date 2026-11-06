@@ -5,15 +5,18 @@ import type { ProgrammeStatus } from "@/generated/prisma/enums";
 import { ListToolbar } from "@/components/common/list-toolbar";
 import { StatusBadge } from "@/components/common/status-badge";
 import { formatDate } from "@/lib/format";
-import { bpsToDecimalString } from "@/lib/money";
+import { istToday } from "@/lib/calendar";
+import { bpsToDecimalString, paiseToDecimalString } from "@/lib/money";
 import { PROGRAMME_STATUS } from "@/lib/status";
 import { requireWorkspace } from "@/server/auth/session";
 import { getProgrammeConfigContext } from "@/server/queries/admin";
 import { listProgrammes } from "@/server/services/admin";
+import { listBusinessHolidays } from "@/server/services/business-calendar";
 import { AdminHeader, Empty, Panel } from "../_components/editorial";
 import { Rate } from "../_components/figures";
 import { param, plural } from "../_components/labels";
 import { Ledger, LTd, LTh, LTr, RefCode } from "../_components/ledger";
+import { HolidayCalendar } from "./_components/holiday-calendar";
 import { ProgrammeFormDialog } from "./_components/programme-form-dialog";
 import { RateCard, UnconfiguredCard, type RateCardData } from "./_components/rate-card";
 import type { ProgrammeRow } from "./_components/types";
@@ -28,8 +31,8 @@ const PRINCIPLES = [
     body: "Each builder and Veefin negotiate a fixed discount outside BrickFlow. The Super Admin records it here as a financing programme.",
   },
   {
-    title: "One fixed rate per builder",
-    body: "Every early-payment offer for that builder's invoices uses the active programme's rate: no bidding, tiers or per-invoice pricing.",
+    title: "One set of terms per builder",
+    body: "Every early-payment offer for that builder's invoices is priced by the active programme: a flat percentage or an annual rate for the days to the due date, with any TDS, fees and limits it sets.",
   },
   {
     title: "Read-only for everyone else",
@@ -48,7 +51,11 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
   const status = statusParam && statusParam in PROGRAMME_STATUS ? (statusParam as ProgrammeStatus) : undefined;
   const q = param(sp.q)?.toLowerCase();
 
-  const [programmes, context] = await Promise.all([listProgrammes(actor), getProgrammeConfigContext(actor)]);
+  const [programmes, context, holidays] = await Promise.all([
+    listProgrammes(actor),
+    getProgrammeConfigContext(actor),
+    listBusinessHolidays(actor, { from: istToday() }),
+  ]);
   const activeByBuilder = Object.fromEntries(programmes.filter((p) => p.status === "ACTIVE").map((p) => [p.builder.id, p.code]));
 
   const toRow = (p: (typeof programmes)[number]): ProgrammeRow => ({
@@ -68,6 +75,17 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
       effectiveTo: isoDate(p.effectiveTo),
       offerValidityDays: String(p.offerValidityDays),
       terms: p.terms,
+      pricingMode: p.pricingMode,
+      minTenorDays: String(p.minTenorDays),
+      maxTenorDays: p.maxTenorDays === null ? "" : String(p.maxTenorDays),
+      minDiscount: paiseToDecimalString(p.minDiscountPaise),
+      tdsDeducted: p.tdsDeducted,
+      tdsRate: bpsToDecimalString(p.tdsRateBps),
+      invoiceGstRate: bpsToDecimalString(p.invoiceGstRateBps),
+      processingFeeFlat: paiseToDecimalString(p.processingFeeFlatPaise),
+      processingFeeRate: bpsToDecimalString(p.processingFeeBps),
+      feeGstRate: bpsToDecimalString(p.feeGstRateBps),
+      holidayRule: p.holidayRule,
     },
   });
 
@@ -164,19 +182,25 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
           <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-16 size-56 rounded-full bg-haze/10 blur-3xl" />
           <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-fg-muted uppercase">The pricing rule</p>
           <h2 id="pricing-rule" className="mt-2 text-[1.625rem] leading-tight font-semibold text-white">
-            A fixed discount on the approved amount
+            A discount on the financed amount
           </h2>
           <dl className="mt-6 space-y-3 border-l border-line-strong/50 pl-4 font-sans text-[0.875rem]">
             <div>
+              <dt className="text-[0.6875rem] text-white/50">Financed amount</dt>
+              <dd className="text-white/90">Approved amount − TDS, when the builder deducts it</dd>
+            </div>
+            <div>
               <dt className="text-[0.6875rem] text-white/50">Discount</dt>
-              <dd className="text-white/90">Approved amount × agreed rate</dd>
+              <dd className="text-white/90">Financed × flat rate, or × annual rate × days ÷ 365</dd>
             </div>
             <div>
               <dt className="text-[0.6875rem] text-white/50">Partner receives</dt>
-              <dd className="text-white/90">Approved amount − discount</dd>
+              <dd className="text-white/90">Financed − discount − fees and GST on fees</dd>
             </div>
           </dl>
-          <p className="mt-6 text-xs leading-relaxed text-white/55">Calculated on the server in paise and rounded half-up to the nearest paisa. No other charges apply.</p>
+          <p className="mt-6 text-xs leading-relaxed text-white/55">
+            Calculated on the server in paise, rounded half-up to the nearest paisa. Days run on the IST calendar; the builder settles the financed amount.
+          </p>
         </div>
         <ol className="grid divide-y divide-border/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {PRINCIPLES.map(({ title, body }, i) => (
@@ -188,6 +212,8 @@ export default async function FinancingConfigurationPage({ searchParams }: { sea
           ))}
         </ol>
       </section>
+
+      <HolidayCalendar holidays={holidays} />
 
       <Panel
         eyebrow="Register"

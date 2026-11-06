@@ -15,6 +15,7 @@ import { PrismaClient, type FinancingStatus, type InvoiceStatus } from "../src/g
 import { calculateDiscount } from "../src/lib/financing";
 import { buildInvoiceDocument, demoClock, GST_RATE_PERCENT, resolveDemoDataset } from "../src/lib/demo/catalogue";
 import { renderBrokerageInvoicePdf, splitGstInclusive } from "../src/lib/pdf/brokerage-invoice";
+import { seedBusinessHolidays } from "../src/lib/demo/holidays";
 
 try {
   process.loadEnvFile();
@@ -39,6 +40,8 @@ const dateOnly = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 async function reset() {
   await db.$transaction([
     db.auditLog.deleteMany(),
+    db.financingIdempotencyKey.deleteMany(),
+    db.businessHoliday.deleteMany(),
     db.internalComment.deleteMany(),
     db.financingEvent.deleteMany(),
     db.settlement.deleteMany(),
@@ -294,6 +297,7 @@ async function main() {
         discountAmountPaise: calc.discountAmountPaise,
         chargesPaise: 0n,
         netPayablePaise: calc.netPayablePaise,
+        financedAmountPaise: calc.approvedAmountPaise,
         termsSnapshot: JSON.stringify({
           programmeCode: programme.code,
           programmeName: programme.name,
@@ -328,6 +332,7 @@ async function main() {
         discountAmountPaise: calc.discountAmountPaise,
         chargesPaise: 0n,
         netPayablePaise: calc.netPayablePaise,
+        financedAmountPaise: calc.approvedAmountPaise,
         status: f.stage,
         acceptedById: cpUser.userId,
         acceptedAt: f.acceptedAt,
@@ -404,6 +409,7 @@ async function main() {
   }
 
   await persistSequences();
+  await seedBusinessHolidays(db);
   await db.platformSetting.createMany({
     data: [
       { key: "platform.supportEmail", value: "support@brickflow.demo", updatedById: admin.userId },

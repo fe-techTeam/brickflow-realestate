@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import type { InvoiceStatus, Prisma } from "@/generated/prisma/client";
 import { parseRupeesToPaise } from "@/lib/money";
+import { assertTransition } from "@/lib/state-machines";
 import { recordAudit } from "../audit";
 import { assertOrgType, type Actor } from "../auth/session";
 import { db } from "../db";
@@ -210,6 +211,7 @@ export async function resubmitInvoice(actor: Actor, invoiceId: string, raw: { no
   const invoice = await db.invoice.findUnique({ where: { id: invoiceId } });
   if (!invoice || invoice.cpId !== actor.orgId) throw notFound("Invoice not found.");
   if (invoice.status !== "CLARIFICATION_REQUESTED") throw conflict("Only invoices awaiting clarification can be resubmitted.");
+  assertTransition("invoice", "CLARIFICATION_REQUESTED", "SUBMITTED");
 
   let storageKey: string | null = null;
   let digest: string | null = null;
@@ -292,6 +294,7 @@ async function transition(
   if (!options.from.includes(invoice.status)) {
     throw conflict(`This invoice is already ${invoice.status.replace(/_/g, " ").toLowerCase()} and cannot be updated.`);
   }
+  assertTransition("invoice", invoice.status, options.to);
   await db.$transaction(async (tx) => {
     const updated = await tx.invoice.updateMany({
       where: { id: invoice.id, status: { in: options.from } },

@@ -86,6 +86,16 @@ enum DisbursementStatus {
   FAILED
 }
 
+enum PricingMode {
+  FLAT_PERCENT
+  ANNUAL_RATE
+}
+
+enum HolidayRule {
+  NONE
+  NEXT_BUSINESS_DAY
+}
+
 model Organisation {
   id                String           @id @default(cuid())
   type              OrganisationType
@@ -211,6 +221,19 @@ model FinancingProgramme {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
+  // Pricing engine terms. Defaults reproduce the original flat-percentage behaviour.
+  pricingMode            PricingMode @default(FLAT_PERCENT)
+  minTenorDays           Int         @default(1)
+  maxTenorDays           Int?
+  minDiscountPaise       BigInt      @default(0)
+  tdsDeducted            Boolean     @default(false)
+  tdsRateBps             Int         @default(200)
+  invoiceGstRateBps      Int         @default(1800)
+  processingFeeFlatPaise BigInt      @default(0)
+  processingFeeBps       Int         @default(0)
+  feeGstRateBps          Int         @default(1800)
+  holidayRule            HolidayRule @default(NONE)
+
   builder   Organisation       @relation("ProgrammeBuilder", fields: [builderId], references: [id])
   financier Organisation       @relation("ProgrammeFinancier", fields: [financierId], references: [id])
   offers    FinancingOffer[]
@@ -301,6 +324,16 @@ model FinancingOffer {
   chargesPaise        BigInt      @default(0)
   netPayablePaise     BigInt
   termsSnapshot       String
+  pricingMode         PricingMode @default(FLAT_PERCENT)
+  pricingRuleVersion  String      @default("flat/2026-04")
+  tenorDays           Int?
+  pricedDueDate       DateTime?
+  tdsPaise            BigInt      @default(0)
+  financedAmountPaise BigInt
+  processingFeePaise  BigInt      @default(0)
+  feeGstPaise         BigInt      @default(0)
+  annualisedRateBps   Int?
+  pricingSnapshot     Json?
   status              OfferStatus @default(OFFERED)
   generatedById       String
   generatedAt         DateTime    @default(now())
@@ -330,6 +363,16 @@ model FinancingRequest {
   discountAmountPaise BigInt
   chargesPaise        BigInt          @default(0)
   netPayablePaise     BigInt
+  pricingMode         PricingMode @default(FLAT_PERCENT)
+  pricingRuleVersion  String      @default("flat/2026-04")
+  tenorDays           Int?
+  pricedDueDate       DateTime?
+  tdsPaise            BigInt      @default(0)
+  financedAmountPaise BigInt
+  processingFeePaise  BigInt      @default(0)
+  feeGstPaise         BigInt      @default(0)
+  annualisedRateBps   Int?
+  pricingSnapshot     Json?
   status              FinancingStatus @default(PENDING_APPROVAL)
   acceptedById        String
   acceptedAt          DateTime
@@ -454,4 +497,27 @@ model PlatformSetting {
   value       String
   updatedById String?
   updatedAt   DateTime @updatedAt
+}
+
+/// Bank holidays maintained by the platform admin; due dates on these days roll forward when a programme asks for it.
+model BusinessHoliday {
+  id          String   @id @default(cuid())
+  date        DateTime @unique @db.Date
+  name        String
+  createdById String?
+  createdAt   DateTime @default(now())
+}
+
+/// Replay record for a money-moving action submitted with a client-generated idempotency key.
+model FinancingIdempotencyKey {
+  id          String   @id @default(cuid())
+  actorUserId String
+  scope       String
+  key         String
+  fingerprint String
+  resultId    String?
+  createdAt   DateTime @default(now())
+
+  @@unique([actorUserId, scope, key])
+  @@index([createdAt])
 }

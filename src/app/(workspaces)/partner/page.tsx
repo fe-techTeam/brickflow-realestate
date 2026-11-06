@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, BadgePercent, CheckCircle2, FileStack, FileUp, MessageSquareWarning, HandCoins } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { calculateDiscount } from "@/lib/financing";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatBps, formatINRCompact, sumPaise } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -285,12 +284,14 @@ function PortfolioHero({ overview }: { overview: Overview }) {
       label: `${offer.invoice.invoiceNumber} · ${offer.invoice.builder.name}`,
     })),
     ...overview.eligibleWithoutOffer.flatMap((invoice) => {
-      const programme = overview.eligibility.get(invoice.id)?.programme;
-      if (!programme || invoice.approvedAmountPaise === null) return [];
+      const entry = overview.eligibility.get(invoice.id);
+      const programme = entry?.programme;
+      const quote = entry?.quote?.result.quote;
+      if (!programme || !quote || invoice.approvedAmountPaise === null) return [];
       return [
         {
           key: invoice.id,
-          net: calculateDiscount(invoice.approvedAmountPaise, programme.discountRateBps).netPayablePaise,
+          net: quote.netPayablePaise,
           approved: invoice.approvedAmountPaise,
           rate: programme.discountRateBps,
           launcher: <OfferLauncher invoice={offerInvoice(invoice)} size="lg" />,
