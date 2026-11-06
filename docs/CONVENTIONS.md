@@ -85,6 +85,13 @@ Tokens, utilities and components added for the premium visual system. All existi
 
 Toasts (`sonner`) are already themed: call `toast.success`, `toast.error` and so on as usual.
 
+## Invoice integrity
+
+- **Particulars.** Booking (tower, unit, buyer initials only), agreement for sale (registration number, date, value, stated brokerage), GST split, TDS rate, IRN/acknowledgement and place of supply live on `Invoice`. Cross-field rules are in `@/lib/invoice-integrity/consistency` and run both in the upload form and in `submitInvoice`; never duplicate them elsewhere.
+- **Fingerprint registry.** Every invoice registers a canonical SHA-256 fingerprint (`@/lib/invoice-integrity/fingerprint`) in `InvoiceFingerprint`; an identical fingerprint is blocked. Near-duplicates (same parties and total within `INVOICE_DUPLICATE_WINDOW_DAYS`), a reused IRN and the same PDF from another partner become `InvoiceDuplicateFlag` rows for the builder or the platform to review. `checkFingerprint` / `registerFingerprint` / `setExternalFingerprintRegistry` in `services/invoice-integrity.ts` are the integration points for a shared registry.
+- **Three-way match.** Builders tick the `MATCH_ITEMS` before approving unless the programme's `InvoiceMatchPolicy` makes them optional; the attestation (who, when, what) is stored on the `APPROVED` `InvoiceApproval`.
+- **Uploads.** PDFs go through `acceptInvoiceDocument` (quarantine → structure and page checks → optional ClamAV → promotion). Never write invoice documents to storage directly.
+
 ## Security
 
 - Authorise in services (organisation ownership + organisation type), not only in the UI.

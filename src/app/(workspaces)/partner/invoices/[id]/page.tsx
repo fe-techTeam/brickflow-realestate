@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { ApprovalAction, FinancingStatus } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
+import { BrokerageParticulars } from "@/components/invoice/brokerage-particulars";
 import { calculateDiscount } from "@/lib/financing";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatBps } from "@/lib/money";
@@ -111,6 +112,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           )}
 
           <InvoiceDocument invoice={invoice} partial={partial} />
+
+          <Panel eyebrow="Booking, agreement & tax" title="Brokerage particulars" description="As submitted, with the platform's arithmetic checks">
+            <BrokerageParticulars invoice={invoice} />
+          </Panel>
 
           {request && <FinancingRequestPanel invoice={invoice} request={request} />}
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, Loader2, MessageSquareText, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import type { InvoiceStatus } from "@/generated/prisma/enums";
 import { formatINR } from "@/lib/money";
 import { markUnderReviewAction, rejectInvoiceAction, requestClarificationAction } from "@/server/actions/invoices";
 import { ApproveDialog } from "./approve-dialog";
+import { MatchChecklist, type MatchChecklistItem } from "./match-checklist";
 
 /** Decision controls for an invoice awaiting the builder (SUBMITTED or UNDER_REVIEW). */
 export function ReviewActions({
@@ -18,15 +19,34 @@ export function ReviewActions({
   cpName,
   amountPaise,
   status,
+  matchItems,
+  matchRequired,
+  openDuplicates,
 }: {
   invoiceId: string;
   invoiceNumber: string;
   cpName: string;
   amountPaise: string;
   status: Extract<InvoiceStatus, "SUBMITTED" | "UNDER_REVIEW">;
+  matchItems: MatchChecklistItem[];
+  matchRequired: boolean;
+  openDuplicates: number;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [ticked, setTicked] = useState<Set<string>>(new Set());
+  const [matchError, setMatchError] = useState<string | null>(null);
+  const complete = matchItems.every((item) => ticked.has(item.key));
+
+  function toggle(key: string, checked: boolean) {
+    setMatchError(null);
+    setTicked((current) => {
+      const next = new Set(current);
+      if (checked) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
 
   function markUnderReview() {
     startTransition(async () => {
@@ -42,7 +62,19 @@ export function ReviewActions({
 
   return (
     <div className="grid gap-3">
-      <ApproveDialog invoiceId={invoiceId} invoiceNumber={invoiceNumber} cpName={cpName} amountPaise={amountPaise} />
+      <div className="mb-3">
+        <MatchChecklist items={matchItems} ticked={ticked} onToggle={toggle} required={matchRequired} error={matchError} />
+      </div>
+      <ApproveDialog
+        invoiceId={invoiceId}
+        invoiceNumber={invoiceNumber}
+        cpName={cpName}
+        amountPaise={amountPaise}
+        attestations={matchItems.filter((item) => ticked.has(item.key)).map((item) => item.key)}
+        blocked={matchRequired && !complete ? "Tick every three-way match item to approve." : null}
+        onBlocked={setMatchError}
+        openDuplicates={openDuplicates}
+      />
       <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 [&_button]:h-10 [&_button]:w-full">
         <ActionDialog
           trigger="Request clarification"

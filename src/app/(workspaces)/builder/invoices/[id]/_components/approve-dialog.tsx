@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -26,7 +26,26 @@ function checkAmount(raw: string, invoicePaise: bigint): AmountCheck {
 }
 
 /** Approval with an editable approved amount (defaults to the invoice total, may be lower, never higher) and an optional comment. */
-export function ApproveDialog({ invoiceId, invoiceNumber, cpName, amountPaise }: { invoiceId: string; invoiceNumber: string; cpName: string; amountPaise: string }) {
+export function ApproveDialog({
+  invoiceId,
+  invoiceNumber,
+  cpName,
+  amountPaise,
+  attestations,
+  blocked,
+  onBlocked,
+  openDuplicates,
+}: {
+  invoiceId: string;
+  invoiceNumber: string;
+  cpName: string;
+  amountPaise: string;
+  attestations: string[];
+  /** Why approval cannot start yet (e.g. the three-way match is incomplete); null when it can. */
+  blocked: string | null;
+  onBlocked: (message: string) => void;
+  openDuplicates: number;
+}) {
   const router = useRouter();
   const invoicePaise = BigInt(amountPaise);
   const fullAmount = paiseToDecimalString(invoicePaise);
@@ -53,9 +72,12 @@ export function ApproveDialog({ invoiceId, invoiceNumber, cpName, amountPaise }:
     setServerError(null);
     if (!check.ok) return;
     startTransition(async () => {
-      const result = await approveInvoiceAction(invoiceId, { approvedAmount: paiseToDecimalString(check.paise), comment: comment.trim() || undefined });
+      const result = await approveInvoiceAction(invoiceId, { approvedAmount: paiseToDecimalString(check.paise), comment: comment.trim() || undefined, attestations });
       if (!result.ok) {
-        setServerError(result.fieldErrors?.approvedAmount?.[0] ?? result.fieldErrors?.comment?.[0] ?? result.error);
+        if (result.fieldErrors?.attestations?.[0]) {
+          setOpen(false);
+          onBlocked(result.fieldErrors.attestations[0]);
+        } else setServerError(result.fieldErrors?.approvedAmount?.[0] ?? result.fieldErrors?.comment?.[0] ?? result.error);
         toast.error(result.error);
         return;
       }
@@ -71,6 +93,11 @@ export function ApproveDialog({ invoiceId, invoiceNumber, cpName, amountPaise }:
       open={open}
       onOpenChange={(next) => {
         if (pending) return;
+        if (next && blocked) {
+          onBlocked(blocked);
+          toast.error(blocked);
+          return;
+        }
         setOpen(next);
         if (!next) reset();
       }}
@@ -103,6 +130,13 @@ export function ApproveDialog({ invoiceId, invoiceNumber, cpName, amountPaise }:
             <span className="text-[0.75rem] text-muted-foreground">Invoice amount (incl. GST)</span>
             <span className="tabular font-sans text-lg font-medium text-fg">{formatINR(invoicePaise)}</span>
           </div>
+
+          {openDuplicates > 0 && (
+            <p role="note" className="flex items-start gap-2 rounded-lg border border-warning/25 bg-warning-soft px-3.5 py-3 text-[0.8125rem] text-warning">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+              {openDuplicates === 1 ? "A possible duplicate of this invoice has" : `${openDuplicates} possible duplicates of this invoice have`} not been reviewed yet.
+            </p>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="approved-amount">

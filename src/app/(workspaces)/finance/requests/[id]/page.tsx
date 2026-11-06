@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, Download, ExternalLink, FileText, Lock, MessageSquareText, ShieldCheck } from "lucide-react";
 import { StatusBadge } from "@/components/common/status-badge";
+import { BrokerageParticulars, MatchAttestationSummary } from "@/components/invoice/brokerage-particulars";
 import { Button } from "@/components/ui/button";
 import type { ApprovalAction, FinancingStatus, SettlementStatus } from "@/generated/prisma/enums";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -291,6 +292,7 @@ export default async function RequestReviewPage({ params }: Params) {
   const invoice = request.invoice;
   const reduced = request.approvedAmountPaise < request.offer.invoiceAmountPaise;
   const document = invoice.documents[0];
+  const builderApproval = [...invoice.approvals].reverse().find((a) => a.action === "APPROVED");
   const accountMasked = maskAccountNumber(request.cp.bankAccountNumber);
   const summary = toRequestSummary(request);
   const disbursementSummary = toDisbursementSummary(request, {
@@ -521,6 +523,18 @@ export default async function RequestReviewPage({ params }: Params) {
             )}
             <Rule label="Builder approval history" className="mt-7 mb-5" />
             <CaseTimeline events={approvals} />
+            {builderApproval && (
+              <MatchAttestationSummary
+                attestation={builderApproval.attestation}
+                attestedByName={builderApproval.attestedByName}
+                attestedAt={builderApproval.attestedAt}
+                className="mt-6"
+              />
+            )}
+          </Panel>
+
+          <Panel eyebrow="Booking, agreement & tax" title="Brokerage particulars" description="As stated on the invoice, with the platform's arithmetic checks">
+            <BrokerageParticulars invoice={invoice} />
           </Panel>
 
           <div className="grid gap-6">

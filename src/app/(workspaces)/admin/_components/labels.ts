@@ -14,6 +14,7 @@ export const ENTITY_LABELS: Record<string, string> = {
   Organisation: "Organisation",
   User: "User",
   Invoice: "Invoice",
+  InvoiceDocument: "Invoice document",
   FinancingProgramme: "Financing programme",
   FinancingOffer: "Financing offer",
   FinancingRequest: "Financing request",

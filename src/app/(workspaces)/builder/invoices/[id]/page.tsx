@@ -4,12 +4,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeCheck, ChevronLeft, Eye, FileUp, MessageSquareText, MessageSquareWarning, Send, ShieldCheck, XCircle, type LucideIcon } from "lucide-react";
 import { StatusBadge } from "@/components/common/status-badge";
+import { BrokerageParticulars, MatchAttestationSummary } from "@/components/invoice/brokerage-particulars";
+import { DuplicateFlagList } from "@/components/invoice/duplicate-flags";
+import { describeMatchItems } from "@/lib/invoice-integrity/match";
 import type { ApprovalAction } from "@/generated/prisma/enums";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { requireWorkspace, type Actor } from "@/server/auth/session";
 import { DomainError } from "@/server/errors";
 import { getBuilderEmpanelment } from "@/server/queries/builder";
+import { getMatchPolicy, listDuplicateFlags, toDuplicateFlagDtos } from "@/server/services/invoice-integrity";
 import { getInvoiceDetail, type InvoiceDetail } from "@/server/services/invoices";
 import { AgeingMeter } from "../../_components/ageing";
 import { Chronicle, type ChronicleTone } from "../../_components/chronicle";
@@ -47,7 +51,8 @@ function Quote({ children, className }: { children: ReactNode; className?: strin
 }
 
 function DecisionSummary({ invoice }: { invoice: InvoiceDetail }) {
-  const decidedBy = [...invoice.approvals].reverse().find((a) => a.action === "APPROVED" || a.action === "REJECTED")?.actorName;
+  const decision = [...invoice.approvals].reverse().find((a) => a.action === "APPROVED" || a.action === "REJECTED");
+  const decidedBy = decision?.actorName;
 
   if (invoice.status === "ACCEPTED") {
     const approved = invoice.approvedAmountPaise ?? invoice.amountPaise;
@@ -76,6 +81,9 @@ function DecisionSummary({ invoice }: { invoice: InvoiceDetail }) {
           )}
         </div>
         {invoice.latestReviewNote && <Quote className="mt-5">{invoice.latestReviewNote}</Quote>}
+        {decision?.action === "APPROVED" && (
+          <MatchAttestationSummary attestation={decision.attestation} attestedByName={decision.attestedByName} attestedAt={decision.attestedAt} className="mt-5" />
+        )}
         <p className="mt-5 text-[0.75rem] leading-relaxed text-muted-foreground">Eligible for early payment from Veefin while the due date is in the future.</p>
       </div>
     );
@@ -126,7 +134,12 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
   const actor = await requireWorkspace("builder");
   const { id } = await params;
   const invoice = await loadInvoice(actor, id);
-  const empanelment = await getBuilderEmpanelment(actor, invoice.cpId);
+  const [empanelment, flags, policy] = await Promise.all([
+    getBuilderEmpanelment(actor, invoice.cpId),
+    listDuplicateFlags(actor, { invoiceId: invoice.id }),
+    getMatchPolicy(invoice.builderId),
+  ]);
+  const openFlags = flags.filter((f) => f.status === "OPEN").length;
   const now = new Date();
 
   const creditPeriodDays = empanelment?.creditPeriodDays ?? null;
@@ -202,6 +215,9 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
                     cpName={invoice.cp.name}
                     amountPaise={invoice.amountPaise.toString()}
                     status={invoice.status as "SUBMITTED" | "UNDER_REVIEW"}
+                    matchItems={describeMatchItems(invoice)}
+                    matchRequired={policy.required}
+                    openDuplicates={openFlags}
                   />
                   <p className="mt-5 flex gap-2.5 rounded-lg bg-glass/80 px-3.5 py-3 text-[0.75rem] leading-relaxed text-fg-soft/80">
                     <ShieldCheck className="mt-px size-4 shrink-0 text-leaf" />
@@ -262,6 +278,17 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
         </aside>
 
         <div className="min-w-0 space-y-6 sm:space-y-8 xl:col-start-1 xl:row-start-1">
+          {flags.length > 0 && (
+            <Panel
+              eyebrow="Integrity"
+              title="Possible duplicates"
+              description={openFlags ? "Review each match before you decide. Flags never block approval on their own." : "All matches have been reviewed."}
+              flush
+            >
+              <DuplicateFlagList flags={toDuplicateFlagDtos(flags)} canResolve linkBase="/builder/invoices" />
+            </Panel>
+          )}
+
           <DocumentViewer documents={invoice.documents} invoiceNumber={invoice.invoiceNumber} />
 
           <Panel eyebrow="As submitted" title="Invoice particulars" description="Details captured from the channel partner's submission">
@@ -334,6 +361,10 @@ export default async function InvoiceReviewPage({ params }: { params: Promise<{ 
                 <p className="max-w-3xl font-display text-[1.1875rem] leading-snug text-fg-soft">{invoice.description}</p>
               </div>
             )}
+          </Panel>
+
+          <Panel eyebrow="Booking, agreement & tax" title="Brokerage particulars" description="As stated on the invoice, with the platform's arithmetic checks">
+            <BrokerageParticulars invoice={invoice} />
           </Panel>
 
           {invoice.status === "ACCEPTED" && <FinancingPanel invoice={invoice} originalDueDate={originalDueDate} creditPeriodDays={creditPeriodDays} />}
