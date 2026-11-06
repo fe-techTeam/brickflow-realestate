@@ -33,6 +33,40 @@ No AWS resources exist yet. Every command below is for the AWS account owner to 
 | `NODE_ENV` | No | `production` | Set by the image. |
 | `NEXT_TELEMETRY_DISABLED` | No | `1` | Disables Next.js telemetry. |
 
+**Background worker and notifications.** Read by the `worker` service unless marked *app*. `APP_URL` and `AUTH_SECRET` are also required by the worker (email links and signed unsubscribe links).
+
+| Variable | Required | Example / default | Notes |
+| --- | --- | --- | --- |
+| `EMAIL_PROVIDER` | Yes (production) | `smtp` | `smtp` sends email; `log` writes each email to the worker log and sends nothing (bodies are omitted from the log in production because they can carry one-time links). The worker refuses to start in production when it is unset. |
+| `EMAIL_ALLOW_LOG_IN_PRODUCTION` | No | `false` | Must be `true` for `EMAIL_PROVIDER=log` with `NODE_ENV=production`. For demo environments only; the worker logs a warning at start. |
+| `SMTP_HOST` | With `smtp` | `email-smtp.ap-south-1.amazonaws.com` | Any SMTP relay. |
+| `SMTP_PORT` | No | `587` | `465` uses implicit TLS; other ports upgrade with STARTTLS. |
+| `SMTP_SECURE` | No | `true` on 465, else `false` | Implicit TLS. |
+| `SMTP_REQUIRE_TLS` | No | `true` | Without implicit TLS, refuse to send unless STARTTLS succeeds. Set `false` only for a local relay. Certificates are always verified; TLS 1.2 minimum. |
+| `SMTP_USER`, `SMTP_PASSWORD` | With an authenticated relay | — | Both or neither. For Amazon SES these are the SMTP credentials generated in the SES console, not IAM access keys. |
+| `SMTP_FROM` | With `smtp` | `BrickFlow <no-reply@brickflow.example.com>` | Must be a verified identity on SES. |
+| `SMTP_RATE_LIMIT_PER_SECOND` | No | — | Caps sends per second (set to the SES account's sending rate). |
+| `WHATSAPP_PROVIDER` | No (worker, *app*) | `none` | `none` records WhatsApp deliveries as skipped; `cloud` uses the Meta WhatsApp Cloud API. The app shows the WhatsApp column on the preferences page only with `cloud`. |
+| `WHATSAPP_TOKEN` | With `cloud` | — | Permanent system-user access token with `whatsapp_business_messaging`. Secret. |
+| `WHATSAPP_PHONE_NUMBER_ID` | With `cloud` | `106540352242922` | Numeric id of the sending number (WhatsApp Manager, API setup). |
+| `WHATSAPP_APP_SECRET` | With `cloud` (worker, *app*) | — | Meta app secret; verifies `X-Hub-Signature-256` on status callbacks. Secret. Without it the webhook answers 503. |
+| `WHATSAPP_VERIFY_TOKEN` | With `cloud` (*app*) | random string | Echoed back during the webhook subscription handshake; enter the same value in the Meta app dashboard. |
+| `WHATSAPP_API_VERSION` | No | `v27.0` | Graph API version. |
+| `WHATSAPP_TEMPLATE_LANGUAGE` | No | `en` | Language code of the approved templates. |
+| `WORKER_CONCURRENCY` | No | `4` | Jobs run in parallel per worker process. |
+| `WORKER_POLL_INTERVAL_MS` | No | `1000` | Idle wait between claim attempts. |
+| `WORKER_LEASE_MS` | No | `60000` | Visibility timeout. Renewed every third of it while a job runs; an expired lease makes the job claimable by another worker. |
+| `WORKER_SCHEDULER_INTERVAL_MS` | No | `30000` | How often recurring schedules are checked. |
+| `WORKER_SHUTDOWN_TIMEOUT_MS` | No | `25000` | Grace period on `SIGTERM` before unfinished jobs are handed back (keep below the container stop timeout, 40 s in Compose). |
+| `WORKER_HANDLER_TIMEOUT_MS` | No | `300000` | A handler running longer is aborted and retried. |
+| `WORKER_JOB_TYPES` | No | — | Comma-separated job types for a dedicated worker; all types when unset. |
+| `WORKER_HEARTBEAT_FILE` | No | `/tmp/brickflow-worker.alive` in Compose | Touched on every loop; the Compose health check fails when it is older than 2 minutes. |
+| `WORKER_DATABASE_POOL_MAX` | No | `5` | Compose only: `DATABASE_POOL_MAX` for the worker. |
+| `JOB_MAX_ATTEMPTS` | No | `8` | Attempts before a job is dead-lettered. |
+| `JOB_BACKOFF_BASE_MS` / `JOB_BACKOFF_MAX_MS` | No | `5000` / `3600000` | Exponential backoff with jitter between attempts: 2.5-5 s, 5-10 s, and so on, capped at one hour. |
+| `JOB_RETENTION_DAYS` | No | `14` | Succeeded and cancelled jobs are purged after this; dead-lettered jobs are kept. |
+| `SETTLEMENT_REMINDER_CRON` | No | `0 9 * * *` | When settlement reminders run, in IST (five-field cron). |
+
 ### Container behaviour
 
 On start, `docker-entrypoint.sh`:
@@ -42,7 +76,35 @@ On start, `docker-entrypoint.sh`:
 3. runs the demo seed only when the database has no users yet (first start) or when `SEED_ON_START=true`, so data persists across restarts and upgrades by default;
 4. starts the Next.js standalone server with `node server.js`.
 
+The same image runs the background worker with `node --conditions=react-server --import tsx src/worker/main.ts`. The `worker` service in the Compose files overrides the entrypoint, so it never migrates or seeds, and it starts once the app is healthy. The worker validates its configuration and exits with a clear message when, for example, `EMAIL_PROVIDER` is missing in production. Several workers can run at once.
+
 The container runs as a non-root user (uid/gid `1001`) and declares a `HEALTHCHECK` on `GET /api/health`, which returns `{"status":"ok","db":"ok"}` after a `SELECT 1`, or HTTP 503 when the database is unreachable. The endpoint needs no authentication and exposes no configuration.
+
+### Email (Amazon SES SMTP)
+
+1. Verify the sending domain in SES (DKIM records in DNS) and request production access so you can send to any address.
+2. Create SMTP credentials (SES console, SMTP settings) and set `SMTP_HOST=email-smtp.<region>.amazonaws.com`, `SMTP_PORT=587`, `SMTP_USER`, `SMTP_PASSWORD` and `SMTP_FROM` (an address on the verified domain). Port 587 uses STARTTLS, which is required.
+3. Set `SMTP_RATE_LIMIT_PER_SECOND` to the account's sending rate.
+
+Any other relay works the same way. Each email carries a `Message-ID` derived from the delivery id, so a resend after a worker crash is recognisable, and notification emails carry `List-Unsubscribe` / `List-Unsubscribe-Post` headers. Permanent rejections (5xx) are not retried; temporary failures retry with backoff. Every attempt is in the delivery log with the provider message id and the last error.
+
+### WhatsApp Cloud API
+
+1. In Meta Business Manager, add a WhatsApp Business Account and phone number, create a system user with the `whatsapp_business_messaging` permission and generate a permanent token (`WHATSAPP_TOKEN`). Note the phone number id (`WHATSAPP_PHONE_NUMBER_ID`) and the app secret (`WHATSAPP_APP_SECRET`).
+2. Configure the webhook in the Meta app: callback URL `https://<DOMAIN>/api/webhooks/whatsapp`, verify token = `WHATSAPP_VERIFY_TOKEN`, and subscribe to the `messages` field. Status callbacks (sent, delivered, read, failed) update the delivery log.
+3. Create and get approval for one **utility** template per event, in the language set by `WHATSAPP_TEMPLATE_LANGUAGE`. Names and body parameters, in order:
+
+| Template | Body parameters |
+| --- | --- |
+| `brickflow_invoice_submitted`, `brickflow_invoice_under_review`, `brickflow_invoice_approved`, `brickflow_invoice_rejected`, `brickflow_invoice_clarification_requested`, `brickflow_invoice_resubmitted` | {{1}} invoice number, {{2}} channel partner, {{3}} builder, {{4}} amount (the approved amount when set) |
+| `brickflow_offer_generated` | {{1}} invoice number, {{2}} net payable, {{3}} discount rate, {{4}} valid until |
+| `brickflow_offer_expiring` | {{1}} invoice number, {{2}} net payable, {{3}} valid until |
+| `brickflow_offer_accepted`, `brickflow_financing_approved`, `brickflow_financing_rejected` | {{1}} financing request reference, {{2}} invoice number, {{3}} net payable |
+| `brickflow_disbursement_initiated` | {{1}} payout reference, {{2}} amount, {{3}} invoice number |
+| `brickflow_disbursement_completed` | Partner: {{1}} payout reference, {{2}} amount, {{3}} UTR. Builder: {{1}} invoice number, {{2}} settlement amount, {{3}} due date |
+| `brickflow_settlement_due_soon`, `brickflow_settlement_due_today`, `brickflow_settlement_overdue`, `brickflow_settlement_settled` | {{1}} invoice number, {{2}} amount, {{3}} due date |
+
+Messages go only to users who entered a number on their *Notifications* page and ticked the consent box; clearing it switches WhatsApp off for every category. Throttling, temporary errors and expired tokens are retried; invalid numbers and template errors are not.
 
 ---
 
@@ -59,8 +121,9 @@ The lowest-cost persistent setup: one Linux host runs the whole stack from `dock
 ```
   Internet ──► :80 / :443 ──► caddy ──► app:3000 ──► postgres:5432
                (only published      (edge network)   (internal network, no published port)
-                ports)                                     ▲
-                                                 backup ───┘  nightly pg_dump ──► volume postgres-backups
+                ports)                                     ▲   ▲
+                                                 backup ───┘   └─── worker ──► SMTP relay, WhatsApp Cloud API
+                                     nightly pg_dump ──► volume postgres-backups
 ```
 
 | Service | Image | Role |
@@ -68,6 +131,7 @@ The lowest-cost persistent setup: one Linux host runs the whole stack from `dock
 | `caddy` | `caddy:2.11.7-alpine` | Reverse proxy. Obtains and renews a Let's Encrypt certificate for `DOMAIN` automatically, redirects HTTP to HTTPS, adds HSTS. Config: `infra/compose/Caddyfile`. |
 | `app` | built from this repository | BrickFlow. Invoice PDFs on the named volume `app-storage`, mounted at `STORAGE_DIR` (`/app/data/storage`). |
 | `postgres` | `postgres:17.11-alpine3.24` | Database on the named volume `postgres-data`. Not published on any host port; reachable only from `app` and `backup` on an internal network. |
+| `worker` | same image as `app` | Background jobs: email and WhatsApp delivery, offer-expiry and settlement reminders, job-table maintenance. Starts after `app` is healthy (migrations applied). Its health check reads a heartbeat file. On `docker compose stop` it finishes running jobs (up to `WORKER_SHUTDOWN_TIMEOUT_MS`) and hands back the rest. Scale with `--scale worker=2`. |
 | `backup` | `postgres:17.11-alpine3.24` | Runs `infra/compose/pg-backup.sh`: a `pg_dump` (custom format) every night into the volume `postgres-backups`, deleting dumps older than 14 days. |
 
 All images are pinned to exact versions. Update the tags deliberately (and check the release notes) rather than pulling `latest`.
@@ -96,7 +160,17 @@ All images are pinned to exact versions. Update the tags deliberately (and check
    AUTH_SECRET=<openssl rand -base64 48>
    DEMO_PASSWORD=<shared password for the demo accounts>
    DEMO_DATASET=standard          # or chandak
+   # Email (required by the worker in production):
+   EMAIL_PROVIDER=smtp
+   SMTP_HOST=email-smtp.ap-south-1.amazonaws.com
+   SMTP_USER=<SES SMTP user name>
+   SMTP_PASSWORD=<SES SMTP password>
+   SMTP_FROM="BrickFlow <no-reply@brickflow.example.com>"
+   # ...or, for a demo without email delivery:
+   # EMAIL_PROVIDER=log
+   # EMAIL_ALLOW_LOG_IN_PRODUCTION=true
    # Optional:
+   # WHATSAPP_PROVIDER=cloud      # plus the WHATSAPP_* variables, see "WhatsApp Cloud API"
    # BACKUP_HOUR_UTC=21           # 21:00 UTC = 02:30 IST (default)
    # BACKUP_RETENTION_DAYS=14
    # DATABASE_POOL_MAX=10
@@ -112,7 +186,7 @@ All images are pinned to exact versions. Update the tags deliberately (and check
    docker compose -f docker-compose.prod.yml up -d --build
    ```
 
-   On first start the app applies the migrations and seeds the selected demo dataset (the database is empty). Follow progress with `docker compose -f docker-compose.prod.yml logs -f app caddy`.
+   On first start the app applies the migrations and seeds the selected demo dataset (the database is empty). The worker starts once the app is healthy. Follow progress with `docker compose -f docker-compose.prod.yml logs -f app worker caddy`.
 
 4. Open `https://<DOMAIN>`. `https://<DOMAIN>/api/health` returns `{"status":"ok","db":"ok"}`.
 
@@ -159,7 +233,8 @@ To switch datasets, change `DEMO_DATASET` in `.env`, run `docker compose up -d a
 
 ### Operations notes
 
-- Logs are rotated by Docker (`json-file`, 5 × 10 MB per service).
+- Logs are rotated by Docker (`json-file`, 5 × 10 MB per service). The worker logs one JSON line per job outcome: `docker compose logs worker --tail 100`.
+- Queue health, failed and dead-lettered jobs and the delivery log are under *Super Admin → Jobs*. A growing "Ready to run" figure or an old "oldest waiting" age means no worker is running or it is overloaded.
 - All services restart automatically (`unless-stopped`), including after a host reboot.
 - `docker compose down` keeps the volumes; `docker compose down -v` **deletes the database, PDFs, backups and certificates**.
 
@@ -202,6 +277,7 @@ The demo environment runs the [single-server stack](#2-single-server-with-docker
 | Stack | `~/brickflow` on the instance: `docker-compose.prod.yml`, `infra/compose/*` and a `chmod 600` `.env` |
 | Secrets | `.env` on the instance; a recovery copy is in Secrets Manager `brickflow/demo/env` (same account) |
 | Dataset | `DEMO_DATASET=chandak`, `SEED_ON_START=false` (seeded once on first start) |
+| Email | `EMAIL_PROVIDER=log` with `EMAIL_ALLOW_LOG_IN_PRODUCTION=true`: emails are recorded in the delivery log and the worker log, not sent. Add both to `.env` before deploying a release with the worker, or the worker refuses to start (the app is unaffected). |
 | Backups | Nightly `pg_dump` to the `postgres-backups` volume (14 days), plus Lightsail automatic instance snapshots daily at 22:00 UTC |
 | Cost | About $12/month for the instance, plus snapshot storage |
 
@@ -233,6 +309,7 @@ Point an `A` record for the new host name at `35.154.239.217`, with the proxy of
 cd ~/brickflow
 docker compose -f docker-compose.prod.yml ps                                   # status
 docker compose -f docker-compose.prod.yml logs app --tail 100                  # app logs
+docker compose -f docker-compose.prod.yml logs worker --tail 100               # worker logs (jobs; emails in log mode)
 docker compose -f docker-compose.prod.yml exec backup /bin/sh /usr/local/bin/pg-backup.sh --now   # backup now
 docker compose -f docker-compose.prod.yml exec app node scripts/demo-reset.mjs --yes             # reset demo data
 ```
@@ -251,3 +328,4 @@ docker compose -f docker-compose.prod.yml exec app node scripts/demo-reset.mjs -
 - The container runs as a non-root user; ECS Exec is disabled.
 - Images are scanned on push; CI fails on high or critical advisories in production dependencies.
 - Disbursements are simulated: no bank integration or payment credentials exist in any environment.
+- Notifications: TLS is required to the SMTP relay (certificates verified); `SMTP_PASSWORD`, `WHATSAPP_TOKEN` and `WHATSAPP_APP_SECRET` are secrets. The WhatsApp webhook rejects any callback whose `X-Hub-Signature-256` does not match. Unsubscribe links are HMAC-signed per user and category, and a `GET` never changes anything. One-time links in account emails are redacted from the delivery log after sending.

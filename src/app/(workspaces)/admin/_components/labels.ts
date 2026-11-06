@@ -21,6 +21,8 @@ export const ENTITY_LABELS: Record<string, string> = {
   Settlement: "Settlement",
   PlatformSetting: "Platform setting",
   Session: "Session",
+  Job: "Background job",
+  NotificationPreference: "Notification preference",
 };
 
 export const ROLE_LABELS: Record<string, string> = {

@@ -47,10 +47,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/.next/standalone ./
 COPY --from=build --chown=brickflow:brickflow /app/.next/static ./.next/static
 COPY --from=build /app/package.json /app/prisma.config.ts /app/tsconfig.json ./
-COPY --from=build /app/prisma/schema.prisma /app/prisma/seed.ts ./prisma/
+COPY --from=build /app/prisma/schema.prisma /app/prisma/seed.ts /app/prisma/seed-notifications.ts ./prisma/
 COPY --from=build /app/prisma/migrations ./prisma/migrations
 COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/src/lib ./src/lib
+# Background worker (`docker compose` service "worker"): runs from TypeScript sources with tsx.
+COPY --from=build /app/src/server ./src/server
+COPY --from=build /app/src/worker ./src/worker
 COPY --from=build /app/scripts/demo-reset.mjs ./scripts/
 COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 

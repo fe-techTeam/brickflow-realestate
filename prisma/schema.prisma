@@ -455,3 +455,134 @@ model PlatformSetting {
   updatedById String?
   updatedAt   DateTime @updatedAt
 }
+
+
+// ------------------------------------------------------------------------------------------------
+// Background jobs (PostgreSQL-backed queue and transactional outbox) and notifications.
+// Recipient user ids are plain columns, not relations, so these tables never constrain the
+// identity tables; rows are written by the services in the same transaction as the state change.
+// ------------------------------------------------------------------------------------------------
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  RETRY
+  SUCCEEDED
+  DEAD
+  CANCELLED
+}
+
+model Job {
+  id             String    @id @default(cuid())
+  type           String
+  payload        Json
+  status         JobStatus @default(PENDING)
+  runAt          DateTime  @default(now())
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(8)
+  idempotencyKey String?   @unique
+  lockedBy       String?
+  lockedUntil    DateTime?
+  lastError      String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, runAt])
+  @@index([type, status])
+  @@index([status, lockedUntil])
+}
+
+/// Recurring job definitions. `nextRunAt` is advanced under a row lock, and the enqueued job's
+/// idempotency key names the period, so each period runs once however many workers poll.
+model JobSchedule {
+  name             String    @id
+  cron             String
+  utcOffsetMinutes Int       @default(330)
+  jobType          String
+  payload          Json
+  enabled          Boolean   @default(true)
+  nextRunAt        DateTime
+  lastRunAt        DateTime?
+  lastJobId        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  WHATSAPP
+}
+
+enum NotificationDeliveryStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  SKIPPED
+}
+
+model Notification {
+  id             String    @id @default(cuid())
+  userId         String
+  organisationId String?
+  event          String
+  category       String
+  title          String
+  body           String
+  link           String?
+  dedupeKey      String?   @unique
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@index([userId, createdAt])
+}
+
+model NotificationDelivery {
+  id                String                     @id @default(cuid())
+  notificationId    String?
+  userId            String?
+  channel           NotificationChannel
+  event             String
+  template          String
+  recipient         String
+  data              Json
+  status            NotificationDeliveryStatus @default(QUEUED)
+  provider          String?
+  providerMessageId String?
+  error             String?
+  attempts          Int                        @default(0)
+  dedupeKey         String?                    @unique
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  @@index([status, createdAt])
+  @@index([providerMessageId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+model NotificationPreference {
+  userId    String
+  category  String
+  channel   NotificationChannel
+  enabled   Boolean
+  updatedAt DateTime            @updatedAt
+
+  @@id([userId, category, channel])
+}
+
+/// Per-user delivery addresses that are not part of the identity record.
+model NotificationProfile {
+  userId            String    @id
+  whatsappNumber    String?
+  whatsappOptedInAt DateTime?
+  updatedAt         DateTime  @updatedAt
+}

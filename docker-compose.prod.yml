@@ -11,6 +11,12 @@ x-logging: &logging
     max-size: "10m"
     max-file: "5"
 
+# WhatsApp settings shared by the app (preferences page, delivery-status webhook) and the worker.
+x-whatsapp-env: &whatsapp-env
+  WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-none}
+  WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+  WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+
 services:
   caddy:
     image: caddy:2.11.7-alpine
@@ -48,8 +54,60 @@ services:
       DEMO_PASSWORD: ${DEMO_PASSWORD:-BrickFlow@2026}
       DEMO_DATASET: ${DEMO_DATASET:-standard}
       SEED_ON_START: ${SEED_ON_START:-false}
+      <<: *whatsapp-env
     volumes:
       - app-storage:/app/data/storage
+    networks: [edge, backend]
+    logging: *logging
+    restart: unless-stopped
+
+  # Background jobs: notification delivery (email, WhatsApp), reminders and maintenance. Same image as
+  # the app; starts once the app is healthy, i.e. after migrations have been applied. Scale with
+  # `--scale worker=N`: jobs are claimed with row locks, so workers never run the same job twice.
+  worker:
+    image: brickflow:${BRICKFLOW_VERSION:-latest}
+    init: true
+    depends_on:
+      app:
+        condition: service_healthy
+    entrypoint: ["node", "--conditions=react-server", "--import", "tsx", "src/worker/main.ts"]
+    environment:
+      DATABASE_URL: postgresql://brickflow:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/brickflow
+      DATABASE_POOL_MAX: ${WORKER_DATABASE_POOL_MAX:-5}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (at least 32 random characters)}
+      APP_URL: https://${DOMAIN}
+      # The worker refuses to start without a provider; EMAIL_PROVIDER=log is accepted here only
+      # together with EMAIL_ALLOW_LOG_IN_PRODUCTION=true.
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-}
+      EMAIL_ALLOW_LOG_IN_PRODUCTION: ${EMAIL_ALLOW_LOG_IN_PRODUCTION:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_REQUIRE_TLS: ${SMTP_REQUIRE_TLS:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_RATE_LIMIT_PER_SECOND: ${SMTP_RATE_LIMIT_PER_SECOND:-}
+      <<: *whatsapp-env
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v27.0}
+      WHATSAPP_TEMPLATE_LANGUAGE: ${WHATSAPP_TEMPLATE_LANGUAGE:-en}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
+      WORKER_LEASE_MS: ${WORKER_LEASE_MS:-60000}
+      WORKER_SHUTDOWN_TIMEOUT_MS: ${WORKER_SHUTDOWN_TIMEOUT_MS:-25000}
+      JOB_MAX_ATTEMPTS: ${JOB_MAX_ATTEMPTS:-8}
+      JOB_RETENTION_DAYS: ${JOB_RETENTION_DAYS:-14}
+      SETTLEMENT_REMINDER_CRON: ${SETTLEMENT_REMINDER_CRON:-0 9 * * *}
+      WORKER_HEARTBEAT_FILE: /tmp/brickflow-worker.alive
+    healthcheck:
+      test: ["CMD", "node", "-e", "const s=require('fs').statSync('/tmp/brickflow-worker.alive');process.exit(Date.now()-s.mtimeMs<120000?0:1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    # SIGTERM lets running jobs finish (WORKER_SHUTDOWN_TIMEOUT_MS) before they are handed back.
+    stop_grace_period: 40s
     networks: [edge, backend]
     logging: *logging
     restart: unless-stopped

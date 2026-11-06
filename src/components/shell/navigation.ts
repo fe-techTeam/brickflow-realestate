@@ -20,6 +20,7 @@ import {
   UserCircle2,
   Users,
   Wallet,
+  Workflow,
 } from "lucide-react";
 import type { WorkspaceKey } from "@/lib/workspaces";
 
@@ -123,6 +124,7 @@ export const NAVIGATION: Record<WorkspaceKey, NavSection[]> = {
         { title: "Financing Configuration", href: "/admin/financing", icon: BadgePercent },
         { title: "Transactions", href: "/admin/transactions", icon: Receipt },
         { title: "Audit Logs", href: "/admin/audit", icon: ShieldCheck },
+        { title: "Jobs", href: "/admin/jobs", icon: Workflow },
         { title: "Settings", href: "/admin/settings", icon: Settings },
       ],
     },

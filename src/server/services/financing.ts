@@ -8,6 +8,7 @@ import { recordAudit } from "../audit";
 import { assertOrgType, type Actor } from "../auth/session";
 import { db, type Tx } from "../db";
 import { conflict, forbidden, notFound } from "../errors";
+import { notifyDisbursement, notifyFinancingDecision, notifyOfferAccepted, notifyOfferGenerated, notifySettlement } from "../notifications/workflow";
 import { nextReference } from "../sequence";
 
 export const CONSENT_TEXT =
@@ -134,6 +135,7 @@ export async function generateOffer(actor: Actor, invoiceId: string) {
       summary: `Generated offer ${reference} on invoice ${invoice.invoiceNumber}: ${formatBps(offer.discountRateBps)} discount, net ${formatINR(offer.netPayablePaise)}`,
       metadata: { invoiceId: invoice.id, programmeId: programme.id, ...breakdown },
     });
+    await notifyOfferGenerated(tx, offer.id, actor);
     return offer;
   });
 }
@@ -240,6 +242,7 @@ export async function acceptOffer(actor: Actor, offerId: string, raw: { consent:
           consentText: CONSENT_TEXT,
         },
       });
+      await notifyOfferAccepted(tx, request.id, actor);
       return request;
     });
   } catch (error) {
@@ -287,6 +290,7 @@ export async function approveFinancingRequest(actor: Actor, requestId: string, r
       summary: `Approved financing request ${request.reference} (${formatINR(request.netPayablePaise)})`,
       metadata: { note },
     });
+    await notifyFinancingDecision(tx, request.id, true, actor);
   });
 }
 
@@ -306,6 +310,7 @@ export async function rejectFinancingRequest(actor: Actor, requestId: string, ra
       summary: `Rejected financing request ${request.reference}`,
       metadata: { reason },
     });
+    await notifyFinancingDecision(tx, request.id, false, actor);
   });
 }
 
@@ -359,6 +364,7 @@ export async function initiateDisbursement(actor: Actor, requestId: string) {
       summary: `Initiated disbursement ${reference} of ${formatINR(request.netPayablePaise)} to ${request.cp.name}`,
       metadata: { requestId: request.id, simulated: true },
     });
+    await notifyDisbursement(tx, request.id, false, actor);
     return disbursement;
   });
 }
@@ -404,6 +410,7 @@ export async function completeDisbursement(actor: Actor, requestId: string) {
       summary: `Disbursement for ${request.reference} completed; builder settlement of ${formatINR(settlement.amountPaise)} due ${dueDate.toISOString().slice(0, 10)}`,
       metadata: { utr, settlementId: settlement.id, simulated: true },
     });
+    await notifyDisbursement(tx, request.id, true, actor);
   });
 }
 
@@ -456,6 +463,7 @@ export async function markSettlementSettled(actor: Actor, requestId: string, raw
       summary: `Marked settlement for ${request.reference} as settled (${input.reference})`,
       metadata: { requestId: request.id, amountPaise: settlement.amountPaise },
     });
+    await notifySettlement(tx, request.id, "settlement.settled", actor, { dedupeKey: `settlement-settled:${settlement.id}` });
   });
 }
 

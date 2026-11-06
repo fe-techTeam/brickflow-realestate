@@ -15,6 +15,7 @@ import { PrismaClient, type FinancingStatus, type InvoiceStatus } from "../src/g
 import { calculateDiscount } from "../src/lib/financing";
 import { buildInvoiceDocument, demoClock, GST_RATE_PERCENT, resolveDemoDataset } from "../src/lib/demo/catalogue";
 import { renderBrokerageInvoicePdf, splitGstInclusive } from "../src/lib/pdf/brokerage-invoice";
+import { seedNotificationData } from "./seed-notifications";
 
 try {
   process.loadEnvFile();
@@ -410,6 +411,8 @@ async function main() {
       { key: "platform.defaultCreditPeriodDays", value: "60", updatedById: admin.userId },
     ],
   });
+
+  await seedNotificationData(db, NOW);
 
   const summary = await Promise.all([db.organisation.count(), db.user.count(), db.invoice.count(), db.financingRequest.count()]);
   console.log(`Seeded dataset "${DATASET.key}": ${summary[0]} organisations, ${summary[1]} users, ${summary[2]} invoices, ${summary[3]} financing requests.`);

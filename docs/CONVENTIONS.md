@@ -92,6 +92,13 @@ Toasts (`sonner`) are already themed: call `toast.success`, `toast.error` and so
 - State changes use conditional `updateMany` with the expected current status to prevent double processing.
 - Record an audit entry for every state change via `recordAudit(tx, actor, …)` inside the same transaction.
 
+## Background jobs and notifications
+
+- **Never send email, call a webhook or do slow work inside a request.** Enqueue a job in the same transaction as the state change: `enqueueJob(tx, { type, payload, runAt?, idempotencyKey?, maxAttempts? })` from `@/server/jobs`. Payloads are JSON (bigint becomes a string); pass ids, not records.
+- **Handlers** are registered with `registerJobHandler(type, handler, { schema })` in a feature module's `register…Jobs()` function, called from `src/server/jobs/handlers.ts`. Handlers must be idempotent: a job can run twice if a worker dies after doing the work. Throw `PermanentJobError` for failures that retrying cannot fix. Recurring work uses `defineSchedule({ name, cron, jobType })` (cron in IST); each period runs once across all workers. Job modules run in the worker process, so they must not import `next/*` or React (type-only imports are fine).
+- **Workflow notifications** go through `notify(tx, { event, recipients, data, dedupeKey?, excludeUserIds? })` from `@/server/notifications`, inside the service's transaction, next to `recordAudit`. Add the event to `NOTIFICATION_EVENTS` (`@/lib/notifications`) and its renderer and data type to `src/server/notifications/templates.ts`; the template test fails until every event renders for every workspace. Existing invoice and financing events use the one-line helpers in `src/server/notifications/workflow.ts`.
+- **Account emails** (password reset and similar) use `sendTemplatedEmail(to, template, data, { tx?, userId?, idempotencyKey? })`; they ignore preferences, links must use `APP_URL`, and fields marked sensitive are redacted from the delivery log after sending.
+
 ## Git workflow
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md).

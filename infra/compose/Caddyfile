@@ -8,5 +8,13 @@
 		-Server
 	}
 
+	# Webhook callbacks are small; refuse large bodies before they reach the app.
+	handle /api/webhooks/* {
+		request_body {
+			max_size 1MB
+		}
+		reverse_proxy app:3000
+	}
+
 	reverse_proxy app:3000
 }
