@@ -6,6 +6,7 @@ import { ArrowDownToLine, ArrowRight, BadgeCheck, Check, CircleCheck, Landmark, 
 import { toast } from "sonner";
 import { ActionDialog } from "@/components/common/action-dialog";
 import { DemoBadge } from "@/components/common/status-badge";
+import { useIdempotencyKey } from "@/components/common/use-idempotency-key";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatINR } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { useStepUp } from "@/components/security/step-up-dialog";
 import {
   approveFinancingRequestAction,
   completeDisbursementAction,
@@ -131,6 +133,7 @@ export interface RequestSummary {
 }
 
 export function ApproveRequestButton({ summary, size = "default" }: { summary: RequestSummary; size?: Size }) {
+  const idempotencyKey = useIdempotencyKey();
   return (
     <ActionDialog
       trigger="Approve"
@@ -142,7 +145,7 @@ export function ApproveRequestButton({ summary, size = "default" }: { summary: R
       confirmLabel="Approve request"
       confirmVariant="success"
       field={{ name: "note", label: "Approval note", placeholder: "Optional — e.g. within programme limits; KYC on file.", hint: "Recorded on the request timeline and audit log." }}
-      action={approveFinancingRequestAction.bind(null, summary.requestId)}
+      action={(input: { note?: string }) => approveFinancingRequestAction(summary.requestId, { ...input, idempotencyKey: idempotencyKey() })}
     >
       <SummaryRows
         rows={[
@@ -157,6 +160,7 @@ export function ApproveRequestButton({ summary, size = "default" }: { summary: R
 }
 
 export function RejectRequestButton({ summary, size = "default" }: { summary: RequestSummary; size?: Size }) {
+  const idempotencyKey = useIdempotencyKey();
   return (
     <ActionDialog
       trigger="Reject"
@@ -174,7 +178,7 @@ export function RejectRequestButton({ summary, size = "default" }: { summary: Re
         minLength: 10,
         placeholder: "Explain the credit decision, e.g. exposure limit for the builder reached.",
       }}
-      action={rejectFinancingRequestAction.bind(null, summary.requestId)}
+      action={(input: { reason: string }) => rejectFinancingRequestAction(summary.requestId, { ...input, idempotencyKey: idempotencyKey() })}
     />
   );
 }
@@ -190,15 +194,21 @@ export interface DisbursementSummary {
 }
 
 export function InitiateDisbursementButton({ summary, size = "default", className }: { summary: DisbursementSummary; size?: Size; className?: string }) {
+  const stepUp = useStepUp();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const idempotencyKey = useIdempotencyKey();
 
   function confirm() {
     setError(null);
     startTransition(async () => {
-      const result = await initiateDisbursementAction(summary.requestId);
+      const result = await stepUp.run("payout.release", () => initiateDisbursementAction(summary.requestId, { idempotencyKey: idempotencyKey() }));
+      if (!result.ok && result.code === "STEP_UP_REQUIRED") {
+        setError(result.error);
+        return;
+      }
       if (!result.ok) {
         setError(result.error);
         toast.error(result.error);
@@ -211,6 +221,7 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(next) => {
         if (pending) return;
         setOpen(next);
@@ -258,6 +269,8 @@ export function InitiateDisbursementButton({ summary, size = "default", classNam
         </DialogFooter>
       </DialogContent>
     </Dialog>
+      {stepUp.dialog}
+    </>
   );
 }
 
@@ -283,6 +296,8 @@ export function ConfirmTransferButton({
   const [step, setStep] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const processing = step >= 0;
+  const stepUp = useStepUp();
+  const idempotencyKey = useIdempotencyKey();
 
   async function run() {
     setError(null);
@@ -291,7 +306,12 @@ export function ConfirmTransferButton({
     setStep(1);
     await wait(650);
     setStep(2);
-    const result = await completeDisbursementAction(requestId);
+    const result = await stepUp.run("payout.release", () => completeDisbursementAction(requestId, { idempotencyKey: idempotencyKey() }));
+    if (!result.ok && result.code === "STEP_UP_REQUIRED") {
+      setStep(-1);
+      setError(result.error);
+      return;
+    }
     if (!result.ok) {
       setStep(-1);
       setError(result.error);
@@ -307,6 +327,7 @@ export function ConfirmTransferButton({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(next) => {
         if (processing) return;
         setOpen(next);
@@ -379,6 +400,8 @@ export function ConfirmTransferButton({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+      {stepUp.dialog}
+    </>
   );
 }
 
@@ -401,6 +424,7 @@ export function MarkSettledButton({
   const [note, setNote] = useState("");
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [pending, startTransition] = useTransition();
+  const idempotencyKey = useIdempotencyKey();
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -410,7 +434,7 @@ export function MarkSettledButton({
     }
     setErrors({});
     startTransition(async () => {
-      const result = await markSettlementSettledAction(requestId, { reference: reference.trim(), note: note.trim() || undefined });
+      const result = await markSettlementSettledAction(requestId, { reference: reference.trim(), note: note.trim() || undefined, idempotencyKey: idempotencyKey() });
       if (!result.ok) {
         setErrors({ reference: result.fieldErrors?.reference?.[0], note: result.fieldErrors?.note?.[0], form: result.error });
         toast.error(result.error);

@@ -1,16 +1,20 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, useTransition, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, BadgePercent, CalendarClock, Check, Landmark, Loader2, Lock, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, BadgePercent, CalendarClock, Check, Gauge, Landmark, Loader2, Lock, RefreshCw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { formatCalendarDate } from "@/lib/calendar";
 import { formatDateTime } from "@/lib/format";
+import { newIdempotencyKey } from "@/lib/idempotency-key";
+import { describeRate } from "@/lib/key-facts";
 import { formatBps } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { useStepUp } from "@/components/security/step-up-dialog";
 import { acceptOfferAction, generateOfferAction } from "@/server/actions/financing";
 import type { OfferDto } from "@/server/dto";
 import { Money } from "./money";
@@ -214,7 +218,9 @@ function OfferDialog({
   const [accepting, startAccept] = useTransition();
   const [regenerating, startRegenerate] = useTransition();
   const [openedAt] = useState(() => Date.now());
+  const acceptKey = useRef<{ offerId: string; key: string } | null>(null);
   const busy = accepting || regenerating;
+  const stepUp = useStepUp();
 
   function accept() {
     if (!consent) {
@@ -222,8 +228,14 @@ function OfferDialog({
       return;
     }
     setError(null);
+    if (acceptKey.current?.offerId !== offer.id) acceptKey.current = { offerId: offer.id, key: newIdempotencyKey() };
+    const idempotencyKey = acceptKey.current.key;
     startAccept(async () => {
-      const result = await acceptOfferAction(offer.id, { consent: true });
+      const result = await stepUp.run("offer.accept", () => acceptOfferAction(offer.id, { consent: true, idempotencyKey }));
+      if (!result.ok && result.code === "STEP_UP_REQUIRED") {
+        setError({ message: result.error, regenerate: false });
+        return;
+      }
       if (!result.ok) {
         setError({ message: result.error, regenerate: /fresh offer/i.test(result.error) });
         toast.error(result.error);
@@ -250,9 +262,13 @@ function OfferDialog({
   }
 
   const partial = offer.approvedAmountPaise !== offer.invoiceAmountPaise;
-  const keepBps = 10_000 - offer.discountRateBps;
+  const keepBps = Number((BigInt(offer.netPayablePaise) * 10_000n) / BigInt(offer.approvedAmountPaise));
+  const hasTds = BigInt(offer.tdsPaise) > 0n;
+  const hasFee = BigInt(offer.processingFeePaise) > 0n;
+  const rateLabel = describeRate(offer.pricingMode, offer.discountRateBps);
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(next) => {
@@ -309,17 +325,35 @@ function OfferDialog({
                     hint={partial ? "The builder approved a different amount; the discount applies to it." : "Approved in full"}
                     value={<Money paise={offer.approvedAmountPaise} />}
                   />
+                  {hasTds && (
+                    <>
+                      <StatementLine
+                        label="TDS deducted by the builder"
+                        hint="Income-tax deducted at source on your brokerage; credited against your tax"
+                        value={<Money paise={offer.tdsPaise} sign="minus" />}
+                        deduct
+                      />
+                      <StatementLine label="Financed amount" hint="What the builder remits on the settlement date" value={<Money paise={offer.financedAmountPaise} />} />
+                    </>
+                  )}
                   <StatementLine
                     label={
                       <>
-                        Agreed discount <span className="ml-1 rounded-sm bg-danger-soft px-1.5 py-px text-[0.6875rem] font-semibold text-danger tabular">{formatBps(offer.discountRateBps)}</span>
+                        Agreed discount <span className="ml-1 rounded-sm bg-danger-soft px-1.5 py-px text-[0.6875rem] font-semibold text-danger tabular">{rateLabel}</span>
                       </>
                     }
-                    hint="Deducted upfront by the financier"
+                    hint={offer.pricingMode === "ANNUAL_RATE" ? "Annual rate for the days to the settlement date, deducted upfront" : "Deducted upfront by the financier"}
                     value={<Money paise={offer.discountAmountPaise} sign="minus" />}
                     deduct
                   />
-                  <StatementLine label="Other charges" hint="Processing, stamp duty and fees" value={<Money paise={offer.chargesPaise} />} muted />
+                  {hasFee ? (
+                    <>
+                      <StatementLine label="Processing fee" value={<Money paise={offer.processingFeePaise} sign="minus" />} deduct />
+                      <StatementLine label="GST on processing fee" value={<Money paise={offer.feeGstPaise} sign="minus" />} deduct />
+                    </>
+                  ) : (
+                    <StatementLine label="Other charges" hint="Processing, stamp duty and fees" value={<Money paise={offer.chargesPaise} />} muted />
+                  )}
                 </div>
                 <div className="mt-1 border-t-[3px] border-double border-line-strong/25 pt-3.5">
                   <div className="flex items-baseline justify-between gap-4">
@@ -329,6 +363,8 @@ function OfferDialog({
                 </div>
               </div>
             </div>
+
+            {offer.keyFacts && <KeyFactsBlock offer={offer} facts={offer.keyFacts} rateLabel={rateLabel} />}
 
             <div className="px-6 pt-7 pb-5 sm:px-9">
               <div className="rounded-lg border border-hairline bg-glass-100 px-5 py-5">
@@ -391,7 +427,7 @@ function OfferDialog({
                     <ShieldCheck className="size-4 text-leaf" />I agree to the early payment terms
                   </span>
                   <span id={`consent-text-${offer.id}`} className="mt-1.5 block text-xs leading-relaxed text-muted-foreground">
-                    {consentText}
+                    {offer.consentText || consentText}
                   </span>
                 </span>
               </label>
@@ -437,6 +473,37 @@ function OfferDialog({
         )}
       </DialogContent>
     </Dialog>
+      {stepUp.dialog}
+    </>
+  );
+}
+
+/** Key facts statement: the figures a partner needs to compare this early payment with other credit. */
+function KeyFactsBlock({ offer, facts, rateLabel }: { offer: OfferDto; facts: NonNullable<OfferDto["keyFacts"]>; rateLabel: string }) {
+  const items = [
+    { label: "Days to settlement", value: `${facts.tenorDays} ${facts.tenorDays === 1 ? "day" : "days"}`, hint: `Builder settles on ${formatCalendarDate(facts.settlementDueDate)}` },
+    { label: "Annualised rate", value: formatBps(facts.annualisedRateBps), hint: "All-in cost on the amount you receive, ACT/365", emphasis: true },
+    { label: "Pricing", value: rateLabel, hint: offer.pricingMode === "ANNUAL_RATE" ? "Annual rate × days ÷ 365" : "Flat on the financed amount" },
+    { label: "Builder settles", value: <Money paise={facts.settlementAmountPaise} />, hint: "Paid to the financier, not to you" },
+  ];
+  return (
+    <section aria-labelledby={`key-facts-${offer.id}`} className="px-6 pt-7 sm:px-9">
+      <div className="rounded-lg border border-line-strong/30 px-5 py-5">
+        <h3 id={`key-facts-${offer.id}`} className="flex items-center gap-2 text-[0.625rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+          <Gauge className="size-3.5 text-fg-muted" />
+          Key facts
+        </h3>
+        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
+          {items.map((item) => (
+            <div key={item.label} className="min-w-0">
+              <dt className="text-xs text-muted-foreground">{item.label}</dt>
+              <dd className={cn("mt-0.5 font-medium tabular", item.emphasis ? "text-lg font-normal text-fg" : "text-sm text-fg")}>{item.value}</dd>
+              <p className="mt-0.5 text-[0.6875rem] leading-snug text-muted-foreground">{item.hint}</p>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
   );
 }
 
@@ -478,7 +545,7 @@ function NetReceivable({ offer, keepBps }: { offer: OfferDto; keepBps: number })
           </div>
           <div className="border-x border-line-strong/25">
             <dt className="text-[0.625rem] tracking-[0.14em] text-muted-foreground uppercase">Rate</dt>
-            <dd className="mt-1 text-[0.8125rem] font-medium text-fg tabular">{formatBps(offer.discountRateBps)} fixed</dd>
+            <dd className="mt-1 text-[0.8125rem] font-medium text-fg tabular">{describeRate(offer.pricingMode, offer.discountRateBps)}</dd>
           </div>
           <div>
             <dt className="text-[0.625rem] tracking-[0.14em] text-muted-foreground uppercase">You keep</dt>

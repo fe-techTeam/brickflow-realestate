@@ -61,7 +61,7 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
               items={[
                 { label: "Legal name", value: profile.legalName },
                 { label: "GSTIN", value: <span className="tabular">{profile.gstin ?? "—"}</span> },
-                { label: "PAN", value: <span className="tabular">{profile.pan ?? "—"}</span> },
+                { label: "PAN", value: <span className="tabular">{profile.panMasked ?? "—"}</span> },
 
                 { label: "RERA registration", value: <span className="text-xs">{profile.reraNumber ?? "—"}</span> },
                 { label: "Registered address", value: [profile.addressLine, profile.city, profile.state, profile.pincode].filter(Boolean).join(", ") || "—" },

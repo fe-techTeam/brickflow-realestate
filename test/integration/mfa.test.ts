@@ -3,7 +3,7 @@ import { hashRecoveryCode } from "@/server/auth/recovery-codes";
 import { validateSession } from "@/server/auth/sessions";
 import { requireStepUp, STEP_UP_PURPOSES, StepUpRequiredError } from "@/server/auth/step-up";
 import { totpCode, totpStep } from "@/server/auth/totp";
-import { decryptField } from "@/server/crypto/encryption";
+import { decryptField } from "@/server/crypto/field-encryption";
 import { db } from "@/server/db";
 import { authenticate, completeLoginEnrolment, completeMfaLogin, startLoginEnrolment } from "@/server/services/auth";
 import { beginEnrolment, confirmEnrolment, disableMfa, regenerateRecoveryCodes, resetUserMfa, verifySecondFactor } from "@/server/services/mfa";
@@ -25,7 +25,7 @@ describe("TOTP enrolment", () => {
     const secret = first.manualKey.replace(/\s/g, "");
 
     const row = await db.user.findUniqueOrThrow({ where: { id: user.userId } });
-    expect(row.mfaPendingSecret).toMatch(/^v1\./);
+    expect(row.mfaPendingSecret).toMatch(/^enc:v1:/);
     expect(row.mfaPendingSecret).not.toContain(secret);
     expect(row.mfaEnabledAt).toBeNull();
     // Reloading the set-up page shows the same key until it is confirmed.

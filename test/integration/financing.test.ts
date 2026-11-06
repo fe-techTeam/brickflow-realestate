@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { addDays, endOfIstDay, istToday } from "@/lib/calendar";
 import type { Actor } from "@/server/auth/session";
 import { db } from "@/server/db";
 import {
@@ -57,7 +58,8 @@ describe("end-to-end financing of a ₹5,00,000 invoice at 3%", () => {
       netPayablePaise: 4_85_000_00n,
     });
     expect(typeof offer.discountAmountPaise).toBe("bigint");
-    expect(offer.validUntil.getTime() - offer.generatedAt.getTime()).toBe(7 * DAY_MS);
+    // Valid through the end of the IST day seven days after generation.
+    expect(offer.validUntil).toEqual(endOfIstDay(addDays(istToday(offer.generatedAt), 7)));
     expect(JSON.parse(offer.termsSnapshot)).toMatchObject({ programmeCode: "BF-PRG-0001", discountRateBps: 300, offerValidityDays: 7 });
 
     const invoice = await db.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
@@ -100,7 +102,11 @@ describe("end-to-end financing of a ₹5,00,000 invoice at 3%", () => {
     expect(persisted.approvedAmountPaise - persisted.discountAmountPaise - persisted.chargesPaise).toBe(persisted.netPayablePaise);
 
     const offer = await db.financingOffer.findUniqueOrThrow({ where: { id: offerId } });
-    expect(offer).toMatchObject({ status: "ACCEPTED", acceptedById: as.prestige.userId, consentText: CONSENT_TEXT });
+    // The stored consent is the standard statement followed by the key facts the partner saw.
+    expect(offer).toMatchObject({ status: "ACCEPTED", acceptedById: as.prestige.userId });
+    expect(offer.consentText).toContain(CONSENT_TEXT);
+    expect(offer.consentText).toContain("I receive ₹4,85,000.00 now");
+    expect(offer.consentText).toMatch(/annualised rate of [\d.]+% \(ACT\/365\)/);
 
     const invoice = await getInvoiceDetail(as.prestige, invoiceId);
     expect(invoice.financingStatus).toBe("PENDING_APPROVAL");

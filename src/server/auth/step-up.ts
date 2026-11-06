@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "../db";
 import { DomainError } from "../errors";
-import { STEP_UP_WINDOW_MS } from "./config";
+import { mfaEnforced, STEP_UP_WINDOW_MS } from "./config";
 import type { Actor } from "./session";
 import { isSessionActive } from "./sessions";
 
@@ -11,6 +11,10 @@ import { isSessionActive } from "./sessions";
  * verification) in this session within `STEP_UP_WINDOW_MS`, it throws `StepUpRequiredError`.
  * Server actions surface that as `{ ok: false, code: "STEP_UP_REQUIRED" }`; the client then shows
  * `StepUpDialog` (components/security/step-up-dialog), which calls `confirmStepUpAction` and retries.
+ *
+ * Applies whenever `MFA_ENFORCED` is on, and always for users who have two-step verification. With
+ * enforcement off, a user without an authenticator is not asked (there is no second factor to check),
+ * which keeps the shared demo accounts usable.
  */
 export const STEP_UP_PURPOSES = ["offer.accept", "bank.change", "invoice.approve", "payout.release", "mfa.disable", "mfa.recovery_codes"] as const;
 
@@ -37,6 +41,10 @@ export class StepUpRequiredError extends DomainError {
 
 export async function requireStepUp(actor: Actor, purpose: StepUpPurpose, now: Date = new Date()): Promise<void> {
   if (!isStepUpPurpose(purpose)) throw new Error(`Unknown step-up purpose "${String(purpose)}"`);
+  if (!mfaEnforced()) {
+    const user = await db.user.findUnique({ where: { id: actor.userId }, select: { mfaEnabledAt: true } });
+    if (!user?.mfaEnabledAt) return;
+  }
   if (!actor.sessionId) throw new StepUpRequiredError(purpose);
   const session = await db.session.findUnique({ where: { id: actor.sessionId }, select: { userId: true, stepUpAt: true, revokedAt: true, expiresAt: true, lastSeenAt: true } });
   const fresh =

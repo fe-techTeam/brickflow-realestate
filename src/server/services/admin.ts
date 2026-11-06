@@ -2,7 +2,8 @@ import "server-only";
 import { z } from "zod";
 import type { OrganisationType, Prisma, ProgrammeStatus, RecordStatus } from "@/generated/prisma/client";
 import { MAX_DISCOUNT_RATE_BPS, MIN_DISCOUNT_RATE_BPS } from "@/lib/financing";
-import { formatBps, parsePercentToBps } from "@/lib/money";
+import { formatBps, parsePercentToBps, parseRupeesToPaise } from "@/lib/money";
+import { DEFAULT_PRICING_TERMS, pricingTermsIssues, type PricingTerms } from "@/lib/pricing";
 import { recordAudit } from "../audit";
 import { authorize } from "../auth/permissions";
 import { revokeUserSessions } from "../auth/sessions";
@@ -31,6 +32,154 @@ const rateString = z
 
 const programmeStatus = z.enum(["DRAFT", "ACTIVE", "SUSPENDED", "CLOSED"]);
 
+/** Optional percentage (0–100, up to 2 decimals) as basis points; blank means "not supplied". */
+const optionalPercent = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v, ctx) => {
+    if (v === undefined || v === "") return undefined;
+    const bps = parsePercentToBps(v);
+    if (bps === null || bps > 10_000) {
+      ctx.addIssue({ code: "custom", message: "Enter a percentage with up to 2 decimals" });
+      return z.NEVER;
+    }
+    return bps;
+  });
+
+/** Optional rupee amount as paise; blank means "not supplied". */
+const optionalRupees = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v, ctx) => {
+    if (v === undefined || v === "") return undefined;
+    const paise = parseRupeesToPaise(v);
+    if (paise === null) {
+      ctx.addIssue({ code: "custom", message: "Enter an amount in rupees with up to 2 decimals" });
+      return z.NEVER;
+    }
+    return paise;
+  });
+
+const optionalDays = z
+  .union([z.string(), z.number()])
+  .optional()
+  .transform((v, ctx) => {
+    if (v === undefined || v === "") return undefined;
+    const n = typeof v === "number" ? v : Number(v.trim());
+    if (!Number.isInteger(n) || n < 1 || n > 365) {
+      ctx.addIssue({ code: "custom", message: "Enter whole days between 1 and 365" });
+      return z.NEVER;
+    }
+    return n;
+  });
+
+/** Like `optionalDays`, but an explicit blank or null clears the value (no maximum). */
+const clearableDays = z
+  .union([z.string(), z.number(), z.null()])
+  .optional()
+  .transform((v, ctx) => {
+    if (v === undefined) return undefined;
+    if (v === null || (typeof v === "string" && v.trim() === "")) return null;
+    const n = typeof v === "number" ? v : Number(v.trim());
+    if (!Number.isInteger(n) || n < 1 || n > 365) {
+      ctx.addIssue({ code: "custom", message: "Enter whole days between 1 and 365, or leave blank" });
+      return z.NEVER;
+    }
+    return n;
+  });
+
+/**
+ * Pricing-engine fields shared by create and update. Every field is optional: on create, missing
+ * fields take the defaults that reproduce flat-percentage pricing; on update they keep the stored value.
+ */
+const pricingFields = {
+  pricingMode: z.enum(["FLAT_PERCENT", "ANNUAL_RATE"]).optional(),
+  minTenorDays: optionalDays,
+  maxTenorDays: clearableDays,
+  minDiscount: optionalRupees,
+  tdsDeducted: z.boolean().optional(),
+  tdsRate: optionalPercent,
+  invoiceGstRate: optionalPercent,
+  processingFeeFlat: optionalRupees,
+  processingFeeRate: optionalPercent,
+  feeGstRate: optionalPercent,
+  holidayRule: z.enum(["NONE", "NEXT_BUSINESS_DAY"]).optional(),
+};
+
+interface PricingFieldInput {
+  pricingMode?: PricingTerms["pricingMode"];
+  minTenorDays?: number;
+  maxTenorDays?: number | null;
+  minDiscount?: bigint;
+  tdsDeducted?: boolean;
+  tdsRate?: number;
+  invoiceGstRate?: number;
+  processingFeeFlat?: bigint;
+  processingFeeRate?: number;
+  feeGstRate?: number;
+  holidayRule?: "NONE" | "NEXT_BUSINESS_DAY";
+}
+
+type StoredPricingTerms = Omit<PricingTerms, "discountRateBps"> & { holidayRule: "NONE" | "NEXT_BUSINESS_DAY" };
+
+const FORM_FIELD: Partial<Record<keyof PricingTerms, string>> = {
+  discountRateBps: "discountRate",
+  minDiscountPaise: "minDiscount",
+  tdsRateBps: "tdsRate",
+  invoiceGstRateBps: "invoiceGstRate",
+  processingFeeFlatPaise: "processingFeeFlat",
+  processingFeeBps: "processingFeeRate",
+  feeGstRateBps: "feeGstRate",
+};
+
+function storedPricingTerms(p: StoredPricingTerms): StoredPricingTerms {
+  return {
+    pricingMode: p.pricingMode,
+    minTenorDays: p.minTenorDays,
+    maxTenorDays: p.maxTenorDays,
+    minDiscountPaise: p.minDiscountPaise,
+    tdsDeducted: p.tdsDeducted,
+    tdsRateBps: p.tdsRateBps,
+    invoiceGstRateBps: p.invoiceGstRateBps,
+    processingFeeFlatPaise: p.processingFeeFlatPaise,
+    processingFeeBps: p.processingFeeBps,
+    feeGstRateBps: p.feeGstRateBps,
+    holidayRule: p.holidayRule,
+  };
+}
+
+/** Merges submitted pricing fields over `base` and validates the combination. */
+function resolvePricing(input: PricingFieldInput, discountRateBps: number, base: StoredPricingTerms): StoredPricingTerms {
+  const terms: StoredPricingTerms = {
+    pricingMode: input.pricingMode ?? base.pricingMode,
+    minTenorDays: input.minTenorDays ?? base.minTenorDays,
+    maxTenorDays: input.maxTenorDays === undefined ? base.maxTenorDays : input.maxTenorDays,
+    minDiscountPaise: input.minDiscount ?? base.minDiscountPaise,
+    tdsDeducted: input.tdsDeducted ?? base.tdsDeducted,
+    tdsRateBps: input.tdsRate ?? base.tdsRateBps,
+    invoiceGstRateBps: input.invoiceGstRate ?? base.invoiceGstRateBps,
+    processingFeeFlatPaise: input.processingFeeFlat ?? base.processingFeeFlatPaise,
+    processingFeeBps: input.processingFeeRate ?? base.processingFeeBps,
+    feeGstRateBps: input.feeGstRate ?? base.feeGstRateBps,
+    holidayRule: input.holidayRule ?? base.holidayRule,
+  };
+  const issues = pricingTermsIssues({ ...terms, discountRateBps });
+  if (issues.length) {
+    const fieldErrors: Record<string, string[]> = {};
+    for (const issue of issues) (fieldErrors[FORM_FIELD[issue.field] ?? issue.field] ??= []).push(issue.message);
+    throw invalid("Please correct the highlighted fields.", fieldErrors);
+  }
+  return terms;
+}
+
+function pricingKey(p: StoredPricingTerms): string {
+  return JSON.stringify(storedPricingTerms(p), (_k, v) => (typeof v === "bigint" ? v.toString() : v));
+}
+
+const DEFAULT_STORED_PRICING: StoredPricingTerms = { ...DEFAULT_PRICING_TERMS, holidayRule: "NONE" };
+
 const optionalDate = z
   .string()
   .optional()
@@ -48,6 +197,7 @@ export const createProgrammeSchema = z
     effectiveTo: optionalDate,
     offerValidityDays: z.coerce.number().int().min(1, "At least 1 day").max(90, "At most 90 days"),
     terms: z.string().trim().min(20, "Describe the programme terms (at least 20 characters)").max(4000),
+    ...pricingFields,
   })
   .refine((v) => !v.effectiveTo || v.effectiveTo > v.effectiveFrom, { path: ["effectiveTo"], message: "End date must be after the effective date" });
 
@@ -62,6 +212,7 @@ export const updateProgrammeSchema = z
     effectiveTo: optionalDate,
     offerValidityDays: z.coerce.number().int().min(1).max(90),
     terms: z.string().trim().min(20).max(4000),
+    ...pricingFields,
   })
   .refine((v) => !v.effectiveTo || v.effectiveTo > v.effectiveFrom, { path: ["effectiveTo"], message: "End date must be after the effective date" });
 
@@ -103,6 +254,7 @@ export async function createProgramme(actor: Actor, raw: CreateProgrammeInput) {
   ]);
   if (!builder || builder.type !== "BUILDER") throw invalid("Select a valid builder.", { builderId: ["Select a valid builder"] });
   if (!financier || financier.type !== "FINANCIER") throw invalid("Select a valid financier.", { financierId: ["Select a valid financier"] });
+  const pricing = resolvePricing(input, input.discountRate, DEFAULT_STORED_PRICING);
 
   return db.$transaction(async (tx) => {
     await assertSingleActive(tx, builder.id, input.status);
@@ -119,6 +271,7 @@ export async function createProgramme(actor: Actor, raw: CreateProgrammeInput) {
         effectiveTo: input.effectiveTo ?? null,
         offerValidityDays: input.offerValidityDays,
         terms: input.terms,
+        ...pricing,
         createdById: actor.userId,
       },
     });
@@ -127,7 +280,7 @@ export async function createProgramme(actor: Actor, raw: CreateProgrammeInput) {
       entityType: "FinancingProgramme",
       entityId: programme.id,
       summary: `Created programme ${code} for ${builder.name} at ${formatBps(programme.discountRateBps)} (${programme.status.toLowerCase()})`,
-      metadata: { discountRateBps: programme.discountRateBps, status: programme.status, effectiveFrom: programme.effectiveFrom },
+      metadata: { discountRateBps: programme.discountRateBps, status: programme.status, effectiveFrom: programme.effectiveFrom, pricing: storedPricingTerms(programme) },
     });
     return programme;
   });
@@ -139,11 +292,13 @@ export async function updateProgramme(actor: Actor, programmeId: string, raw: Up
   const input = updateProgrammeSchema.parse(raw);
   const existing = await db.financingProgramme.findUnique({ where: { id: programmeId }, include: { builder: true } });
   if (!existing) throw notFound("Programme not found.");
+  const pricing = resolvePricing(input, input.discountRate, existing);
 
   return db.$transaction(async (tx) => {
     await assertSingleActive(tx, existing.builderId, input.status, existing.id);
     const termsChanged =
       existing.discountRateBps !== input.discountRate ||
+      pricingKey(existing) !== pricingKey(pricing) ||
       existing.status !== input.status ||
       existing.effectiveFrom.getTime() !== input.effectiveFrom.getTime() ||
       (existing.effectiveTo?.getTime() ?? null) !== (input.effectiveTo?.getTime() ?? null) ||
@@ -158,6 +313,7 @@ export async function updateProgramme(actor: Actor, programmeId: string, raw: Up
         effectiveTo: input.effectiveTo ?? null,
         offerValidityDays: input.offerValidityDays,
         terms: input.terms,
+        ...pricing,
       },
     });
     const withdrawn = termsChanged ? await supersedeOpenOffers(tx, existing.id) : 0;
@@ -170,8 +326,20 @@ export async function updateProgramme(actor: Actor, programmeId: string, raw: Up
         ? `Changed ${programme.code} (${existing.builder.name}) discount from ${formatBps(existing.discountRateBps)} to ${formatBps(programme.discountRateBps)}`
         : `Updated programme ${programme.code} (${existing.builder.name})`,
       metadata: {
-        before: { discountRateBps: existing.discountRateBps, status: existing.status, effectiveFrom: existing.effectiveFrom, effectiveTo: existing.effectiveTo },
-        after: { discountRateBps: programme.discountRateBps, status: programme.status, effectiveFrom: programme.effectiveFrom, effectiveTo: programme.effectiveTo },
+        before: {
+          discountRateBps: existing.discountRateBps,
+          status: existing.status,
+          effectiveFrom: existing.effectiveFrom,
+          effectiveTo: existing.effectiveTo,
+          pricing: storedPricingTerms(existing),
+        },
+        after: {
+          discountRateBps: programme.discountRateBps,
+          status: programme.status,
+          effectiveFrom: programme.effectiveFrom,
+          effectiveTo: programme.effectiveTo,
+          pricing: storedPricingTerms(programme),
+        },
         openOffersWithdrawn: withdrawn,
       },
     });

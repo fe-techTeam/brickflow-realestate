@@ -86,6 +86,16 @@ enum DisbursementStatus {
   FAILED
 }
 
+enum PricingMode {
+  FLAT_PERCENT
+  ANNUAL_RATE
+}
+
+enum HolidayRule {
+  NONE
+  NEXT_BUSINESS_DAY
+}
+
 model Organisation {
   id                String           @id @default(cuid())
   type              OrganisationType
@@ -102,9 +112,16 @@ model Organisation {
   contactName       String?
   contactEmail      String?
   contactPhone      String?
+  // Legacy plaintext columns, superseded by panEncrypted/panMasked and BankAccount; dropped in a later cleanup migration.
   bankName          String?
   bankAccountNumber String?
   bankIfsc          String?
+  gstRegistered     Boolean          @default(true)
+  panEncrypted      String?
+  panMasked         String?
+  kycStatus         KycStatus        @default(NOT_STARTED)
+  kycStatusAt       DateTime?
+  kycVerifiedAt     DateTime?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
@@ -119,8 +136,12 @@ model Organisation {
   cpRequests           FinancingRequest[]      @relation("RequestCp")
   builderRequests      FinancingRequest[]      @relation("RequestBuilder")
   financierRequests    FinancingRequest[]      @relation("RequestFinancier")
+  bankAccounts         BankAccount[]
+  verificationChecks   VerificationCheck[]
+  kycDocuments         KycDocument[]
 
   @@index([type, status])
+  @@index([kycStatus])
 }
 
 model User {
@@ -220,6 +241,19 @@ model FinancingProgramme {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
+  // Pricing engine terms. Defaults reproduce the original flat-percentage behaviour.
+  pricingMode            PricingMode @default(FLAT_PERCENT)
+  minTenorDays           Int         @default(1)
+  maxTenorDays           Int?
+  minDiscountPaise       BigInt      @default(0)
+  tdsDeducted            Boolean     @default(false)
+  tdsRateBps             Int         @default(200)
+  invoiceGstRateBps      Int         @default(1800)
+  processingFeeFlatPaise BigInt      @default(0)
+  processingFeeBps       Int         @default(0)
+  feeGstRateBps          Int         @default(1800)
+  holidayRule            HolidayRule @default(NONE)
+
   builder   Organisation       @relation("ProgrammeBuilder", fields: [builderId], references: [id])
   financier Organisation       @relation("ProgrammeFinancier", fields: [financierId], references: [id])
   offers    FinancingOffer[]
@@ -229,8 +263,8 @@ model FinancingProgramme {
 }
 
 model Invoice {
-  id                  String           @id @default(cuid())
-  reference           String           @unique
+  id                  String          @id @default(cuid())
+  reference           String          @unique
   invoiceNumber       String
   cpId                String
   builderId           String
@@ -241,14 +275,14 @@ model Invoice {
   gstAmountPaise      BigInt?
   approvedAmountPaise BigInt?
   description         String?
-  status              InvoiceStatus    @default(DRAFT)
-  financingStatus     FinancingStatus  @default(NOT_REQUESTED)
+  status              InvoiceStatus   @default(DRAFT)
+  financingStatus     FinancingStatus @default(NOT_REQUESTED)
   latestReviewNote    String?
   submittedAt         DateTime?
   decidedAt           DateTime?
   createdById         String
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   cp               Organisation      @relation("InvoiceCp", fields: [cpId], references: [id])
   builder          Organisation      @relation("InvoiceBuilder", fields: [builderId], references: [id])
@@ -310,6 +344,16 @@ model FinancingOffer {
   chargesPaise        BigInt      @default(0)
   netPayablePaise     BigInt
   termsSnapshot       String
+  pricingMode         PricingMode @default(FLAT_PERCENT)
+  pricingRuleVersion  String      @default("flat/2026-04")
+  tenorDays           Int?
+  pricedDueDate       DateTime?
+  tdsPaise            BigInt      @default(0)
+  financedAmountPaise BigInt
+  processingFeePaise  BigInt      @default(0)
+  feeGstPaise         BigInt      @default(0)
+  annualisedRateBps   Int?
+  pricingSnapshot     Json?
   status              OfferStatus @default(OFFERED)
   generatedById       String
   generatedAt         DateTime    @default(now())
@@ -339,6 +383,16 @@ model FinancingRequest {
   discountAmountPaise BigInt
   chargesPaise        BigInt          @default(0)
   netPayablePaise     BigInt
+  pricingMode         PricingMode     @default(FLAT_PERCENT)
+  pricingRuleVersion  String          @default("flat/2026-04")
+  tenorDays           Int?
+  pricedDueDate       DateTime?
+  tdsPaise            BigInt          @default(0)
+  financedAmountPaise BigInt
+  processingFeePaise  BigInt          @default(0)
+  feeGstPaise         BigInt          @default(0)
+  annualisedRateBps   Int?
+  pricingSnapshot     Json?
   status              FinancingStatus @default(PENDING_APPROVAL)
   acceptedById        String
   acceptedAt          DateTime
@@ -380,12 +434,12 @@ model FinancingEvent {
 }
 
 model InternalComment {
-  id          String   @id @default(cuid())
-  requestId   String
-  body        String
-  authorId    String
-  authorName  String
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  requestId  String
+  body       String
+  authorId   String
+  authorName String
+  createdAt  DateTime @default(now())
 
   request FinancingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
@@ -509,4 +563,166 @@ model AuthRecoveryCode {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, usedAt])
+}
+
+/// Bank holidays maintained by the platform admin; due dates on these days roll forward when a programme asks for it.
+model BusinessHoliday {
+  id          String   @id @default(cuid())
+  date        DateTime @unique @db.Date
+  name        String
+  createdById String?
+  createdAt   DateTime @default(now())
+}
+
+/// Replay record for a money-moving action submitted with a client-generated idempotency key.
+model FinancingIdempotencyKey {
+  id          String   @id @default(cuid())
+  actorUserId String
+  scope       String
+  key         String
+  fingerprint String
+  resultId    String?
+  createdAt   DateTime @default(now())
+
+  @@unique([actorUserId, scope, key])
+  @@index([createdAt])
+}
+
+// ---- Verification & KYC ----
+
+enum KycStatus {
+  NOT_STARTED
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum VerificationCheckType {
+  GSTIN
+  PAN
+  BANK_ACCOUNT
+  UDYAM
+  E_INVOICE
+  RERA_AGENT
+}
+
+enum VerificationSubject {
+  ORGANISATION
+  BANK_ACCOUNT
+  INVOICE
+}
+
+/// PENDING: awaiting manual review (e.g. RERA certificate). REVIEW_REQUIRED: provider confirmed the
+/// record but a rule (name match, duplicate account) needs an admin decision. ERROR: provider failure.
+enum VerificationCheckStatus {
+  PENDING
+  VERIFIED
+  REVIEW_REQUIRED
+  FAILED
+  REJECTED
+  ERROR
+}
+
+enum BankAccountStatus {
+  UNVERIFIED
+  VERIFIED
+  REVIEW_REQUIRED
+  FAILED
+  REJECTED
+}
+
+/// One verification attempt against a provider (or a manual review). Stores the normalised result,
+/// a SHA-256 of the raw provider response and a redacted copy; never the raw response itself.
+model VerificationCheck {
+  id                  String                  @id @default(cuid())
+  organisationId      String
+  bankAccountId       String?
+  type                VerificationCheckType
+  subject             VerificationSubject     @default(ORGANISATION)
+  subjectRef          String?
+  inputFingerprint    String
+  inputMasked         String
+  provider            String
+  providerReference   String?
+  status              VerificationCheckStatus
+  result              Json?
+  nameMatchScore      Int?
+  reasons             String[]                @default([])
+  errorKind           String?
+  errorCode           String?
+  rawResponseHash     String?
+  rawResponseRedacted Json?
+  cachedFromId        String?
+  requestId           String?
+  requestedById       String?
+  reviewedById        String?
+  reviewedByName      String?
+  reviewedAt          DateTime?
+  reviewNote          String?
+  checkedAt           DateTime                @default(now())
+  expiresAt           DateTime?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  organisation Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  bankAccount  BankAccount?  @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  documents    KycDocument[]
+
+  @@index([organisationId, type, checkedAt])
+  @@index([type, provider, inputFingerprint, checkedAt])
+  @@index([status, checkedAt])
+  @@index([bankAccountId, checkedAt])
+  @@index([type, expiresAt])
+}
+
+/// Payout bank accounts. The account number is encrypted at rest (AES-256-GCM); only the last four
+/// digits and a keyed fingerprint (for duplicate detection) are stored in clear.
+model BankAccount {
+  id                     String            @id @default(cuid())
+  organisationId         String
+  accountNumberEncrypted String
+  accountNumberLast4     String
+  accountFingerprint     String
+  ifsc                   String
+  bankName               String?
+  branch                 String?
+  accountHolderName      String
+  beneficiaryName        String?
+  verificationStatus     BankAccountStatus @default(UNVERIFIED)
+  verifiedAt             DateTime?
+  isPrimary              Boolean           @default(false)
+  primarySince           DateTime?
+  coolingOffUntil        DateTime?
+  archivedAt             DateTime?
+  createdById            String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  organisation Organisation        @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  checks       VerificationCheck[]
+
+  @@unique([organisationId, accountFingerprint])
+  @@index([accountFingerprint])
+  @@index([organisationId, isPrimary])
+}
+
+/// Supporting documents for manual checks (e.g. the MahaRERA agent registration certificate).
+model KycDocument {
+  id             String   @id @default(cuid())
+  organisationId String
+  checkId        String?
+  kind           String
+  fileName       String
+  storageKey     String   @unique
+  mimeType       String
+  sizeBytes      Int
+  sha256         String
+  uploadedById   String
+  createdAt      DateTime @default(now())
+
+  organisation Organisation       @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  check        VerificationCheck? @relation(fields: [checkId], references: [id], onDelete: SetNull)
+
+  @@index([organisationId, kind])
 }

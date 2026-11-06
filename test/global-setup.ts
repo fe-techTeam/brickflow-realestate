@@ -9,5 +9,7 @@ export default async function setup(project: TestProject) {
   if (typeof databaseUrl !== "string" || typeof storageDir !== "string") {
     throw new Error("DATABASE_URL and STORAGE_DIR must be set in the Vitest config");
   }
+  // The seed encrypts KYC data, so it must use the same key as the test workers (and not a local .env).
+  if (typeof env.DATA_ENCRYPTION_KEY === "string") process.env.DATA_ENCRYPTION_KEY = env.DATA_ENCRYPTION_KEY;
   await prepareDatabase({ databaseUrl, storageDir, demoPassword: String(env.DEMO_PASSWORD), quiet: true });
 }

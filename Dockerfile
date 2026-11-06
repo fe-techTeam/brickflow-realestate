@@ -47,11 +47,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/.next/standalone ./
 COPY --from=build --chown=brickflow:brickflow /app/.next/static ./.next/static
 COPY --from=build /app/package.json /app/prisma.config.ts /app/tsconfig.json ./
-COPY --from=build /app/prisma/schema.prisma /app/prisma/seed.ts ./prisma/
+COPY --from=build /app/prisma/schema.prisma /app/prisma/seed.ts /app/prisma/seed-verification.ts ./prisma/
 COPY --from=build /app/prisma/migrations ./prisma/migrations
 COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/src/lib ./src/lib
-COPY --from=build /app/scripts/demo-reset.mjs ./scripts/
+COPY --from=build /app/src/server/crypto ./src/server/crypto
+COPY --from=build /app/scripts/demo-reset.mjs /app/scripts/check-invariants.ts /app/scripts/migrate-kyc-data.ts ./scripts/
+COPY --from=build /app/src/server/invariants ./src/server/invariants
 COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN mkdir -p /app/data/storage /app/.next/cache \

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { Actor } from "@/server/auth/session";
@@ -19,6 +20,7 @@ const invoices = await import("@/server/services/invoices");
 const documentRoute = await import("@/app/api/documents/invoices/[documentId]/route");
 
 let as: Record<DemoUser, Actor>;
+const key = () => randomUUID();
 
 beforeAll(async () => {
   as = await actors();
@@ -97,17 +99,17 @@ describe("server actions are refused outside their workspace", () => {
     const offerId = offer.ok ? offer.data.id : "";
     for (const user of others("partner")) {
       await signInAs(user);
-      expect(await financingActions.acceptOfferAction(offerId, { consent: true }), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
+      expect(await financingActions.acceptOfferAction(offerId, { consent: true, idempotencyKey: key() }), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
     }
 
     const request = await pendingRequest();
     for (const user of others("finance")) {
       await signInAs(user);
-      expect(await financingActions.approveFinancingRequestAction(request.id, {}), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
-      expect(await financingActions.rejectFinancingRequestAction(request.id, { reason: "Not permitted to do this" }), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
-      expect(await financingActions.initiateDisbursementAction(request.id), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
-      expect(await financingActions.completeDisbursementAction(request.id), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
-      expect(await financingActions.markSettlementSettledAction(request.id, { reference: "UTR-0001" }), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
+      expect(await financingActions.approveFinancingRequestAction(request.id, { idempotencyKey: key() }), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
+      expect(await financingActions.rejectFinancingRequestAction(request.id, { reason: "Not permitted to do this", idempotencyKey: key() }), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
+      expect(await financingActions.initiateDisbursementAction(request.id, { idempotencyKey: key() }), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
+      expect(await financingActions.completeDisbursementAction(request.id, { idempotencyKey: key() }), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
+      expect(await financingActions.markSettlementSettledAction(request.id, { reference: "UTR-0001", idempotencyKey: key() }), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
       expect(await financingActions.addInternalCommentAction(request.id, { body: "Should not be stored" }), user).toMatchObject({ ok: false, code: "FORBIDDEN" });
     }
     expect((await db.financingRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("PENDING_APPROVAL");

@@ -104,7 +104,7 @@ export default async function OrganisationDetailPage({ params }: { params: Promi
             facts={[
               { label: "Type", value: <OrgTypeBadge type={org.type} /> },
               { label: "GSTIN", value: mono(org.gstin) },
-              { label: "PAN", value: mono(org.pan) },
+              { label: "PAN", value: mono(org.panMasked) },
               { label: "RERA registration", value: org.reraNumber ?? "—" },
               { label: "Registered address", value: address || "—" },
               { label: "Last updated", value: <span className="tabular">{formatDateTime(org.updatedAt)}</span> },

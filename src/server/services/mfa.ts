@@ -8,14 +8,14 @@ import type { Actor } from "../auth/session";
 import { requireStepUp } from "../auth/step-up";
 import { reserveAttempt, THROTTLE_POLICIES, throttleKeys } from "../auth/throttle";
 import { formatSecretForDisplay, generateTotpSecret, otpauthUri, verifyTotp } from "../auth/totp";
-import { decryptField, encryptField } from "../crypto/encryption";
+import { decryptField, ENCRYPTION_CONTEXT, encryptField, needsReencryption } from "../crypto/field-encryption";
 import { db, type Tx } from "../db";
 import { conflict, forbidden, invalid, notFound } from "../errors";
 
 const INVALID_CODE = "That code is not valid. Check it and try again.";
 
-const activeContext = (userId: string) => `user:${userId}:totp`;
-const pendingContext = (userId: string) => `user:${userId}:totp-pending`;
+const activeContext = ENCRYPTION_CONTEXT.totpSecret;
+const pendingContext = ENCRYPTION_CONTEXT.totpPendingSecret;
 
 export interface EnrolmentSecret {
   /** Base32 key for manual entry, grouped for readability. */
@@ -58,12 +58,14 @@ export async function verifySecondFactor(
     const used = await db.authRecoveryCode.updateMany({ where: { userId: user.id, codeHash: hashRecoveryCode(code), usedAt: null }, data: { usedAt: now } });
     if (used.count === 1) method = "recovery";
   } else {
-    const step = verifyTotp(decryptField(user.mfaSecret, activeContext(user.id)), code, { at: now, lastUsedStep: user.mfaLastUsedStep });
+    const secret = decryptField(user.mfaSecret, activeContext(user.id));
+    const step = verifyTotp(secret, code, { at: now, lastUsedStep: user.mfaLastUsedStep });
     if (step !== null) {
       // Conditional write: of two concurrent requests with the same code, only one can advance the step.
+      // A secret stored in an older format or under a rotated key is re-encrypted on the way.
       const advanced = await db.user.updateMany({
         where: { id: user.id, OR: [{ mfaLastUsedStep: null }, { mfaLastUsedStep: { lt: step } }] },
-        data: { mfaLastUsedStep: step },
+        data: { mfaLastUsedStep: step, ...(needsReencryption(user.mfaSecret) ? { mfaSecret: encryptField(secret, activeContext(user.id)) } : {}) },
       });
       if (advanced.count === 1) method = "totp";
     }

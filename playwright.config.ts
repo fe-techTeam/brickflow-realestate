@@ -40,11 +40,14 @@ export default defineConfig({
           DEMO_PASSWORD: demoPassword,
           DEMO_DATASET: "standard",
           AUTH_SECRET: "playwright-e2e-only-secret-value-of-at-least-32-chars",
-          DATA_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
           // The e2e build runs with NODE_ENV=production; the seeded demo accounts have no authenticator.
           MFA_ENFORCED: "false",
           APP_URL: baseURL,
           NEXT_TELEMETRY_DISABLED: "1",
+          // The server runs with NODE_ENV=production, so these must be explicit (the seed shares the key).
+          DATA_ENCRYPTION_KEY: "ZTJlLW9ubHktZmllbGQtZW5jcnlwdGlvbi1rZXktMzI=",
+          VERIFICATION_PROVIDER: "sandbox",
+          ALLOW_SANDBOX_VERIFICATION: "true",
         },
       },
 });
