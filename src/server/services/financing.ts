@@ -436,8 +436,24 @@ export async function initiateDisbursement(actor: Actor, requestId: string, raw:
 }
 
 /**
+ * Settlement due date the request was priced on. Requests accepted under the pricing engine carry it in
+ * their snapshot and it is never recomputed, so later edits to the invoice due date, the programme's
+ * holiday rule or the holiday calendar cannot move a date the partner and financier agreed to. Only
+ * legacy requests (no snapshot) derive it from the invoice and programme.
+ */
+export async function agreedSettlementDueDate(
+  request: Pick<Prisma.FinancingRequestGetPayload<object>, "pricedDueDate"> & {
+    invoice: Pick<Invoice, "dueDate" | "invoiceDate" | "cpId" | "builderId">;
+    programme: { holidayRule: ApplicableProgramme["holidayRule"] };
+  },
+): Promise<CalendarDate> {
+  if (request.pricedDueDate) return toCalendarDate(request.pricedDueDate);
+  return settlementDueDate(await invoiceDueDate(request.invoice), request.programme.holidayRule);
+}
+
+/**
  * Payout step 2: confirms the bank acknowledgement and opens the builder settlement for the financed
- * amount, due on the invoice due date adjusted by the programme's holiday rule.
+ * amount from the acceptance snapshot, due on the agreed settlement date.
  */
 export async function completeDisbursement(actor: Actor, requestId: string, raw: { idempotencyKey?: string } = {}) {
   const { idempotencyKey } = keyOnlySchema.parse(raw);
@@ -448,7 +464,7 @@ export async function completeDisbursement(actor: Actor, requestId: string, raw:
     async (claim) => {
       if (request.status !== "DISBURSEMENT_INITIATED") throw conflict("No disbursement is in progress for this request.");
       const now = new Date();
-      const due = await settlementDueDate(await invoiceDueDate(request.invoice), request.programme.holidayRule);
+      const due = await agreedSettlementDueDate(request);
       const dueDate = toStorageDate(due);
       const utr = `DEMOUTR${now.getUTCFullYear()}${String(randomInt(0, 1_000_000_000)).padStart(9, "0")}`;
 

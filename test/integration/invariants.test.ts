@@ -1,11 +1,14 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { Prisma } from "@/generated/prisma/client";
 import type { Actor } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { runInvariantChecks, type InvariantCode } from "@/server/services/invariants";
 import { financedTo } from "./fixtures-financing";
 import { actors, type DemoUser } from "./helpers";
+
+const DbNull = Prisma.DbNull;
 
 let as: Record<DemoUser, Actor>;
 let offered: Awaited<ReturnType<typeof financedTo>>;
@@ -156,6 +159,29 @@ describe("financing invariants", () => {
     );
   });
 
+  it("detect a settlement due on a different date from the one priced at acceptance", async () => {
+    const settlement = await db.settlement.findUniqueOrThrow({ where: { requestId: disbursed.requestId } });
+    await withViolation(
+      () => db.settlement.update({ where: { id: settlement.id }, data: { dueDate: new Date(settlement.dueDate.getTime() + 86_400_000) } }),
+      () => db.settlement.update({ where: { id: settlement.id }, data: { dueDate: settlement.dueDate } }),
+      async () => {
+        const report = await runInvariantChecks();
+        const finding = report.violations.find((v) => v.entityId === settlement.id && v.code === "SETTLEMENT_DUE_DATE_MISMATCH");
+        expect(finding).toMatchObject({ severity: "error" });
+        expect(report.ok).toBe(false);
+      },
+    );
+  });
+
+  it("detect a priced request that lost its pricing snapshot", async () => {
+    const request = await db.financingRequest.findUniqueOrThrow({ where: { id: pending.requestId } });
+    await withViolation(
+      () => db.financingRequest.update({ where: { id: request.id }, data: { pricingSnapshot: DbNull } }),
+      () => db.financingRequest.update({ where: { id: request.id }, data: { pricingSnapshot: (request.pricingSnapshot ?? DbNull) as Prisma.InputJsonValue } }),
+      async () => expect(await codesFor(request.id)).toContain("REQUEST_SNAPSHOT_MISSING"),
+    );
+  });
+
   it("detect a settlement on a request that was never disbursed", async () => {
     let settlementId = "";
     await withViolation(
@@ -222,9 +248,9 @@ describe("financing invariants", () => {
       () => db.settlement.update({ where: { id: settlement.id }, data: { dueDate: settlement.dueDate, status: settlement.status } }),
       async () => {
         const report = await runInvariantChecks();
-        const finding = report.violations.find((v) => v.entityId === settlement.id);
-        expect(finding).toMatchObject({ code: "SETTLEMENT_STATUS_STALE", severity: "warning" });
-        expect(report.ok).toBe(true);
+        const findings = report.violations.filter((v) => v.entityId === settlement.id);
+        expect(findings).toContainEqual(expect.objectContaining({ code: "SETTLEMENT_STATUS_STALE", severity: "warning" }));
+        expect(report.errors).toBe(report.violations.filter((v) => v.severity === "error").length);
       },
     );
   });

@@ -5,6 +5,7 @@
  */
 
 import type { PrismaClient } from "../../generated/prisma/client";
+import { LEGACY_PRICING_RULE_VERSION } from "../../lib/pricing";
 import { deriveSettlementStatus } from "../../lib/state-machines";
 
 export type InvariantCode =
@@ -21,6 +22,8 @@ export type InvariantCode =
   | "DISBURSEMENT_AMOUNT_MISMATCH"
   | "DISBURSEMENT_STATE_MISMATCH"
   | "SETTLEMENT_AMOUNT_MISMATCH"
+  | "SETTLEMENT_DUE_DATE_MISMATCH"
+  | "REQUEST_SNAPSHOT_MISSING"
   | "SETTLEMENT_STATE_MISMATCH"
   | "SETTLED_WITHOUT_SETTLED_AT"
   | "OPEN_SETTLEMENT_WITH_SETTLED_AT"
@@ -140,7 +143,8 @@ const CHECKS: Check[] = [
          OR o."approvedAmountPaise" <> r."approvedAmountPaise" OR o."discountRateBps" <> r."discountRateBps"
          OR o."tdsPaise" <> r."tdsPaise" OR o."financedAmountPaise" <> r."financedAmountPaise"
          OR o."discountAmountPaise" <> r."discountAmountPaise" OR o."chargesPaise" <> r."chargesPaise"
-         OR o."netPayablePaise" <> r."netPayablePaise"`,
+         OR o."netPayablePaise" <> r."netPayablePaise"
+         OR o."pricedDueDate" IS DISTINCT FROM r."pricedDueDate"`,
     message: (r) => `Request ${r.ref} does not carry the figures of its accepted offer ${r.detail}.`,
   },
   {
@@ -199,6 +203,26 @@ const CHECKS: Check[] = [
       FROM "Settlement" s JOIN "FinancingRequest" r ON r.id = s."requestId"
       WHERE s."amountPaise" <> r."financedAmountPaise"`,
     message: (r) => `Settlement for ${r.ref} differs from the financed amount (${r.detail} paise).`,
+  },
+  {
+    code: "REQUEST_SNAPSHOT_MISSING",
+    severity: "error",
+    entityType: "FinancingRequest",
+    run: (db) => db.$queryRaw<Row[]>`
+      SELECT r.id, r.reference AS ref, r."pricingRuleVersion" AS detail FROM "FinancingRequest" r
+      WHERE r."pricingRuleVersion" <> ${LEGACY_PRICING_RULE_VERSION}
+        AND (r."pricedDueDate" IS NULL OR r."pricingSnapshot" IS NULL OR r."tenorDays" IS NULL)`,
+    message: (r) => `Request ${r.ref} was priced under ${r.detail} but has no complete pricing snapshot.`,
+  },
+  {
+    code: "SETTLEMENT_DUE_DATE_MISMATCH",
+    severity: "error",
+    entityType: "Settlement",
+    run: (db) => db.$queryRaw<Row[]>`
+      SELECT s.id, r.reference AS ref, to_char(s."dueDate", 'YYYY-MM-DD') || ' vs agreed ' || to_char(r."pricedDueDate", 'YYYY-MM-DD') AS detail
+      FROM "Settlement" s JOIN "FinancingRequest" r ON r.id = s."requestId"
+      WHERE r."pricedDueDate" IS NOT NULL AND s."dueDate" <> r."pricedDueDate"`,
+    message: (r) => `Settlement for ${r.ref} is due on a different date from the one priced at acceptance (${r.detail}).`,
   },
   {
     code: "SETTLEMENT_STATE_MISMATCH",

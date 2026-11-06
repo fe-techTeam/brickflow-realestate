@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { FinancingProgramme } from "@/generated/prisma/client";
-import { addDays, dayOfWeek, endOfIstDay, istToday, toCalendarDate, toStorageDate } from "@/lib/calendar";
+import { Prisma, type FinancingProgramme } from "@/generated/prisma/client";
+import { addDays, adjustDueDate, dayOfWeek, endOfIstDay, istToday, toCalendarDate, toStorageDate } from "@/lib/calendar";
 import { priceEarlyPayment, PRICING_RULE_VERSION, LEGACY_PRICING_RULE_VERSION } from "@/lib/pricing";
 import type { Actor } from "@/server/auth/session";
 import { db } from "@/server/db";
@@ -254,6 +254,68 @@ describe("holiday rule", () => {
     const offer = await generateOffer(as.prestige, invoice.id);
     expect(toCalendarDate(offer.pricedDueDate!)).toBe(sunday);
     await db.financingProgramme.update({ where: { id: godrej.id }, data: { holidayRule: "NEXT_BUSINESS_DAY" } });
+  });
+});
+
+describe("settlement date comes from the acceptance snapshot", () => {
+  let sunday: string;
+
+  beforeAll(async () => {
+    let candidate = addDays(istToday(), 20);
+    while (dayOfWeek(candidate) !== 0) candidate = addDays(candidate, 1);
+    sunday = candidate;
+  });
+
+  afterAll(async () => {
+    await restore(godrej);
+  });
+
+  async function disburse(requestId: string) {
+    await approveFinancingRequest(as.finance, requestId, {});
+    await initiateDisbursement(as.finance, requestId);
+    await completeDisbursement(as.finance, requestId);
+    return db.settlement.findUniqueOrThrow({ where: { requestId } });
+  }
+
+  it("always writes the priced settlement date and snapshot at acceptance", async () => {
+    const invoice = await acceptedInvoice(as.prestige, as.godrej, { dueDate: isoDate(33) });
+    const request = await acceptOffer(as.prestige, (await generateOffer(as.prestige, invoice.id)).id, { consent: true });
+    expect(request.pricedDueDate).not.toBeNull();
+    expect(request.pricingSnapshot).not.toBeNull();
+    expect(request.pricingRuleVersion).toBe(PRICING_RULE_VERSION);
+    expect(toCalendarDate(request.pricedDueDate!)).toBe(isoDate(33));
+  });
+
+  it("ignores later changes to the invoice due date and the programme's holiday rule", async () => {
+    await db.financingProgramme.update({ where: { id: godrej.id }, data: { holidayRule: "NONE" } });
+    const invoice = await acceptedInvoice(as.prestige, as.godrej, { dueDate: sunday });
+    const request = await acceptOffer(as.prestige, (await generateOffer(as.prestige, invoice.id)).id, { consent: true });
+    expect(toCalendarDate(request.pricedDueDate!)).toBe(sunday);
+
+    await db.invoice.update({ where: { id: invoice.id }, data: { dueDate: toStorageDate(addDays(sunday, 10)) } });
+    await db.financingProgramme.update({ where: { id: godrej.id }, data: { holidayRule: "NEXT_BUSINESS_DAY" } });
+
+    const settlement = await disburse(request.id);
+    expect(toCalendarDate(settlement.dueDate)).toBe(sunday);
+    expect(settlement.amountPaise).toBe(request.financedAmountPaise);
+    expect(await errorsFor([request.id, settlement.id])).toEqual([]);
+  });
+
+  it("still derives the date for legacy requests priced before the snapshot existed", async () => {
+    await db.financingProgramme.update({ where: { id: godrej.id }, data: { holidayRule: "NONE" } });
+    const invoice = await acceptedInvoice(as.prestige, as.godrej, { dueDate: sunday });
+    const offer = await generateOffer(as.prestige, invoice.id);
+    const request = await acceptOffer(as.prestige, offer.id, { consent: true });
+    const legacy = { pricingRuleVersion: LEGACY_PRICING_RULE_VERSION, pricedDueDate: null, tenorDays: null, annualisedRateBps: null, pricingSnapshot: Prisma.DbNull };
+    await db.financingOffer.update({ where: { id: offer.id }, data: legacy });
+    await db.financingRequest.update({ where: { id: request.id }, data: legacy });
+    await db.financingProgramme.update({ where: { id: godrej.id }, data: { holidayRule: "NEXT_BUSINESS_DAY" } });
+
+    const holidays = new Set((await db.businessHoliday.findMany()).map((h) => toCalendarDate(h.date)));
+    const settlement = await disburse(request.id);
+    expect(toCalendarDate(settlement.dueDate)).toBe(adjustDueDate(sunday, "NEXT_BUSINESS_DAY", holidays));
+    expect(toCalendarDate(settlement.dueDate)).not.toBe(sunday);
+    expect(await errorsFor([invoice.id, offer.id, request.id, settlement.id])).toEqual([]);
   });
 });
 
