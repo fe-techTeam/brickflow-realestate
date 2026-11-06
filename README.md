@@ -34,10 +34,10 @@ Each user belongs to one organisation, and the organisation type decides the wor
 
 | Workspace | Path | Organisation type | What it covers |
 | --- | --- | --- | --- |
-| Channel Partner | `/partner` | Channel partner (broker) | Overview, invoices, invoice upload with PDF field extraction, financing offers, transactions, disbursements, documents, organisation profile |
-| Builder | `/builder` | Real estate developer | Overview, empanelled channel partners, projects, invoice approvals, approved invoices, financed invoices, settlements, reports |
-| Veefin Finance | `/finance` | Financier | Overview, builders, channel partners, financing programmes, financing requests, disbursements, transactions, reports |
-| Super Admin | `/admin` | Platform operator | Dashboard, organisations, users, builders, channel partners, financing configuration (programmes and rates), transactions, audit logs, settings |
+| Channel Partner | `/partner` | Channel partner (broker) | Overview, invoices, invoice upload with PDF field extraction, financing offers, transactions, disbursements, documents, verification (KYC and payout account), organisation profile |
+| Builder | `/builder` | Real estate developer | Overview, empanelled channel partners, projects, invoice approvals, approved invoices, financed invoices, settlements, reports, verification |
+| Veefin Finance | `/finance` | Financier | Overview, builders, channel partners, financing programmes, financing requests, disbursements, transactions, reports, verification |
+| Super Admin | `/admin` | Platform operator | Dashboard, organisations, users, builders, channel partners, KYC review, financing configuration (programmes and rates), transactions, audit logs, settings |
 
 ## End-to-end business flow
 
@@ -142,6 +142,8 @@ Open <http://localhost:3000>. `npm run demo:reset` deletes the stored invoice PD
 | `DEMO_PASSWORD` | `BrickFlow@2026` | Shared password for the seeded accounts |
 | `DEMO_DATASET` | `standard` | Which demo dataset to seed and offer on the sign-in page (see below) |
 | `APP_URL` | `http://localhost:3000` | Public base URL; `https://` enables secure cookies |
+| `DATA_ENCRYPTION_KEY` | empty (development key) | Encrypts bank account numbers and PAN; required in production |
+| `VERIFICATION_PROVIDER` | `sandbox` | KYC verification provider; see [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) for live providers and the other verification and KYC variables |
 
 ## Demo datasets
 

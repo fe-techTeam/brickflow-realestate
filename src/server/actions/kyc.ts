@@ -84,6 +84,7 @@ export async function setPrimaryBankAccountAction(bankAccountId: string): Promis
   return runAction(async () => {
     await setPrimaryBankAccount(await requireActor(), bankAccountId, { requestId: await requestId() });
     refresh();
+    return undefined;
   }, "Payout account updated. Early payments pause during the security cooling-off period.");
 }
 
@@ -91,6 +92,7 @@ export async function approveVerificationAction(checkId: string, input: { note?:
   return runAction(async () => {
     await reviewVerificationCheck(await requireActor(), checkId, { decision: "APPROVE", note: input.note });
     refresh();
+    return undefined;
   }, "Verification approved.");
 }
 
@@ -98,5 +100,6 @@ export async function rejectVerificationAction(checkId: string, input: { reason:
   return runAction(async () => {
     await reviewVerificationCheck(await requireActor(), checkId, { decision: "REJECT", note: input.reason });
     refresh();
+    return undefined;
   }, "Verification rejected.");
 }

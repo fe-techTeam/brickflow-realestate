@@ -8,8 +8,9 @@
  *   - --scrub-legacy  clears the legacy plaintext columns once the encrypted copies exist
  *                     (run only after the migration has been verified; the columns are dropped later)
  *   - --dry-run       reports what would change
+ *   - --organisation  limits the run to one organisation id
  *
- *   node node_modules/tsx/dist/cli.mjs scripts/migrate-kyc-data.ts [--dry-run] [--reencrypt] [--scrub-legacy]
+ *   node node_modules/tsx/dist/cli.mjs scripts/migrate-kyc-data.ts [--dry-run] [--reencrypt] [--scrub-legacy] [--organisation <id>]
  */
 import { parseArgs } from "node:util";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -25,7 +26,12 @@ try {
 }
 
 const { values: flags } = parseArgs({
-  options: { "dry-run": { type: "boolean", default: false }, reencrypt: { type: "boolean", default: false }, "scrub-legacy": { type: "boolean", default: false } },
+  options: {
+    "dry-run": { type: "boolean", default: false },
+    reencrypt: { type: "boolean", default: false },
+    "scrub-legacy": { type: "boolean", default: false },
+    organisation: { type: "string" },
+  },
 });
 
 const url = process.env.DATABASE_URL;
@@ -36,7 +42,7 @@ const dryRun = flags["dry-run"] === true;
 
 async function main() {
   const counts = { panEncrypted: 0, bankAccountsCreated: 0, reencrypted: 0, legacyScrubbed: 0, skippedInvalidAccounts: 0 };
-  const organisations = await db.organisation.findMany();
+  const organisations = await db.organisation.findMany({ where: flags.organisation ? { id: flags.organisation } : undefined });
 
   for (const org of organisations) {
     await db.$transaction(async (tx) => {

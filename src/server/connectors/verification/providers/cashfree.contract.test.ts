@@ -13,7 +13,7 @@ const BASE = "https://sandbox.cashfree.com/verification";
 function provider(replies: ScriptedReply[], options: { publicKeyPem?: string } = {}) {
   const fetch = fakeFetch(replies);
   const config = { clientId: "CF_TEST_CLIENT", clientSecret: "cf_test_secret_value", environment: "sandbox" as const, publicKeyPem: options.publicKeyPem };
-  let instance: CashfreeVerificationProvider;
+  const holder: { instance?: CashfreeVerificationProvider } = {};
   const http = new ResilientHttpClient({
     provider: "cashfree",
     baseUrl: BASE,
@@ -21,10 +21,10 @@ function provider(replies: ScriptedReply[], options: { publicKeyPem?: string } =
     sleep: noSleep,
     logger: silentConnectorLogger,
     breaker: new CircuitBreaker("cashfree-test"),
-    defaultHeaders: () => instance.authHeaders(),
+    defaultHeaders: () => holder.instance!.authHeaders(),
   });
-  instance = new CashfreeVerificationProvider(config, http);
-  return { cf: instance, fetch };
+  holder.instance = new CashfreeVerificationProvider(config, http);
+  return { cf: holder.instance, fetch };
 }
 
 async function failure(promise: Promise<unknown>): Promise<ConnectorError> {

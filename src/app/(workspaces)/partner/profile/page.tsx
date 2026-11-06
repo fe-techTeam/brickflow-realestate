@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Building2, Info, Landmark, ShieldCheck, Users } from "lucide-react";
+import { KYC_STATUS } from "@/components/kyc/kyc-status";
 import { formatDate, formatDateTime, initials } from "@/lib/format";
 import { requireWorkspace } from "@/server/auth/session";
 import { getPartnerProfile } from "@/server/queries/partner";
@@ -30,13 +32,13 @@ export default async function OrganisationProfilePage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
         <div className="flex min-w-0 flex-col gap-6">
-          <Panel eyebrow="KYC verified" title="Registration details">
+          <Panel eyebrow={`KYC ${KYC_STATUS[org.kycStatus].label.toLowerCase()}`} title="Registration details" actions={<Link href="/partner/verification" className="text-xs font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-fg">Manage verification</Link>}>
             <Facts
               items={[
                 { label: "Legal name", value: org.legalName },
                 { label: "Organisation type", value: "Channel partner" },
                 { label: "GSTIN", value: org.gstin },
-                { label: "PAN", value: org.pan },
+                { label: "PAN", value: org.panMasked },
                 { label: "RERA registration", value: org.reraNumber },
                 { label: "Primary contact", value: org.contactName },
                 { label: "Contact email", value: org.contactEmail },
@@ -173,8 +175,8 @@ export default async function OrganisationProfilePage() {
               <Info className="size-4 text-fg-muted" />
               Maintained by the administrator
             </p>
-            These details are maintained by the BrickFlow platform administrator after KYC verification. To change legal details, bank account, empanelments or team
-            members, contact the platform administrator.
+            Legal details, empanelments and team members are maintained by the BrickFlow platform administrator. Registrations and your payout bank account are
+            managed on the <Link href="/partner/verification" className="font-medium text-fg underline decoration-line-strong underline-offset-4">Verification</Link> page.
           </div>
         </aside>
       </div>

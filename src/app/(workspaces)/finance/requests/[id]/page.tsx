@@ -533,7 +533,7 @@ export default async function RequestReviewPage({ params }: Params) {
               tone="basalt"
               facts={[
                 { label: "GSTIN", value: <span className="tabular">{request.cp.gstin ?? "—"}</span> },
-                { label: "PAN", value: <span className="tabular">{request.cp.pan ?? "—"}</span> },
+                { label: "PAN", value: <span className="tabular">{request.cp.panMasked ?? "—"}</span> },
                 { label: "RERA", value: <span className="text-xs">{request.cp.reraNumber ?? "—"}</span> },
                 {
                   label: "Contact",
@@ -567,7 +567,7 @@ export default async function RequestReviewPage({ params }: Params) {
               tone="leaf"
               facts={[
                 { label: "GSTIN", value: <span className="tabular">{request.builder.gstin ?? "—"}</span> },
-                { label: "PAN", value: <span className="tabular">{request.builder.pan ?? "—"}</span> },
+                { label: "PAN", value: <span className="tabular">{request.builder.panMasked ?? "—"}</span> },
                 { label: "RERA", value: <span className="text-xs">{request.builder.reraNumber ?? "—"}</span> },
                 {
                   label: "Contact",

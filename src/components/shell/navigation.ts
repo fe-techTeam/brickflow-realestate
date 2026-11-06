@@ -1,5 +1,6 @@
 import {
   ArrowDownToLine,
+  BadgeCheck,
   BadgePercent,
   BarChart3,
   Building2,
@@ -57,6 +58,7 @@ export const NAVIGATION: Record<WorkspaceKey, NavSection[]> = {
       label: "Account",
       items: [
         { title: "Documents", href: "/partner/documents", icon: FileText },
+        { title: "Verification", href: "/partner/verification", icon: ShieldCheck },
         { title: "Organisation Profile", href: "/partner/profile", icon: UserCircle2 },
       ],
     },
@@ -82,6 +84,7 @@ export const NAVIGATION: Record<WorkspaceKey, NavSection[]> = {
       items: [
         { title: "Settlements", href: "/builder/settlements", icon: Landmark },
         { title: "Reports", href: "/builder/reports", icon: BarChart3 },
+        { title: "Verification", href: "/builder/verification", icon: ShieldCheck },
       ],
     },
   ],
@@ -101,6 +104,7 @@ export const NAVIGATION: Record<WorkspaceKey, NavSection[]> = {
         { title: "Disbursements", href: "/finance/disbursements", icon: ArrowDownToLine },
         { title: "Transactions", href: "/finance/transactions", icon: Receipt },
         { title: "Reports", href: "/finance/reports", icon: BarChart3 },
+        { title: "Verification", href: "/finance/verification", icon: ShieldCheck },
       ],
     },
   ],
@@ -115,6 +119,7 @@ export const NAVIGATION: Record<WorkspaceKey, NavSection[]> = {
         { title: "Users", href: "/admin/users", icon: Users },
         { title: "Builders", href: "/admin/builders", icon: Building2 },
         { title: "Channel Partners", href: "/admin/partners", icon: Handshake },
+        { title: "KYC Review", href: "/admin/kyc", icon: BadgeCheck },
       ],
     },
     {
