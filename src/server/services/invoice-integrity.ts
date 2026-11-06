@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import type { InvoiceDuplicateKind, Prisma } from "@/generated/prisma/client";
+import type { InvoiceDuplicateKind, OrganisationType, Prisma, RoleKey } from "@/generated/prisma/client";
 import { computeFingerprint, type FingerprintParts, type FingerprintSource } from "@/lib/invoice-integrity/fingerprint";
 import { formatINR } from "@/lib/money";
 import { recordAudit } from "../audit";
@@ -9,6 +9,12 @@ import { db, type Tx } from "../db";
 import { conflict, forbidden, notFound } from "../errors";
 import type { DuplicateFlagDto } from "@/components/invoice/duplicate-flags";
 import { getApplicableProgramme } from "./financing";
+
+/** Writes check the exact role, not only the organisation type. */
+function requireRole(actor: Actor, orgType: OrganisationType, role: RoleKey) {
+  assertOrgType(actor, orgType);
+  if (actor.role !== role) throw forbidden();
+}
 
 /* ----------------------------------------------------------------------------------------------
  * Fingerprint registry. The local registry is the InvoiceFingerprint table; a shared registry
@@ -279,7 +285,8 @@ const resolveSchema = z.object({
 
 /** Records the reviewer's conclusion on an open flag: not a duplicate (CLEARED) or a confirmed duplicate. */
 export async function resolveDuplicateFlag(actor: Actor, flagId: string, raw: z.input<typeof resolveSchema>) {
-  if (actor.orgType !== "PLATFORM") assertOrgType(actor, "BUILDER");
+  if (actor.orgType === "PLATFORM") requireRole(actor, "PLATFORM", "SUPER_ADMIN");
+  else requireRole(actor, "BUILDER", "BUILDER_ACCOUNTS");
   const input = resolveSchema.parse(raw);
   const flag = await db.invoiceDuplicateFlag.findFirst({ where: { AND: [{ id: flagId }, flagScope(actor)] }, include: { invoice: { select: { id: true, invoiceNumber: true } } } });
   if (!flag) throw notFound("Flag not found.");
@@ -358,11 +365,14 @@ export async function listRejectedUploads(actor: Actor, limit = 25): Promise<Rej
   });
 }
 
+/** Relaxing the builder's attestation is a programme-level control, so it needs the same role as editing a programme. */
 export async function setMatchPolicy(actor: Actor, programmeId: string, attestationOptional: boolean) {
-  assertOrgType(actor, "PLATFORM");
+  requireRole(actor, "PLATFORM", "SUPER_ADMIN");
   const programme = await db.financingProgramme.findUnique({ where: { id: programmeId }, select: { id: true, code: true } });
   if (!programme) throw notFound("Programme not found.");
   await db.$transaction(async (tx) => {
+    const before = await tx.invoiceMatchPolicy.findUnique({ where: { programmeId } });
+    const previous = before?.attestationOptional ?? false;
     await tx.invoiceMatchPolicy.upsert({
       where: { programmeId },
       create: { programmeId, attestationOptional, updatedById: actor.userId },
@@ -373,7 +383,7 @@ export async function setMatchPolicy(actor: Actor, programmeId: string, attestat
       entityType: "FinancingProgramme",
       entityId: programme.id,
       summary: `Three-way match ${attestationOptional ? "made optional" : "required"} for programme ${programme.code}`,
-      metadata: { attestationOptional },
+      metadata: { before: { attestationOptional: previous }, after: { attestationOptional } },
     });
   });
 }

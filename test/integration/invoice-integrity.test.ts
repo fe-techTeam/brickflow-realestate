@@ -240,6 +240,8 @@ describe("duplicate registry", () => {
     await expectValidationError(resolveDuplicateFlag(as.godrej, flag.id, { resolution: "CLEARED", note: "ok" }), "note");
     await expectDomainError(resolveDuplicateFlag(as.skyline, flag.id, { resolution: "CLEARED", note: "Not ours to decide at all." }), "NOT_FOUND");
     await expectDomainError(resolveDuplicateFlag(as.prestige, flag.id, { resolution: "CLEARED", note: "Partner trying to clear it." }), "FORBIDDEN");
+    await expectDomainError(resolveDuplicateFlag({ ...as.godrej, role: "CP_ADMIN" }, flag.id, { resolution: "CLEARED", note: "Wrong role on the builder side." }), "FORBIDDEN");
+    await expectDomainError(resolveDuplicateFlag({ ...as.admin, role: "FINANCE_OPS" }, flag.id, { resolution: "CLEARED", note: "Platform user without admin rights." }), "FORBIDDEN");
 
     await resolveDuplicateFlag(as.godrej, flag.id, { resolution: "CLEARED", note: "Separate bookings, units B-1104 and B-1202." });
     expect(await db.invoiceDuplicateFlag.findUniqueOrThrow({ where: { id: flag.id } })).toMatchObject({
@@ -327,6 +329,19 @@ describe("three-way match", () => {
     expect(attestation.items.find((i) => i.key === "UNIT")?.invoiceValue).toBe("Tower B · Unit 1104 · Buyer RK");
     const audit = await db.auditLog.findFirstOrThrow({ where: { entityId: id, action: "invoice.approved" } });
     expect(JSON.parse(audit.metadata!).threeWayMatch).toMatchObject({ required: true, programmeId: godrejProgrammeId });
+  });
+
+  it("lets only a super admin change the policy, auditing before and after", async () => {
+    const platformNonAdmin: Actor = { ...as.admin, role: "FINANCE_OPS" };
+    await expectDomainError(setMatchPolicy(platformNonAdmin, godrejProgrammeId, true), "FORBIDDEN");
+    await expectDomainError(setMatchPolicy(as.finance, godrejProgrammeId, true), "FORBIDDEN");
+    expect((await getMatchPolicy(as.godrej.orgId)).required).toBe(true);
+
+    await setMatchPolicy(as.admin, godrejProgrammeId, true);
+    const entry = await db.auditLog.findFirstOrThrow({ where: { entityId: godrejProgrammeId, action: "programme.match_policy_updated" }, orderBy: { createdAt: "desc" } });
+    expect(entry.actorUserId).toBe(as.admin.userId);
+    expect(JSON.parse(entry.metadata!)).toEqual({ before: { attestationOptional: false }, after: { attestationOptional: true } });
+    await setMatchPolicy(as.admin, godrejProgrammeId, false);
   });
 
   it("lets the platform make the match optional for a programme", async () => {
