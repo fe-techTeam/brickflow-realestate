@@ -1,9 +1,9 @@
 import { deflateSync } from "node:zlib";
 import { PDFDocument, PDFName, PDFString } from "pdf-lib";
 import { describe, expect, it } from "vitest";
-import { buildInvoiceDocument, SAMPLE_INVOICES } from "@/lib/demo/catalogue";
+import { buildInvoiceDocument, DEMO_DATASETS, demoClock, SAMPLE_INVOICES } from "@/lib/demo/catalogue";
 import { renderBrokerageInvoicePdf } from "@/lib/pdf/brokerage-invoice";
-import { inspectPdf, maxPdfPagesFromEnv, scanPdfStructure } from "./pdf-inspect";
+import { inspectPdf, maxPdfPagesFromEnv, scanParsedDocument, scanPdfStructure } from "./pdf-inspect";
 
 /** Assembles a classic PDF (objects numbered from 1, cross-reference table with real offsets). */
 function handPdf(objects: (string | Buffer)[], trailerExtra = ""): Uint8Array {
@@ -131,6 +131,136 @@ describe("inspectPdf — rejected documents", () => {
   });
 
   it("reads the page limit from the environment", () => {
+    expect(maxPdfPagesFromEnv({ UPLOAD_MAX_PDF_PAGES: "7" })).toBe(7);
+  });
+});
+
+const CATALOG = "<< /Type /Catalog /Pages 2 0 R >>";
+
+function ascii85(data: Buffer): string {
+  let out = "";
+  for (let i = 0; i < data.length; i += 4) {
+    const chunk = Buffer.concat([data.subarray(i, i + 4), Buffer.alloc(4)]).subarray(0, 4);
+    let value = chunk.readUInt32BE(0);
+    const digits: string[] = [];
+    for (let k = 0; k < 5; k += 1) {
+      digits.unshift(String.fromCharCode((value % 85) + 33));
+      value = Math.floor(value / 85);
+    }
+    out += digits.slice(0, Math.min(4, data.length - i) + 1).join("");
+  }
+  return out;
+}
+
+describe("inspectPdf — parser differentials and fail-closed decoding", () => {
+  it("does not skip a stream because of a decoy /Image key", () => {
+    const decoyObjStm = handPdf([
+      CATALOG,
+      ...PAGE_TREE,
+      stream("/Type /ObjStm /Image true /Subtype /Image /N 1 /First 4 /Filter /FlateDecode", deflateSync(Buffer.from("5 0 << /S /JavaScript /JS (x) >>", "latin1"))),
+    ]);
+    expect(scanPdfStructure(decoyObjStm)).toEqual({ reason: "active_content", detail: "/JavaScript" });
+
+    const decoyContent = handPdf([CATALOG, ...PAGE_TREE, stream("/Image 1 /Length1 2 /Filter /FlateDecode", deflateSync(Buffer.from("/JavaScript", "latin1")))]);
+    expect(scanPdfStructure(decoyContent)).toEqual({ reason: "active_content", detail: "/JavaScript" });
+  });
+
+  it("skips real image, cross-reference and font-file streams by their parsed values", () => {
+    const bytes = handPdf([
+      "<< /Type /Catalog /Pages 2 0 R >>",
+      ...PAGE_TREE,
+      stream("/Type /XObject /Subtype /Image /Width 1 /Height 1 /Filter /DCTDecode", Buffer.from("\xff\xd8 /JS binary", "latin1")),
+      "<< /Type /FontDescriptor /FontName /X /FontFile2 6 0 R >>",
+      stream("/Length1 4", Buffer.from("/AA font program bytes", "latin1")),
+    ]);
+    expect(scanPdfStructure(bytes)).toBeNull();
+  });
+
+  it("finds JavaScript inside an object stream through the parsed object graph", async () => {
+    const bytes = await pdfLibDocument((doc) => {
+      const action = doc.context.register(doc.context.obj({ S: "JavaScript", JS: PDFString.of("app.alert(1)") }));
+      doc.getPage(0).node.set(PDFName.of("Annots"), doc.context.obj([doc.context.obj({ Type: "Annot", Subtype: "Link", Rect: [0, 0, 10, 10], A: action })]));
+    });
+    const document = await PDFDocument.load(bytes);
+    expect(scanParsedDocument(document)).toMatchObject({ reason: "active_content" });
+    await expect(inspectPdf(bytes)).resolves.toMatchObject({ ok: false, reason: "active_content" });
+  });
+
+  it("rejects an /OpenAction action on the catalog", async () => {
+    const bytes = handPdf(["<< /Type /Catalog /Pages 2 0 R /OpenAction 4 0 R >>", ...PAGE_TREE, "<< /S /Named /N /Print >>"]);
+    await expect(inspectPdf(bytes)).resolves.toMatchObject({ ok: false, reason: "active_content", detail: "/OpenAction" });
+  });
+
+  it("allows web links but rejects other link schemes", async () => {
+    const withUri = (uri: string) =>
+      pdfLibDocument((doc) => {
+        doc.getPage(0).node.set(
+          PDFName.of("Annots"),
+          doc.context.obj([doc.context.obj({ Type: "Annot", Subtype: "Link", Rect: [0, 0, 10, 10], A: doc.context.obj({ S: "URI", URI: PDFString.of(uri) }) })]),
+        );
+      });
+    await expect(inspectPdf(await withUri("https://example.com/terms"))).resolves.toMatchObject({ ok: true });
+    await expect(inspectPdf(await withUri("javascript:alert(1)"))).resolves.toMatchObject({ ok: false, reason: "active_content", detail: "/URI scheme" });
+    await expect(inspectPdf(await withUri("file:///etc/passwd"))).resolves.toMatchObject({ ok: false, reason: "active_content" });
+  });
+
+  it("fails closed on a corrupt flate stream", () => {
+    const bytes = handPdf([CATALOG, ...PAGE_TREE, stream("/Filter /FlateDecode", Buffer.from("definitely not zlib data", "latin1"))]);
+    expect(scanPdfStructure(bytes)).toMatchObject({ reason: "unreadable", detail: "corrupt FlateDecode data" });
+  });
+
+  it("fails closed on filters and predictors it cannot reverse", () => {
+    const lzw = handPdf([CATALOG, ...PAGE_TREE, stream("/Filter /LZWDecode", Buffer.from("x"))]);
+    expect(scanPdfStructure(lzw)).toMatchObject({ reason: "unreadable", detail: "unsupported filter LZWDecode" });
+    const crypt = handPdf([CATALOG, ...PAGE_TREE, stream("/Filter [/FlateDecode /Crypt]", deflateSync(Buffer.from("x")))]);
+    expect(scanPdfStructure(crypt)).toMatchObject({ reason: "unreadable" });
+    const tiff = handPdf([CATALOG, ...PAGE_TREE, stream("/Filter /FlateDecode /DecodeParms << /Predictor 2 >>", deflateSync(Buffer.from("x")))]);
+    expect(scanPdfStructure(tiff)).toMatchObject({ reason: "unreadable", detail: "unsupported predictor 2" });
+  });
+
+  it("decodes ASCII hex, ASCII85, run-length and chained filters", () => {
+    const payload = deflateSync(Buffer.from("5 0 << /S /Launch >>", "latin1"));
+    const hex = `${payload.toString("hex")}>`;
+    const chained = handPdf([CATALOG, ...PAGE_TREE, stream("/Type /ObjStm /N 1 /First 4 /Filter [/ASCIIHexDecode /FlateDecode]", Buffer.from(hex, "latin1"))]);
+    expect(scanPdfStructure(chained)).toEqual({ reason: "active_content", detail: "/Launch" });
+
+    const a85 = handPdf([CATALOG, ...PAGE_TREE, stream("/Filter /ASCII85Decode", Buffer.from(`${ascii85(Buffer.from("q /JS 1 0 obj", "latin1"))}~>`, "latin1"))]);
+    expect(scanPdfStructure(a85)).toEqual({ reason: "active_content", detail: "/JS" });
+
+    const runLength = Buffer.concat([Buffer.from([2]), Buffer.from("/AA", "latin1"), Buffer.from([128])]);
+    const rl = handPdf([CATALOG, ...PAGE_TREE, stream("/Filter /RunLengthDecode", runLength)]);
+    expect(scanPdfStructure(rl)).toEqual({ reason: "active_content", detail: "/AA" });
+  });
+
+  it("reverses PNG predictors before scanning", () => {
+    const row = Buffer.from("/JavaScript", "latin1");
+    const predicted = Buffer.concat([Buffer.from([0]), row]);
+    const bytes = handPdf([
+      CATALOG,
+      ...PAGE_TREE,
+      stream(`/Type /ObjStm /N 1 /First 4 /Filter /FlateDecode /DecodeParms << /Predictor 12 /Columns ${row.length} >>`, deflateSync(predicted)),
+    ]);
+    expect(scanPdfStructure(bytes)).toEqual({ reason: "active_content", detail: "/JavaScript" });
+  });
+
+  it("rejects streams that expand beyond the decompression budget", () => {
+    const bomb = deflateSync(Buffer.alloc(52 * 1024 * 1024));
+    const bytes = handPdf([CATALOG, ...PAGE_TREE, stream("/Filter /FlateDecode", bomb)]);
+    expect(scanPdfStructure(bytes)).toMatchObject({ reason: "unreadable", detail: "decoded content too large" });
+  });
+
+  it("accepts every sample invoice in both demo datasets", async () => {
+    for (const dataset of Object.values(DEMO_DATASETS)) {
+      for (const sample of dataset.samples(demoClock())) {
+        const bytes = await renderBrokerageInvoicePdf(buildInvoiceDocument(sample, dataset));
+        await expect(inspectPdf(bytes), sample.slug).resolves.toEqual({ ok: true, pageCount: 1 });
+      }
+    }
+  });
+});
+
+describe("inspectPdf — environment", () => {
+  it("falls back to the default page limit", () => {
     expect(maxPdfPagesFromEnv({})).toBe(50);
     expect(maxPdfPagesFromEnv({ UPLOAD_MAX_PDF_PAGES: "10" })).toBe(10);
     expect(maxPdfPagesFromEnv({ UPLOAD_MAX_PDF_PAGES: "-1" })).toBe(50);
