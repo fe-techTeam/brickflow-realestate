@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect } from "vitest";
 import { ZodError } from "zod";
 import { buildInvoiceDocument } from "@/lib/demo/catalogue";
+import { MATCH_ITEM_KEYS } from "@/lib/invoice-integrity/match";
 import { parseRupeesToPaise } from "@/lib/money";
 import { renderBrokerageInvoicePdf } from "@/lib/pdf/brokerage-invoice";
 import { workspaceForOrgType } from "@/lib/workspaces";
@@ -11,6 +12,9 @@ import type { DomainErrorCode } from "@/server/errors";
 import { approveInvoice, submitInvoice, type UploadedFile } from "@/server/services/invoices";
 
 export const DEMO_PASSWORD = "BrickFlow@2026";
+
+/** Every three-way match item ticked, as the builder must before approving. */
+export const ATTESTED = { attestations: [...MATCH_ITEM_KEYS] };
 
 export const USERS = {
   admin: "admin@brickflow.demo",
@@ -136,7 +140,7 @@ export async function submitTestInvoice(cpActor: Actor, options: SubmitOptions =
 /** Submits and fully approves an invoice, returning its id. */
 export async function acceptedInvoice(cpActor: Actor, builderActor: Actor, options: SubmitOptions & { approvedAmount?: string } = {}) {
   const invoice = await submitTestInvoice(cpActor, options);
-  await approveInvoice(builderActor, invoice.id, { approvedAmount: options.approvedAmount, comment: "Verified against the booking register." });
+  await approveInvoice(builderActor, invoice.id, { ...ATTESTED, approvedAmount: options.approvedAmount, comment: "Verified against the booking register." });
   return invoice;
 }
 

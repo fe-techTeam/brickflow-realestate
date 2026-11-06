@@ -8,7 +8,8 @@
  * membership survives (see {@link linesFromPositionedText}). OCR text that uses runs of three or
  * more spaces between columns is treated the same way.
  */
-import { paiseToDecimalString, parseRupeesToPaise } from "../money";
+import { GST_STATE_CODES } from "../invoice-integrity/gst";
+import { formatBps, paiseToDecimalString, parsePercentToBps, parseRupeesToPaise } from "../money";
 
 export interface PositionedText {
   str: string;
@@ -39,6 +40,29 @@ export interface ExtractedInvoiceFields {
   totalAmount?: string;
   /** True when taxable value + tax equals the total (within one rupee). */
   amountsReconcile?: boolean;
+  /** GST rate in basis points, from "CGST @ 9%" + "SGST @ 9%" or "IGST @ 18%". */
+  gstRateBps?: number;
+  /** Two-digit GST state code of the place of supply. */
+  placeOfSupplyStateCode?: string;
+  /** E-invoice IRN, 64 lower-case hex characters. */
+  irn?: string;
+  /** 15-digit IRP acknowledgement number. */
+  ackNumber?: string;
+  /** ISO yyyy-mm-dd */
+  ackDate?: string;
+  bookingTower?: string;
+  bookingUnit?: string;
+  /** One to four letters; full buyer names are never extracted. */
+  buyerInitials?: string;
+  agreementRegistrationNumber?: string;
+  /** ISO yyyy-mm-dd */
+  agreementDate?: string;
+  /** Decimal rupee string, like the other amounts. */
+  agreementValue?: string;
+  /** Percentage as typed in a form, e.g. "2" or "2.5". */
+  agreementBrokerageRate?: string;
+  /** TDS rate stated on the invoice, as a percentage string. */
+  tdsRate?: string;
 }
 
 export interface BuilderCandidate {
@@ -368,7 +392,119 @@ export function parseInvoiceText(text: string): ExtractedInvoiceFields {
     const diff = taxable + tax - total;
     result.amountsReconcile = diff >= -100n && diff <= 100n;
   }
+
+  Object.assign(result, compact(brokerageParticulars(lines)));
   return result;
+}
+
+function compact<T extends object>(value: T): Partial<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
+
+/** The first cell after a label on the same line: "Label: value\tnext cell" → "value". */
+function cellAfter(line: string, match: RegExpMatchArray): string {
+  return cellsOf(line.slice(match.index! + match[0].length).replace(/^[\s:.\-–#]+/, ""))[0] ?? "";
+}
+
+function findLabelled<T>(lines: string[], label: RegExp, read: (cell: string) => T | undefined, lookAhead = false): T | undefined {
+  for (const [index, line] of lines.entries()) {
+    const match = line.match(label);
+    if (match?.index === undefined) continue;
+    const value = read(cellAfter(line, match)) ?? (lookAhead ? read(cellsOf(lines[index + 1] ?? "").find(Boolean) ?? "") : undefined);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+const STATE_NAMES = Object.entries(GST_STATE_CODES).sort(([, a], [, b]) => b.length - a.length);
+
+function stateCodeIn(cell: string): string | undefined {
+  const code = cell.match(/\((\d{2})\)/)?.[1] ?? cell.match(/^(\d{2})(?!\d)/)?.[1];
+  if (code) return code in GST_STATE_CODES ? code : undefined;
+  const lower = cell.toLowerCase();
+  return STATE_NAMES.find(([, name]) => lower.includes(name.toLowerCase()))?.[0];
+}
+
+function findIrn(lines: string[]): string | undefined {
+  for (const [index, line] of lines.entries()) {
+    const match = line.match(/\bIRN\b\s*(?:no\.?|number)?\s*[:.\-]?/i);
+    if (match?.index === undefined) continue;
+    // The 64-character IRN often wraps onto the next line.
+    const tail = `${line.slice(match.index + match[0].length)}${lines[index + 1] ?? ""}`.replace(/\s+/g, "");
+    const hex = tail.match(/^[0-9a-f]{64}/i);
+    if (hex) return hex[0].toLowerCase();
+  }
+  return lines.join("\n").match(/\b[0-9a-f]{64}\b/i)?.[0].toLowerCase();
+}
+
+function gstRateBps(lines: string[]): number | undefined {
+  for (const line of lines) {
+    const match = line.match(/\b(cgst|sgst|utgst|igst)\b[^%\n\t]*?(\d{1,2}(?:\.\d{1,2})?)\s*%/i);
+    if (!match) continue;
+    const bps = parsePercentToBps(match[2]!);
+    if (bps === null || bps <= 0) continue;
+    const total = match[1]!.toLowerCase() === "igst" ? bps : bps * 2;
+    if (total <= 4000) return total;
+  }
+  return undefined;
+}
+
+const TOWER = /\b(tower|wing|block)\s*[:\-]?\s*([A-Za-z0-9][A-Za-z0-9-]{0,9})\b/i;
+const UNIT = /\b(?:units?|flats?|apartments?|apt\.?|villas?|plots?|shops?)\s*(?:no\.?)?\s*[:\-#]?\s*([A-Za-z0-9][A-Za-z0-9/-]{0,14})/gi;
+const INITIALS = /^([A-Z](?:[.\s]?[A-Z]){0,3})\.?(?![A-Za-z])/;
+
+function towerIn(text: string): string | undefined {
+  const match = text.match(TOWER);
+  if (!match) return undefined;
+  const kind = match[1]!.toLowerCase();
+  return kind === "tower" ? match[2] : `${kind[0]!.toUpperCase()}${kind.slice(1)} ${match[2]}`;
+}
+
+function unitIn(text: string): string | undefined {
+  for (const match of text.matchAll(UNIT)) {
+    if (/\d/.test(match[1]!)) return match[1];
+  }
+  return undefined;
+}
+
+function initialsAfter(text: string, label: RegExp): string | undefined {
+  const match = text.match(label);
+  if (match?.index === undefined) return undefined;
+  const initials = text.slice(match.index + match[0].length).match(INITIALS)?.[1];
+  return initials?.replace(/[.\s]/g, "");
+}
+
+/** Booking, agreement, e-invoice and place-of-supply details printed on a brokerage invoice. */
+function brokerageParticulars(lines: string[]) {
+  const booking = findLabelled(lines, /\bbooking(?:\s+(?:ref(?:erence)?|details))?\s*[:\-]/i, (cell) => (cell ? cell : undefined));
+  // Without a booking label, look only below the parties so addresses are never read as units.
+  const bodyStart = lines.findIndex((l) => /\b(project|description|particulars)\b/i.test(l));
+  const body = bodyStart >= 0 ? lines.slice(bodyStart).join("\n") : "";
+  const brokerage = lines.map((l) => l.match(/\bbrokerage\b[^%\n\t]{0,20}?(\d{1,2}(?:\.\d{1,2})?)\s*%/i)?.[1]).find(Boolean);
+  const brokerageBps = brokerage ? parsePercentToBps(brokerage) : null;
+  const tds = lines.map((l) => l.match(/\bTDS\b[^%\n\t]{0,24}?(?<![\d.])(\d{1,2}(?:\.\d{1,2})?)\s*%/i)?.[1]).find(Boolean);
+  const tdsBps = tds ? parsePercentToBps(tds) : null;
+
+  return {
+    gstRateBps: gstRateBps(lines),
+    placeOfSupplyStateCode: findLabelled(lines, /\bplace\s+of\s+supply\b/i, (cell) => (cell ? stateCodeIn(cell) : undefined), true),
+    irn: findIrn(lines),
+    ackNumber: findLabelled(lines, /\back(?:nowledge?ment)?\.?\s*(?:no|number)\b\.?/i, (cell) => cell.replace(/\s+/g, "").match(/^\d{15}(?!\d)/)?.[0], true),
+    ackDate: dateAfter(lines, /\back(?:nowledge?ment)?\.?\s*date\b/i),
+    bookingTower: booking ? towerIn(booking) : towerIn(body),
+    bookingUnit: booking ? unitIn(booking) : unitIn(body),
+    buyerInitials: (booking ? initialsAfter(booking, /\bbuyer(?:'s)?(?:\s+initials)?\s*[:\-]?\s*/i) : undefined) ?? findLabelled(lines, /\bbuyer(?:'s)?\s+initials?\s*[:\-]?/i, (cell) => cell.match(INITIALS)?.[1]?.replace(/[.\s]/g, "")),
+    agreementRegistrationNumber: findLabelled(lines, /\bagreement\s+(?:for\s+sale|(?:reg(?:istration|n)?\.?\s*)?(?:no|number)\b)\.?/i, (cell) =>
+      cell
+        .split(/\s+/)
+        .map((t) => t.replace(/[.,;:]+$/, ""))
+        .find((t) => /^[A-Za-z0-9][A-Za-z0-9/._-]{2,39}$/.test(t) && /\d/.test(t) && !parseInvoiceDate(t)),
+    ),
+    agreementDate: dateAfter(lines, /\bagreement\s+date\b|\bdate\s+of\s+(?:agreement|registration)\b|\bregistered\s+on\b/i),
+    agreementValue: findLabelled(lines, /(?<!\bof\s)\b(?:agreement|sale)\s+(?:value|consideration)\b|\bconsideration\s+value\b/i, (cell) => parseAmount(cell)),
+    agreementBrokerageRate: brokerageBps && brokerageBps > 0 && brokerageBps <= 1000 ? formatBps(brokerageBps, { suffix: false }) : undefined,
+    tdsRate: tdsBps !== null && tdsBps <= 2000 ? formatBps(tdsBps, { suffix: false }) : undefined,
+  } satisfies Partial<ExtractedInvoiceFields>;
 }
 
 function nameTokens(value: string): string[] {

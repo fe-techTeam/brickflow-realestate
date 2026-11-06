@@ -73,6 +73,161 @@ describe("parseInvoiceText — digital PDF layout", () => {
     expect(fields.totalAmount).toBe("500000.00");
     expect(fields.amountsReconcile).toBe(true);
   });
+
+  it("reads the GST rate and place of supply", () => {
+    expect(fields.gstRateBps).toBe(1800);
+    expect(fields.placeOfSupplyStateCode).toBe("27");
+    expect(fields.irn).toBeUndefined();
+    expect(fields.agreementRegistrationNumber).toBeUndefined();
+  });
+});
+
+const IRN = "a46a5d32a3e25e8fa098d654131b148eaffdb12388d327717ab81f892cfe0409";
+
+/** Lines as reconstructed from a brokerage invoice with e-invoice and booking particulars. */
+const PARTICULARS_INVOICE = [
+  "Prestige Realty Partners LLP\tTAX INVOICE",
+  "\tOriginal for recipient",
+  "(Demo)",
+  "\tInvoice No.\tGFH/2026/001",
+  "Real estate channel partner · Brokerage & advisory services",
+  "\tInvoice Date\t20 Oct 2026",
+  `IRN: ${IRN}`,
+  "\tDue Date\t19 Dec 2026",
+  "\tPlace of Supply\tMaharashtra (27)",
+  "\tAck No.\t112004200659788",
+  "\tAck Date\t21 Oct 2026",
+  "SUPPLIER (CHANNEL PARTNER)\tBILL TO (BUILDER)",
+  "Prestige Realty Partners LLP (Demo)\tGodrej Properties Demo Limited",
+  "Office 702, Demo Corporate Park, Andheri East\tDemo Business District, Vikhroli East",
+  "GSTIN: 27AAPFP9005H1Z6\tGSTIN: 27AAACG9002E1Z3",
+  "PROJECT",
+  "Greenfield Heights (GFH), Pune\tProject RERA: P52100099011",
+  "BOOKING & AGREEMENT",
+  "Booking: Tower B · Unit 1104 · Buyer RK\tAgreement value: INR 2,11,86,400.00",
+  "Agreement for sale: HVL-2/9131/2026\tAgreement date: 15 Sept 2026",
+  "Brokerage: 2.5% of agreement value · INR 5,29,660.00\tTDS u/s 194H: 2%",
+  "#\tDESCRIPTION OF SERVICE\tSAC\tTAXABLE VALUE",
+  "1 Brokerage on sale of residential units — Tower B\t997222\tINR 4,23,728.81",
+  "\tTaxable value\tINR 4,23,728.81",
+  "\tCGST @ 9%\tINR 38,135.59",
+  "\tSGST @ 9%\tINR 38,135.60",
+  "\tTOTAL INVOICE VALUE\tINR 5,00,000.00",
+].join("\n");
+
+describe("parseInvoiceText — booking, agreement and e-invoice particulars", () => {
+  const fields = parseInvoiceText(PARTICULARS_INVOICE);
+
+  it("reads the e-invoice registration", () => {
+    expect(fields.irn).toBe(IRN);
+    expect(fields.ackNumber).toBe("112004200659788");
+    expect(fields.ackDate).toBe("2026-10-21");
+  });
+
+  it("reads the booking and agreement", () => {
+    expect(fields).toMatchObject({
+      bookingTower: "B",
+      bookingUnit: "1104",
+      buyerInitials: "RK",
+      agreementRegistrationNumber: "HVL-2/9131/2026",
+      agreementDate: "2026-09-15",
+      agreementValue: "21186400.00",
+      agreementBrokerageRate: "2.5",
+      tdsRate: "2",
+    });
+  });
+
+  it("reads the TDS rate without mistaking the section number for it", () => {
+    expect(parseInvoiceText("TDS u/s 194H: 2%").tdsRate).toBe("2");
+    expect(parseInvoiceText("TDS @ 5% under section 194H").tdsRate).toBe("5");
+    expect(parseInvoiceText("Section 194H applies").tdsRate).toBeUndefined();
+  });
+
+  it("keeps the existing fields intact", () => {
+    expect(fields).toMatchObject({
+      invoiceNumber: "GFH/2026/001",
+      invoiceDate: "2026-10-20",
+      dueDate: "2026-12-19",
+      builderGstin: "27AAACG9002E1Z3",
+      taxableAmount: "423728.81",
+      totalAmount: "500000.00",
+      gstRateBps: 1800,
+      placeOfSupplyStateCode: "27",
+      amountsReconcile: true,
+    });
+  });
+});
+
+describe("parseInvoiceText — particulars in other layouts", () => {
+  it("joins an IRN wrapped across two lines and tolerates spaced acknowledgement numbers", () => {
+    const fields = parseInvoiceText([`IRN : ${IRN.slice(0, 40)}`, IRN.slice(40), "Ack No : 1120 0420 0659 788", "Ack Dt / Ack Date : 21/10/2026"].join("\n"));
+    expect(fields.irn).toBe(IRN);
+    expect(fields.ackNumber).toBe("112004200659788");
+    expect(fields.ackDate).toBe("2026-10-21");
+  });
+
+  it("finds an unlabelled IRN and ignores hex runs of the wrong length", () => {
+    expect(parseInvoiceText(`E-invoice\n${IRN.toUpperCase()}`).irn).toBe(IRN);
+    expect(parseInvoiceText(`IRN: ${IRN.slice(0, 60)}`).irn).toBeUndefined();
+  });
+
+  it.each([
+    ["Place of Supply: 29-Karnataka", "29"],
+    ["Place of Supply   Karnataka", "29"],
+    ["Place of supply: Andhra Pradesh", "37"],
+    ["Place of Supply: (30) Goa", "30"],
+    ["Place of Supply: 99", undefined],
+  ])("reads the place of supply from %s", (line, code) => {
+    expect(parseInvoiceText(line).placeOfSupplyStateCode).toBe(code);
+  });
+
+  it("derives the GST rate from IGST or half-rate CGST", () => {
+    expect(parseInvoiceText("IGST @ 18% ₹64,067.80").gstRateBps).toBe(1800);
+    expect(parseInvoiceText("CGST 2.5% 250.00\nSGST 2.5% 250.00").gstRateBps).toBe(500);
+    expect(parseInvoiceText("Taxable value 1000").gstRateBps).toBeUndefined();
+  });
+
+  it("reads unit and wing from the service description when there is no booking line", () => {
+    const fields = parseInvoiceText(
+      [
+        "SUPPLIER        BILL TO",
+        "Flat 12, Sea View, Bandra        Godrej Properties Demo Limited",
+        "Description of service",
+        "Brokerage on sale of Flat No. 1802, Wing B — Brokerage @ 2% of agreement value",
+        "Agreement No.: MBI-12/3456/2026 registered on 02/09/2026",
+        "Sale consideration Rs. 1,25,00,000",
+      ].join("\n"),
+    );
+    expect(fields).toMatchObject({
+      bookingUnit: "1802",
+      bookingTower: "Wing B",
+      agreementRegistrationNumber: "MBI-12/3456/2026",
+      agreementDate: "2026-09-02",
+      agreementValue: "12500000.00",
+      agreementBrokerageRate: "2",
+    });
+  });
+
+  it("does not read units from addresses above the service description", () => {
+    const fields = parseInvoiceText(["Flat 12, Sea View, Bandra", "Office 702, Demo Corporate Park"].join("\n"));
+    expect(fields.bookingUnit).toBeUndefined();
+    expect(fields.bookingTower).toBeUndefined();
+  });
+
+  it("only takes buyer initials, never names", () => {
+    expect(parseInvoiceText("Booking: Tower C · Unit 0405 · Buyer A.K.").buyerInitials).toBe("AK");
+    expect(parseInvoiceText("Buyer initials: PD").buyerInitials).toBe("PD");
+    expect(parseInvoiceText("Booking: Tower C · Unit 0405 · Buyer Rahul Kumar").buyerInitials).toBeUndefined();
+    expect(parseInvoiceText("Booking: Tower C · Unit 0405 · Buyer RAHUL").buyerInitials).toBeUndefined();
+    expect(parseInvoiceText("Buyer: ABC Developers Ltd\nBuyer GSTIN 29AAKFS9003F1Z1").buyerInitials).toBeUndefined();
+  });
+
+  it("does not take the computed brokerage as the agreement value or a date as the agreement number", () => {
+    const fields = parseInvoiceText("Brokerage: 2% of agreement value · INR 4,23,728.00\nAgreement for sale registered 15/09/2026");
+    expect(fields.agreementValue).toBeUndefined();
+    expect(fields.agreementRegistrationNumber).toBeUndefined();
+    expect(fields.agreementBrokerageRate).toBe("2");
+  });
 });
 
 describe("parseInvoiceText — OCR-style text", () => {

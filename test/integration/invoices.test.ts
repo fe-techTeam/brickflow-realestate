@@ -16,6 +16,7 @@ import {
 import { storage } from "@/server/storage";
 import {
   actors,
+  ATTESTED,
   auditActions,
   expectDomainError,
   expectValidationError,
@@ -151,7 +152,7 @@ describe("builder review", () => {
   it("approves the full invoice amount", async () => {
     const invoice = await submitTestInvoice(as.prestige, { amount: "350000" });
     await markUnderReview(as.godrej, invoice.id);
-    await approveInvoice(as.godrej, invoice.id, { comment: "Verified." });
+    await approveInvoice(as.godrej, invoice.id, { ...ATTESTED, comment: "Verified." });
 
     const stored = await db.invoice.findUniqueOrThrow({ where: { id: invoice.id }, include: { approvals: { orderBy: { createdAt: "asc" } } } });
     expect(stored).toMatchObject({ status: "ACCEPTED", approvedAmountPaise: 3_50_000_00n, latestReviewNote: "Verified." });
@@ -166,7 +167,7 @@ describe("builder review", () => {
 
   it("approves a partial amount", async () => {
     const invoice = await submitTestInvoice(as.prestige, { amount: "420000" });
-    await approveInvoice(as.godrej, invoice.id, { approvedAmount: "4,00,000", comment: "Capped as per empanelment schedule." });
+    await approveInvoice(as.godrej, invoice.id, { ...ATTESTED, approvedAmount: "4,00,000", comment: "Capped as per empanelment schedule." });
     const stored = await db.invoice.findUniqueOrThrow({ where: { id: invoice.id } });
     expect(stored).toMatchObject({ status: "ACCEPTED", amountPaise: 4_20_000_00n, approvedAmountPaise: 4_00_000_00n });
   });
@@ -194,8 +195,8 @@ describe("builder review", () => {
 
   it("blocks double approval and decisions on decided invoices", async () => {
     const invoice = await submitTestInvoice(as.prestige);
-    await approveInvoice(as.godrej, invoice.id, {});
-    await expectDomainError(approveInvoice(as.godrej, invoice.id, {}), "CONFLICT", /already accepted/);
+    await approveInvoice(as.godrej, invoice.id, ATTESTED);
+    await expectDomainError(approveInvoice(as.godrej, invoice.id, ATTESTED), "CONFLICT", /already accepted/);
     await expectDomainError(rejectInvoice(as.godrej, invoice.id, { reason: "Changed our mind about this one." }), "CONFLICT");
     await expectDomainError(markUnderReview(as.godrej, invoice.id), "CONFLICT");
     expect((await db.invoiceApproval.count({ where: { invoiceId: invoice.id, action: "APPROVED" } }))).toBe(1);
@@ -203,7 +204,7 @@ describe("builder review", () => {
 
   it("allows only one of two concurrent approvals to succeed", async () => {
     const invoice = await submitTestInvoice(as.prestige);
-    const results = await Promise.allSettled([approveInvoice(as.godrej, invoice.id, {}), approveInvoice(as.godrej, invoice.id, {})]);
+    const results = await Promise.allSettled([approveInvoice(as.godrej, invoice.id, ATTESTED), approveInvoice(as.godrej, invoice.id, ATTESTED)]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(await db.invoiceApproval.count({ where: { invoiceId: invoice.id, action: "APPROVED" } })).toBe(1);
   });
@@ -211,7 +212,7 @@ describe("builder review", () => {
   it("lets the partner see each decision", async () => {
     const approved = await submitTestInvoice(as.prestige);
     const rejected = await submitTestInvoice(as.prestige);
-    await approveInvoice(as.godrej, approved.id, { approvedAmount: "450000" });
+    await approveInvoice(as.godrej, approved.id, { ...ATTESTED, approvedAmount: "450000" });
     await rejectInvoice(as.godrej, rejected.id, { reason: "Duplicate of an invoice paid last quarter." });
 
     const approvedDetail = await getInvoiceDetail(as.prestige, approved.id);
@@ -258,7 +259,7 @@ describe("clarification loop", () => {
     expect(await auditActions(invoice.id)).toEqual(["invoice.submitted", "invoice.clarification_requested", "invoice.resubmitted"]);
 
     await expectDomainError(resubmitInvoice(as.prestige, invoice.id, { note: "Responding a second time." }, null), "CONFLICT");
-    await approveInvoice(as.godrej, invoice.id, {});
+    await approveInvoice(as.godrej, invoice.id, ATTESTED);
     expect((await db.invoice.findUniqueOrThrow({ where: { id: invoice.id } })).status).toBe("ACCEPTED");
   });
 });
@@ -276,7 +277,7 @@ describe("cross-organisation access", () => {
   it("stops another builder from reviewing the invoice", async () => {
     const invoice = await submitTestInvoice(as.prestige);
 
-    await expectDomainError(approveInvoice(as.skyline, invoice.id, {}), "NOT_FOUND");
+    await expectDomainError(approveInvoice(as.skyline, invoice.id, ATTESTED), "NOT_FOUND");
     await expectDomainError(rejectInvoice(as.skyline, invoice.id, { reason: "Not our invoice at all, rejecting." }), "NOT_FOUND");
     await expectDomainError(requestClarification(as.skyline, invoice.id, { reason: "Not our invoice at all, asking." }), "NOT_FOUND");
     await expectDomainError(getInvoiceDetail(as.skyline, invoice.id), "NOT_FOUND");
@@ -286,7 +287,7 @@ describe("cross-organisation access", () => {
   it("stops partners, the financier and the admin from acting as the builder", async () => {
     const invoice = await submitTestInvoice(as.prestige);
     for (const actor of [as.prestige, as.finance, as.admin]) {
-      await expectDomainError(approveInvoice(actor, invoice.id, {}), "FORBIDDEN");
+      await expectDomainError(approveInvoice(actor, invoice.id, ATTESTED), "FORBIDDEN");
     }
   });
 

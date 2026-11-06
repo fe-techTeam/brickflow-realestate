@@ -80,6 +80,24 @@ enum ApprovalAction {
   REJECTED
 }
 
+enum InvoiceDocumentScanStatus {
+  CLEAN
+  NOT_SCANNED
+}
+
+enum InvoiceDuplicateKind {
+  NEAR_DUPLICATE
+  SAME_IRN
+  SAME_DOCUMENT_OTHER_PARTNER
+  EXTERNAL_REGISTRY
+}
+
+enum InvoiceDuplicateFlagStatus {
+  OPEN
+  CLEARED
+  CONFIRMED
+}
+
 enum DisbursementStatus {
   INITIATED
   SUCCESS
@@ -232,6 +250,28 @@ model Invoice {
   gstAmountPaise      BigInt?
   approvedAmountPaise BigInt?
   description         String?
+  // Booking reference: buyer identity is limited to initials, never full buyer details.
+  bookingTower                String?
+  bookingUnit                 String?
+  buyerInitials               String?
+  agreementRegistrationNumber String?
+  agreementDate               DateTime?
+  agreementValuePaise         BigInt?
+  agreementBrokerageBps       Int?
+  agreementBrokeragePaise     BigInt?
+  taxableValuePaise           BigInt?
+  cgstPaise                   BigInt?
+  sgstPaise                   BigInt?
+  igstPaise                   BigInt?
+  gstRateBps                  Int?
+  tdsRateBps                  Int?
+  irn                         String?
+  eInvoiceAckNumber           String?
+  eInvoiceAckDate             DateTime?
+  placeOfSupplyStateCode      String?
+  // GSTINs registered for both organisations when the invoice was submitted.
+  supplierGstin               String?
+  recipientGstin              String?
   status              InvoiceStatus    @default(DRAFT)
   financingStatus     FinancingStatus  @default(NOT_REQUESTED)
   latestReviewNote    String?
@@ -248,11 +288,15 @@ model Invoice {
   approvals        InvoiceApproval[]
   offers           FinancingOffer[]
   financingRequest FinancingRequest?
+  fingerprint      InvoiceFingerprint?
+  duplicateFlags   InvoiceDuplicateFlag[] @relation("DuplicateFlagInvoice")
+  duplicateMatches InvoiceDuplicateFlag[] @relation("DuplicateFlagMatch")
 
   @@unique([cpId, builderId, invoiceNumber])
   @@index([builderId, status])
   @@index([cpId, status])
   @@index([financingStatus])
+  @@index([irn])
 }
 
 model InvoiceDocument {
@@ -263,6 +307,9 @@ model InvoiceDocument {
   mimeType     String
   sizeBytes    Int
   sha256       String
+  pageCount    Int?
+  scanStatus   InvoiceDocumentScanStatus?
+  validatedAt  DateTime?
   uploadedById String
   createdAt    DateTime @default(now())
 
@@ -282,11 +329,69 @@ model InvoiceApproval {
   actorUserId String
   actorName   String
   actorOrgId  String
+  // Three-way match attestation recorded with an approval: who attested, when and what.
+  attestedById   String?
+  attestedByName String?
+  attestedAt     DateTime?
+  attestation    Json?
   createdAt   DateTime       @default(now())
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId, createdAt])
+}
+
+/// Canonical identity of an invoice on the platform (see src/lib/invoice-integrity/fingerprint.ts).
+model InvoiceFingerprint {
+  id           String   @id @default(cuid())
+  invoiceId    String   @unique
+  fingerprint  String   @unique
+  version      Int      @default(1)
+  supplierKey  String
+  recipientKey String
+  numberKey    String
+  invoiceDate  DateTime
+  totalPaise   BigInt
+  irn          String?
+  createdAt    DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([supplierKey, recipientKey, totalPaise])
+  @@index([irn])
+}
+
+/// A possible duplicate raised for review. Exact fingerprint matches are blocked instead.
+model InvoiceDuplicateFlag {
+  id               String                     @id @default(cuid())
+  invoiceId        String
+  matchedInvoiceId String?
+  externalRef      String?
+  kind             InvoiceDuplicateKind
+  detail           String
+  status           InvoiceDuplicateFlagStatus @default(OPEN)
+  reviewedById     String?
+  reviewedByName   String?
+  reviewedAt       DateTime?
+  reviewNote       String?
+  createdAt        DateTime                   @default(now())
+
+  invoice        Invoice  @relation("DuplicateFlagInvoice", fields: [invoiceId], references: [id], onDelete: Cascade)
+  matchedInvoice Invoice? @relation("DuplicateFlagMatch", fields: [matchedInvoiceId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId, status])
+  @@index([matchedInvoiceId])
+  @@index([status, createdAt])
+}
+
+/// Three-way match policy per financing programme. Without a row the builder's attestation is required.
+model InvoiceMatchPolicy {
+  id                  String   @id @default(cuid())
+  programmeId         String   @unique
+  attestationOptional Boolean  @default(false)
+  updatedById         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model FinancingOffer {

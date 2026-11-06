@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { amountInWordsINR } from "../amount-words";
-import { formatINR } from "../money";
+import { formatBps, formatINR } from "../money";
 
 export interface InvoiceParty {
   legalName: string;
@@ -24,6 +24,13 @@ export interface BrokerageInvoiceData {
   /** Intra-state supplies split GST into CGST + SGST; inter-state use IGST. */
   gst: { mode: "INTRA" | "INTER"; ratePercent: number } | null;
   notes?: string[];
+  /** Booking the brokerage relates to. Buyer identity is limited to initials. */
+  booking?: { tower: string; unit: string; buyerInitials?: string | null } | null;
+  agreement?: { registrationNumber: string; date: Date; valuePaise: bigint; brokerageBps?: number | null } | null;
+  /** E-invoice registration issued by the IRP. */
+  eInvoice?: { irn: string; ackNumber: string; ackDate: Date } | null;
+  /** TDS the recipient is expected to deduct under section 194H, in basis points. */
+  tdsRateBps?: number | null;
 }
 
 export interface GstBreakdown {
@@ -114,6 +121,27 @@ function partyBlock(page: PDFPage, fonts: Fonts, title: string, party: InvoicePa
   return cursor;
 }
 
+/** Label/value pairs for the booking & agreement band, laid out two per row. */
+function bookingParticulars(data: BrokerageInvoiceData): [string, string][] {
+  const rows: [string, string][] = [];
+  const { booking, agreement } = data;
+  if (booking) {
+    const tower = /^(tower|wing|block|phase)\b/i.test(booking.tower) ? booking.tower : `Tower ${booking.tower}`;
+    rows.push(["Booking:", [tower, `Unit ${booking.unit}`, booking.buyerInitials ? `Buyer ${booking.buyerInitials}` : null].filter(Boolean).join(" · ")]);
+  }
+  if (agreement) {
+    rows.push(["Agreement value:", inr(agreement.valuePaise)]);
+    rows.push(["Agreement for sale:", agreement.registrationNumber]);
+    rows.push(["Agreement date:", date(agreement.date)]);
+    if (agreement.brokerageBps) {
+      const agreed = (agreement.valuePaise * BigInt(agreement.brokerageBps) + 5_000n) / 10_000n;
+      rows.push(["Brokerage:", `${formatBps(agreement.brokerageBps)} of agreement value · ${inr(agreed)}`]);
+    }
+  }
+  if (rows.length && data.tdsRateBps != null) rows.push(["TDS u/s 194H:", formatBps(data.tdsRateBps)]);
+  return rows;
+}
+
 /** Renders a professional A4 GST brokerage tax invoice. Works in Node and the browser. */
 export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
@@ -147,6 +175,11 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
     y -= 21;
   }
   text(page, "Real estate channel partner · Brokerage & advisory services", margin, y + 4, fonts.regular, 8.5, MUTED);
+  if (data.eInvoice) {
+    y -= 13;
+    text(page, "IRN:", margin, y + 4, fonts.bold, 7, LABEL);
+    text(page, data.eInvoice.irn, margin + 19, y + 4, fonts.regular, 7, INK);
+  }
 
   rightText(page, "TAX INVOICE", width - margin, height - 56, fonts.display, 22, HEAD);
   rightText(page, "Original for recipient", width - margin, height - 70, fonts.italic, 8, MUTED);
@@ -158,6 +191,7 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
     ["Due Date", data.dueDate ? date(data.dueDate) : "As per empanelment terms"],
     ["Place of Supply", data.placeOfSupply],
   ];
+  if (data.eInvoice) metaRows.push(["Ack No.", data.eInvoice.ackNumber], ["Ack Date", date(data.eInvoice.ackDate)]);
   metaRows.forEach(([label, value], i) => {
     const rowY = metaTop - i * 13;
     rightText(page, value, width - margin, rowY, fonts.bold, 8.5, HEAD);
@@ -173,11 +207,24 @@ export async function renderBrokerageInvoicePdf(data: BrokerageInvoiceData): Pro
   const rightEnd = partyBlock(page, fonts, "Bill To (Builder)", data.recipient, margin + contentWidth / 2 + 12, top, colWidth);
   y = Math.min(leftEnd, rightEnd) - 8;
 
-  page.drawRectangle({ x: margin, y: y - 38, width: contentWidth, height: 38, color: SHADE });
+  const particulars = bookingParticulars(data);
+  const bandHeight = 38 + (particulars.length ? 24 + Math.ceil(particulars.length / 2) * 12 : 0);
+  page.drawRectangle({ x: margin, y: y - bandHeight, width: contentWidth, height: bandHeight, color: SHADE });
   text(page, "PROJECT", margin + 12, y - 14, fonts.bold, 7, LABEL);
   text(page, `${data.project.name} (${data.project.code}), ${data.project.city}`, margin + 12, y - 28, fonts.bold, 9.5, HEAD);
   if (data.project.reraNumber) rightText(page, `Project RERA: ${data.project.reraNumber}`, width - margin - 12, y - 28, fonts.regular, 8.5);
-  y -= 58;
+  if (particulars.length) {
+    const top = y - 38;
+    page.drawLine({ start: { x: margin + 12, y: top }, end: { x: width - margin - 12, y: top }, thickness: 0.5, color: RULE });
+    text(page, "BOOKING & AGREEMENT", margin + 12, top - 13, fonts.bold, 7, LABEL);
+    particulars.forEach(([label, value], i) => {
+      const x = margin + 12 + (i % 2) * (contentWidth / 2);
+      const rowY = top - 27 - Math.floor(i / 2) * 12;
+      text(page, label, x, rowY, fonts.bold, 8, MUTED);
+      text(page, value, x + fonts.bold.widthOfTextAtSize(label, 8) + 4, rowY, fonts.regular, 8.5, HEAD);
+    });
+  }
+  y -= bandHeight + 20;
 
   const cols = { no: margin, desc: margin + 26, sac: margin + contentWidth - 170, amt: width - margin };
   page.drawRectangle({ x: margin, y: y - 6, width: contentWidth, height: 20, color: HEAD });

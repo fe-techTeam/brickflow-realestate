@@ -19,7 +19,7 @@ import {
   settlementStatusFor,
 } from "@/server/services/financing";
 import { approveInvoice, getInvoiceDetail, listInvoices } from "@/server/services/invoices";
-import { acceptedInvoice, actors, auditActions, expectDomainError, expectValidationError, isoDate, submitTestInvoice, utcDate, type DemoUser } from "./helpers";
+import { acceptedInvoice, actors, ATTESTED, auditActions, expectDomainError, expectValidationError, isoDate, submitTestInvoice, utcDate, type DemoUser } from "./helpers";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -42,7 +42,7 @@ describe("end-to-end financing of a ₹5,00,000 invoice at 3%", () => {
   });
 
   it("generates an offer once the invoice is accepted, priced on the server", async () => {
-    await approveInvoice(as.godrej, invoiceId, { comment: "Verified." });
+    await approveInvoice(as.godrej, invoiceId, { ...ATTESTED, comment: "Verified." });
     const offer = await generateOffer(as.prestige, invoiceId);
     offerId = offer.id;
 

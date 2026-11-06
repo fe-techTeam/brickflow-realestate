@@ -5,6 +5,7 @@
  * `DEMO_DATASET` selects the dataset (default `standard`, which the automated tests rely on).
  */
 import type { BrokerageInvoiceData } from "../pdf/brokerage-invoice";
+import { demoBrokerageContext, type DemoBrokerageContext } from "./brokerage-context";
 import { chandakDataset } from "./datasets/chandak";
 import { STANDARD_ORGANISATIONS, STANDARD_PROJECTS, STANDARD_SAMPLES, standardDataset } from "./datasets/standard";
 import type { DemoClock, DemoDataset, DemoInvoiceDocument, DemoOrganisation } from "./types";
@@ -55,13 +56,43 @@ function party(org: DemoOrganisation) {
   };
 }
 
+/**
+ * Booking, agreement and e-invoice particulars for a demo invoice. The seed stores exactly what
+ * `buildInvoiceDocument` prints. Only the larger demo partner (Prestige) issues e-invoices.
+ */
+export function invoiceBrokerageContext(input: Omit<DemoInvoiceDocument, "slug" | "title">, dataset: DemoDataset = resolveDemoDataset()): DemoBrokerageContext {
+  const cp = dataset.organisations[input.cp];
+  if (!cp) throw new Error(`Invoice ${input.invoiceNumber} references an organisation missing from dataset "${dataset.key}"`);
+  return demoBrokerageContext({
+    invoiceNumber: input.invoiceNumber,
+    invoiceDate: input.invoiceDate,
+    amountPaise: input.amountPaise,
+    gstRatePercent: GST_RATE_PERCENT,
+    supplierGstin: cp.gstin,
+    detail: input.detail,
+    eInvoice: input.cp === "prestige",
+  });
+}
+
+const utcDay = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+
 export function buildInvoiceDocument(input: Omit<DemoInvoiceDocument, "slug" | "title">, dataset: DemoDataset = resolveDemoDataset()): BrokerageInvoiceData {
   const cp = dataset.organisations[input.cp];
   const builder = dataset.organisations[input.builder];
   const project = dataset.projects.find((p) => p.key === input.project);
   if (!cp || !builder || !project) throw new Error(`Invoice ${input.invoiceNumber} references an organisation or project missing from dataset "${dataset.key}"`);
   const sameState = cp.state === builder.state;
+  const context = invoiceBrokerageContext(input, dataset);
   return {
+    booking: { tower: context.bookingTower, unit: context.bookingUnit, buyerInitials: context.buyerInitials },
+    agreement: {
+      registrationNumber: context.agreementRegistrationNumber,
+      date: utcDay(context.agreementDate),
+      valuePaise: context.agreementValuePaise,
+      brokerageBps: context.agreementBrokerageBps,
+    },
+    eInvoice: context.eInvoice ? { irn: context.eInvoice.irn, ackNumber: context.eInvoice.ackNumber, ackDate: utcDay(context.eInvoice.ackDate) } : null,
+    tdsRateBps: context.tdsRateBps,
     invoiceNumber: input.invoiceNumber,
     invoiceDate: new Date(`${input.invoiceDate}T00:00:00.000Z`),
     dueDate: input.dueDate ? new Date(`${input.dueDate}T00:00:00.000Z`) : null,
