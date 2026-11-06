@@ -20,11 +20,14 @@ export function AppShell({
   user,
   children,
   sidebarCollapsed = false,
+  notifications,
 }: {
   workspace: WorkspaceKey;
   user: ShellUser;
   children: ReactNode;
   sidebarCollapsed?: boolean;
+  /** Top-bar notification control, rendered before the account menu. */
+  notifications?: ReactNode;
 }) {
   return (
     <BreadcrumbProvider>
@@ -38,6 +41,7 @@ export function AppShell({
               <Breadcrumbs workspace={workspace} className="flex-1" />
               <p className="kicker hidden text-[0.95rem] whitespace-nowrap text-fg-muted xl:block">{TODAY.format(new Date())}</p>
               <span aria-hidden="true" className="mx-2 hidden h-7 w-px bg-border xl:block" />
+              {notifications}
               <UserMenu user={user} workspace={workspace} />
             </div>
           </header>
