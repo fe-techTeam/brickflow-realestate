@@ -52,7 +52,8 @@ COPY --from=build /app/prisma/migrations ./prisma/migrations
 COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/src/lib ./src/lib
 COPY --from=build /app/src/server/crypto ./src/server/crypto
-COPY --from=build /app/scripts/demo-reset.mjs /app/scripts/migrate-kyc-data.ts ./scripts/
+COPY --from=build /app/scripts/demo-reset.mjs /app/scripts/check-invariants.ts /app/scripts/migrate-kyc-data.ts ./scripts/
+COPY --from=build /app/src/server/invariants ./src/server/invariants
 COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN mkdir -p /app/data/storage /app/.next/cache \

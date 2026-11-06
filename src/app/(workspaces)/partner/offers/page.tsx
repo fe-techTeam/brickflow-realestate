@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BadgePercent, CalendarClock, History, HandCoins } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { calculateDiscount } from "@/lib/financing";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatBps, sumPaise } from "@/lib/money";
 import { requireWorkspace } from "@/server/auth/session";
@@ -22,8 +21,8 @@ export default async function FinancingOffersPage() {
   const now = new Date();
 
   const previews = eligibleWithoutOffer.map((invoice) => {
-    const programme = eligibility.get(invoice.id)?.programme;
-    return { invoice, programme, preview: programme && invoice.approvedAmountPaise ? calculateDiscount(invoice.approvedAmountPaise, programme.discountRateBps) : null };
+    const entry = eligibility.get(invoice.id);
+    return { invoice, programme: entry?.programme, preview: entry?.quote?.result.quote ?? null };
   });
   const availableNet = sumPaise([...open.map((o) => o.netPayablePaise), ...previews.map((p) => p.preview?.netPayablePaise)]);
   const accepted = history.filter((o) => o.status === "ACCEPTED");

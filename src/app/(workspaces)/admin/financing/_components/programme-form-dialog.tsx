@@ -4,8 +4,9 @@ import { useId, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2, Pencil, Plus, ShieldCheck, Stamp } from "lucide-react";
 import { toast } from "sonner";
-import type { ProgrammeStatus } from "@/generated/prisma/enums";
+import type { HolidayRule, PricingMode, ProgrammeStatus } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +15,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { parsePercentToBps } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { createProgrammeAction, updateProgrammeAction } from "@/server/actions/admin";
+import { DEFAULT_PRICING_VALUES } from "./pricing-values";
 import { RatePreview } from "./rate-preview";
-import { PROGRAMME_STATUS_OPTIONS, type OrgOption, type ProgrammeFormValues, type ProgrammeRow } from "./types";
+import {
+  HOLIDAY_RULE_OPTIONS,
+  PRICING_MODE_OPTIONS,
+  PROGRAMME_STATUS_OPTIONS,
+  type OrgOption,
+  type ProgrammeFormValues,
+  type ProgrammeRow,
+} from "./types";
 
 type FieldErrors = Record<string, string[] | undefined>;
 
@@ -62,8 +71,19 @@ function todayIso(): string {
 }
 
 function emptyValues(): ProgrammeFormValues {
-  return { name: "", discountRate: "", status: "DRAFT", effectiveFrom: todayIso(), effectiveTo: "", offerValidityDays: "7", terms: "" };
+  return {
+    name: "",
+    discountRate: "",
+    status: "DRAFT",
+    effectiveFrom: todayIso(),
+    effectiveTo: "",
+    offerValidityDays: "7",
+    terms: "",
+    ...DEFAULT_PRICING_VALUES,
+  };
 }
+
+const PRICING_KEYS = Object.keys(DEFAULT_PRICING_VALUES) as (keyof typeof DEFAULT_PRICING_VALUES)[];
 
 function differs(a: ProgrammeFormValues, b: ProgrammeFormValues, rateBps: number | null, originalBps: number): boolean {
   return (
@@ -71,7 +91,43 @@ function differs(a: ProgrammeFormValues, b: ProgrammeFormValues, rateBps: number
     a.status !== b.status ||
     a.effectiveFrom !== b.effectiveFrom ||
     a.effectiveTo !== b.effectiveTo ||
-    a.terms.trim() !== b.terms.trim()
+    a.terms.trim() !== b.terms.trim() ||
+    PRICING_KEYS.some((k) => String(a[k]).trim() !== String(b[k]).trim())
+  );
+}
+
+function NumberField({
+  id,
+  label,
+  value,
+  onChange,
+  errors,
+  hint,
+  describedBy,
+  decimal,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  errors?: string[];
+  hint?: string;
+  describedBy?: string;
+  decimal?: boolean;
+}) {
+  return (
+    <Field id={id} label={label} errors={errors} hint={hint}>
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        inputMode={decimal ? "decimal" : "numeric"}
+        autoComplete="off"
+        aria-invalid={Boolean(errors?.length)}
+        aria-describedby={describedBy}
+        className="tabular h-10 bg-card"
+      />
+    </Field>
   );
 }
 
@@ -114,6 +170,7 @@ export function ProgrammeFormDialog(props: Props) {
   const rateBps = parsePercentToBps(values.discountRate);
   const termsChanged = editing && differs(values, initial, rateBps, props.programme.discountRateBps);
   const activeConflict = !editing && builderId && values.status === "ACTIVE" ? props.activeByBuilder[builderId] : undefined;
+  const annual = values.pricingMode === "ANNUAL_RATE";
 
   function reset() {
     setValues(initial);
@@ -295,11 +352,53 @@ export function ProgrammeFormDialog(props: Props) {
               )}
 
               <Field
+                id={id("pricingMode")}
+                label="Pricing method"
+                required
+                errors={errors.pricingMode}
+                hint={PRICING_MODE_OPTIONS.find((o) => o.value === values.pricingMode)?.hint}
+              >
+                <Select value={values.pricingMode} onValueChange={(v) => set("pricingMode", v as PricingMode)}>
+                  <SelectTrigger id={id("pricingMode")} className="h-10 w-full bg-card data-[size=default]:h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRICING_MODE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Field
+                id={id("holidayRule")}
+                label="Due date on a holiday"
+                required
+                errors={errors.holidayRule}
+                hint={HOLIDAY_RULE_OPTIONS.find((o) => o.value === values.holidayRule)?.hint}
+              >
+                <Select value={values.holidayRule} onValueChange={(v) => set("holidayRule", v as HolidayRule)}>
+                  <SelectTrigger id={id("holidayRule")} className="h-10 w-full bg-card data-[size=default]:h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOLIDAY_RULE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Field
                 id={id("discountRate")}
-                label="Agreed discount (%)"
+                label={annual ? "Annual rate (%)" : "Agreed discount (%)"}
                 required
                 errors={errors.discountRate}
-                hint="Fixed percentage of the builder-approved amount, up to 2 decimals."
+                hint={annual ? "Charged for the days to the settlement date, ACT/365." : "Fixed percentage of the financed amount, up to 2 decimals."}
               >
                 <div className="relative">
                   <Input
@@ -345,7 +444,40 @@ export function ProgrammeFormDialog(props: Props) {
                 </p>
               )}
 
-              <div className="grid gap-x-5 gap-y-5 sm:col-span-2 sm:grid-cols-3">
+              <fieldset className="grid gap-x-5 gap-y-5 border-t border-border/70 pt-5 sm:col-span-2 sm:grid-cols-3">
+                <legend className="sr-only">Tenor and minimum discount</legend>
+                <NumberField id={id("minTenorDays")} label="Minimum tenor (days)" value={values.minTenorDays} onChange={(v) => set("minTenorDays", v)} errors={errors.minTenorDays} hint="No offer below this." describedBy={describedBy("minTenorDays")} />
+                <NumberField id={id("maxTenorDays")} label="Maximum tenor (days)" value={values.maxTenorDays} onChange={(v) => set("maxTenorDays", v)} errors={errors.maxTenorDays} hint="Blank for no maximum." describedBy={describedBy("maxTenorDays")} />
+                <NumberField id={id("minDiscount")} label="Minimum discount (₹)" value={values.minDiscount} onChange={(v) => set("minDiscount", v)} errors={errors.minDiscount} hint="Floor per offer; 0 for none." describedBy={describedBy("minDiscount")} decimal />
+              </fieldset>
+
+              <fieldset className="grid gap-x-5 gap-y-4 sm:col-span-2 sm:grid-cols-3">
+                <legend className="sr-only">Tax deducted at source</legend>
+                <label htmlFor={id("tdsDeducted")} className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card px-3.5 py-3 sm:col-span-3">
+                  <Checkbox id={id("tdsDeducted")} checked={values.tdsDeducted} onCheckedChange={(v) => set("tdsDeducted", v === true)} className="mt-0.5" />
+                  <span className="text-[0.8125rem] leading-relaxed text-fg-soft">
+                    <span className="font-semibold text-fg">The builder deducts TDS on brokerage</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Section 393 of the Income-tax Act, 2025. The financed amount becomes the invoice total less TDS on its taxable value; the builder settles that amount.
+                    </span>
+                  </span>
+                </label>
+                {values.tdsDeducted && (
+                  <>
+                    <NumberField id={id("tdsRate")} label="TDS rate (%)" value={values.tdsRate} onChange={(v) => set("tdsRate", v)} errors={errors.tdsRate} hint="Usually 2%." describedBy={describedBy("tdsRate")} decimal />
+                    <NumberField id={id("invoiceGstRate")} label="Invoice GST rate (%)" value={values.invoiceGstRate} onChange={(v) => set("invoiceGstRate", v)} errors={errors.invoiceGstRate} hint="Taxable value = total ÷ (1 + GST)." describedBy={describedBy("invoiceGstRate")} decimal />
+                  </>
+                )}
+              </fieldset>
+
+              <fieldset className="grid gap-x-5 gap-y-5 sm:col-span-2 sm:grid-cols-3">
+                <legend className="sr-only">Processing fee</legend>
+                <NumberField id={id("processingFeeFlat")} label="Processing fee (₹)" value={values.processingFeeFlat} onChange={(v) => set("processingFeeFlat", v)} errors={errors.processingFeeFlat} hint="Flat per offer." describedBy={describedBy("processingFeeFlat")} decimal />
+                <NumberField id={id("processingFeeRate")} label="Processing fee (%)" value={values.processingFeeRate} onChange={(v) => set("processingFeeRate", v)} errors={errors.processingFeeRate} hint="Of the financed amount." describedBy={describedBy("processingFeeRate")} decimal />
+                <NumberField id={id("feeGstRate")} label="GST on fee (%)" value={values.feeGstRate} onChange={(v) => set("feeGstRate", v)} errors={errors.feeGstRate} hint="Charged on the fee." describedBy={describedBy("feeGstRate")} decimal />
+              </fieldset>
+
+              <div className="grid gap-x-5 gap-y-5 border-t border-border/70 pt-5 sm:col-span-2 sm:grid-cols-3">
                 <Field id={id("effectiveFrom")} label="Effective from" required errors={errors.effectiveFrom}>
                   <Input
                     id={id("effectiveFrom")}
@@ -375,7 +507,7 @@ export function ProgrammeFormDialog(props: Props) {
                   label="Validity (days)"
                   required
                   errors={errors.offerValidityDays}
-                  hint="Offer lifetime, 1–90."
+                  hint={annual ? "Annual-rate offers last until midnight IST." : "Offer lifetime, 1–90."}
                 >
                   <Input
                     id={id("offerValidityDays")}
@@ -416,7 +548,7 @@ export function ProgrammeFormDialog(props: Props) {
           </div>
 
           <aside className="flex flex-col gap-5 border-t border-border/80 bg-glass/80 px-5 pt-7 pb-6 sm:px-7 md:border-t-0 md:border-l">
-            <RatePreview rate={values.discountRate} currentBps={editing ? props.programme.discountRateBps : undefined} />
+            <RatePreview values={values} current={editing ? initial : undefined} />
 
             <div className="flex gap-3 rounded-lg border-l-2 border-leaf bg-leaf-100/50 px-3.5 py-3 text-xs leading-relaxed text-leaf">
               <ShieldCheck className="mt-0.5 size-4 shrink-0" strokeWidth={1.6} aria-hidden="true" />

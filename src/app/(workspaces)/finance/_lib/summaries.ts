@@ -1,12 +1,12 @@
 import "server-only";
-import { formatBps } from "@/lib/money";
+import { describeRate } from "@/lib/key-facts";
 import type { Beneficiary } from "@/server/queries/finance";
 import type { FinancingRequestListItem } from "@/server/services/financing";
 import type { DisbursementSummary, RequestSummary } from "../_components/request-actions";
 
 type SummarySource = Pick<
   FinancingRequestListItem,
-  "id" | "reference" | "approvedAmountPaise" | "discountRateBps" | "netPayablePaise"
+  "id" | "reference" | "approvedAmountPaise" | "discountRateBps" | "netPayablePaise" | "pricingMode"
 > & { cp: { name: string }; builder: { name: string }; invoice: { invoiceNumber: string } };
 
 export function toRequestSummary(r: SummarySource): RequestSummary {
@@ -17,7 +17,7 @@ export function toRequestSummary(r: SummarySource): RequestSummary {
     builderName: r.builder.name,
     invoiceNumber: r.invoice.invoiceNumber,
     approvedAmountPaise: r.approvedAmountPaise.toString(),
-    discountLabel: formatBps(r.discountRateBps),
+    discountLabel: describeRate(r.pricingMode, r.discountRateBps),
     netPayablePaise: r.netPayablePaise.toString(),
   };
 }

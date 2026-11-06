@@ -2,9 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import type { ProgrammeStatus } from "@/generated/prisma/enums";
 import { StatusBadge } from "@/components/common/status-badge";
-import { calculateDiscount } from "@/lib/financing";
 import { formatDate } from "@/lib/format";
-import { formatINR } from "@/lib/money";
+import { formatBps, formatINR } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { Monogram } from "../../_components/editorial";
 import { Rate } from "../../_components/figures";
@@ -12,9 +11,8 @@ import { plural } from "../../_components/labels";
 import { RefCode } from "../../_components/ledger";
 import { ProgrammeFormDialog } from "./programme-form-dialog";
 import { ProgrammeStatusAction } from "./programme-status-action";
+import { SAMPLE_INVOICE_PAISE, SAMPLE_TENOR_DAYS, sampleQuote, termsFromValues } from "./pricing-values";
 import type { ProgrammeRow } from "./types";
-
-const SAMPLE_PAISE = 5_00_000_00n;
 
 /** Status transitions offered as one-click actions for each programme status. */
 export const QUICK_ACTIONS: Record<ProgrammeStatus, ("ACTIVE" | "SUSPENDED" | "CLOSED")[]> = {
@@ -38,7 +36,9 @@ export interface RateCardData {
 /** A programme presented as a rate card: builder, financier, agreed discount, window and actions. */
 export function RateCard({ data }: { data: RateCardData }) {
   const { row } = data;
-  const sample = calculateDiscount(SAMPLE_PAISE, row.discountRateBps);
+  const terms = termsFromValues(row.values).terms;
+  const sample = terms ? sampleQuote(terms) : null;
+  const annual = row.values.pricingMode === "ANNUAL_RATE";
   const active = row.status === "ACTIVE";
   const draft = row.status === "DRAFT";
 
@@ -82,13 +82,20 @@ export function RateCard({ data }: { data: RateCardData }) {
         <p className="text-[0.625rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">Agreed discount</p>
         <div className="mt-2 flex items-end justify-between gap-4">
           <Rate bps={row.discountRateBps} size="hero" className={cn(!active && "text-fg/80")} />
-          <p className="max-w-28 pb-1 text-right text-[0.6875rem] leading-snug text-muted-foreground">of the builder-approved amount</p>
+          <p className="max-w-28 pb-1 text-right text-[0.6875rem] leading-snug text-muted-foreground">
+            {annual ? "a year, for the days to the due date" : "of the financed amount"}
+          </p>
         </div>
         <span aria-hidden="true" className="mt-5 block h-px bg-gradient-to-r from-haze via-haze/40 to-transparent" />
-        <p className="tabular mt-3 text-xs text-muted-foreground">
-          On {formatINR(SAMPLE_PAISE, { showPaise: false })}, partner receives{" "}
-          <span className="font-semibold text-leaf">{formatINR(sample.netPayablePaise, { showPaise: sample.netPayablePaise % 100n !== 0n })}</span>
-        </p>
+        {sample?.ok ? (
+          <p className="tabular mt-3 text-xs text-muted-foreground">
+            On {formatINR(SAMPLE_INVOICE_PAISE, { showPaise: false })} due in {SAMPLE_TENOR_DAYS} days, partner receives{" "}
+            <span className="font-semibold text-leaf">{formatINR(sample.quote.netPayablePaise, { showPaise: sample.quote.netPayablePaise % 100n !== 0n })}</span>
+            <span className="block">Annualised {formatBps(sample.quote.annualisedRateBps)}</span>
+          </p>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">{sample && !sample.ok ? sample.message : "Pricing terms incomplete."}</p>
+        )}
       </div>
 
       <dl className="mx-6 mt-6 grid grid-cols-3 gap-4 border-y border-border/70 py-4 text-xs">

@@ -10,7 +10,7 @@ import type { CallContext, GstinInput, PanInput } from "@/server/connectors/veri
 import { decryptField, ENCRYPTION_CONTEXT } from "@/server/crypto/field-encryption";
 import { db } from "@/server/db";
 import { onPayoutAccountChanged, type PayoutAccountChangedEvent } from "@/server/kyc/events";
-import { acceptOffer, generateOffer } from "@/server/services/financing";
+import { acceptOffer, approveFinancingRequest, generateOffer, initiateDisbursement } from "@/server/services/financing";
 import {
   assertCpEligibleForPayout,
   getKycDocumentForActor,
@@ -415,6 +415,29 @@ describe("payout gate in the financing service", () => {
     await db.verificationCheck.update({ where: { id: panCheck.id }, data: { status: "VERIFIED" } });
     const request = await acceptOffer(as.urbannest, offer.id, { consent: true });
     expect(request.status).toBe("PENDING_APPROVAL");
+  });
+});
+
+describe("payout release during a payout-account cooling-off", () => {
+  it("blocks the financier from initiating a disbursement until the cooling-off ends", async () => {
+    const invoice = await acceptedInvoice(as.urbannest, as.skyline, { cp: "urbannest", builder: "skyline", amount: "180000" });
+    const offer = await generateOffer(as.urbannest, invoice.id);
+    const request = await acceptOffer(as.urbannest, offer.id, { consent: true });
+    await approveFinancingRequest(as.finance, request.id, { note: "Within limits." });
+
+    const changed = await submitBankAccount(as.urbannest, { accountNumber: "4455667788", confirmAccountNumber: "4455667788", ifsc: "HDFC0000123", makePrimary: true });
+    expect(changed.status).toBe("VERIFIED");
+    const account = await db.bankAccount.findUniqueOrThrow({ where: { id: changed.bankAccountId } });
+    expect(account.coolingOffUntil).not.toBeNull();
+
+    vi.stubEnv("KYC_ENFORCED", "true");
+    await expectDomainError(initiateDisbursement(as.finance, request.id), "CONFLICT", /changed its payout account recently/);
+    expect((await db.financingRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("APPROVED");
+    expect(await db.disbursement.count({ where: { requestId: request.id } })).toBe(0);
+
+    await db.bankAccount.update({ where: { id: account.id }, data: { coolingOffUntil: new Date(Date.now() - 1000) } });
+    const disbursement = await initiateDisbursement(as.finance, request.id);
+    expect(disbursement.beneficiaryAccount).toBe("XXXX7788");
   });
 });
 

@@ -553,14 +553,20 @@ function formatIst(date: Date): string {
 }
 
 /**
- * Gate for the financing service: a channel partner may accept an early-payment offer only with
- * VERIFIED KYC and a verified payout account outside its cooling-off period. Enforced when
- * KYC_ENFORCED is on (default in production).
+ * Gate for the financing service: a channel partner may accept an early-payment offer, and be paid
+ * out, only with VERIFIED KYC and a verified payout account outside its cooling-off period.
+ * Enforced when KYC_ENFORCED is on (default in production). `audience: "financier"` words the
+ * refusal for the financier releasing the payout instead of the partner.
  */
-export async function assertCpEligibleForPayout(cpId: string, now: Date = new Date()): Promise<void> {
+export async function assertCpEligibleForPayout(cpId: string, now: Date = new Date(), options: { audience?: "partner" | "financier" } = {}): Promise<void> {
   if (!kycEnforced()) return;
   const eligibility = await payoutEligibility(cpId, now);
-  if (!eligibility.eligible) throw conflict(eligibility.reasons[0]!);
+  if (eligibility.eligible) return;
+  if (options.audience !== "financier") throw conflict(eligibility.reasons[0]!);
+  if (eligibility.coolingOffUntil) {
+    throw conflict(`The channel partner changed its payout account recently. The payout can be released after ${formatIst(eligibility.coolingOffUntil)}.`);
+  }
+  throw conflict("The channel partner's KYC or payout account is not verified, so the payout cannot be released yet.");
 }
 
 /* ----------------------------------------------------------------------------------------------

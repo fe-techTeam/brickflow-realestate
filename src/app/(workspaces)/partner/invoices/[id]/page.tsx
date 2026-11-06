@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import type { ApprovalAction, FinancingStatus } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
-import { calculateDiscount } from "@/lib/financing";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { describeRate } from "@/lib/key-facts";
 import { formatBps } from "@/lib/money";
 import { FINANCING_STATUS } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -123,12 +123,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 <p className="text-[0.625rem] font-semibold tracking-[0.22em] text-fg-muted uppercase">{openOffer ? `Open offer · ${openOffer.reference}` : "Eligible for early payment"}</p>
                 <p className="mt-4 text-xs text-white/55">Receive now</p>
                 <Money
-                  paise={openOffer?.netPayablePaise ?? calculateDiscount(invoice.approvedAmountPaise!, eligibility.programme.discountRateBps).netPayablePaise}
+                  paise={openOffer?.netPayablePaise ?? eligibility.quote?.result.quote.netPayablePaise ?? 0n}
                   size="hero"
                   className="mt-1 block font-light text-[#e3ddd2]"
                 />
                 <p className="mt-3 text-[0.8125rem] leading-relaxed text-white/65">
-                  {formatBps(openOffer?.discountRateBps ?? eligibility.programme.discountRateBps)} agreed discount on the approved{" "}
+                  {describeRate(openOffer?.pricingMode ?? eligibility.programme.pricingMode, openOffer?.discountRateBps ?? eligibility.programme.discountRateBps)} agreed
+                  discount on the approved{" "}
                   <Money paise={invoice.approvedAmountPaise!} className="text-white" />
                   {openOffer ? ` · valid until ${formatDateTime(openOffer.validUntil)}` : ""}
                 </p>

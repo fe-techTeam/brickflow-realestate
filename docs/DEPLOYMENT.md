@@ -184,6 +184,7 @@ To switch datasets, change `DEMO_DATASET` in `.env`, run `docker compose up -d a
 - Logs are rotated by Docker (`json-file`, 5 × 10 MB per service).
 - All services restart automatically (`unless-stopped`), including after a host reboot.
 - `docker compose down` keeps the volumes; `docker compose down -v` **deletes the database, PDFs, backups and certificates**.
+- Consistency check: `docker compose exec app npx tsx scripts/check-invariants.ts` scans the financing data (offers, requests, payouts, settlements, programmes) and exits non-zero on any violation; add `--json` for a machine-readable report. Run it after every release with migrations.
 
 ---
 
