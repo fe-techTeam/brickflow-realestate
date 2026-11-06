@@ -2,8 +2,8 @@ import { createHmac, randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 const PASSWORD = process.env.E2E_DEMO_PASSWORD ?? "BrickFlow@2026";
-// A partner account the smoke tests do not use, so enrolling it does not affect them.
-const PARTNER = "partner@urbannest-demo.test";
+// An account no other spec signs in with, so enrolling it does not affect them.
+const ENROLLER = "accounts@coastal-demo.test";
 
 function totp(base32: string, offsetSteps = 0): string {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -96,9 +96,9 @@ test.describe("security page", () => {
   });
 
   test("sets up two-step verification, then requires a code at sign-in", async ({ page, context }) => {
-    await signIn(page, PARTNER);
-    await expect(page).toHaveURL(/\/partner$/);
-    await page.goto("/partner/security");
+    await signIn(page, ENROLLER);
+    await expect(page).toHaveURL(/\/builder$/);
+    await page.goto("/builder/security");
     await page.getByRole("button", { name: "Set up" }).click();
     const key = (await page.locator("code").first().innerText()).replace(/\s/g, "");
     expect(key).toMatch(/^[A-Z2-7]{32}$/);
@@ -132,10 +132,10 @@ test.describe("security page", () => {
     await page.getByRole("button", { name: "Account menu" }).click();
     await page.getByRole("menuitem", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/login$/);
-    await signIn(page, PARTNER);
+    await signIn(page, ENROLLER);
     await expect(page).toHaveURL(/\/login\/verify$/);
     expect((await context.cookies()).some((c) => c.name === "bf_session")).toBe(false);
-    await page.goto("/partner");
+    await page.goto("/builder");
     await expect(page).toHaveURL(/\/login/);
 
     await page.goto("/login/verify");
@@ -146,7 +146,7 @@ test.describe("security page", () => {
 
     await page.getByLabel("Recovery code").fill(newCodes[0]!);
     await page.getByRole("button", { name: "Verify and sign in" }).click();
-    await expect(page).toHaveURL(/\/partner$/);
+    await expect(page).toHaveURL(/\/builder$/);
     expect((await context.cookies()).some((c) => c.name === "bf_session" && c.httpOnly)).toBe(true);
   });
 });
