@@ -92,38 +92,70 @@ function resolve(context: PDFContext, object: PDFObject | undefined): PDFObject 
   return current instanceof PDFRef ? undefined : current;
 }
 
-function checkUri(context: PDFContext, value: PDFObject | undefined): Verdict {
-  const resolved = resolve(context, value);
+/** Work cap for the object-graph walk: crafted fan-out fails closed instead of consuming CPU. */
+export const MAX_GRAPH_NODES = 500_000;
+
+class GraphLimit extends Error {}
+
+interface GraphState {
+  context: PDFContext;
+  /** Action dictionaries already verified, including their /Next chains. */
+  checkedActions: Set<PDFObject>;
+  nodes: number;
+}
+
+function tick(state: GraphState) {
+  state.nodes += 1;
+  if (state.nodes > MAX_GRAPH_NODES) throw new GraphLimit("object graph too large");
+}
+
+function checkUri(state: GraphState, value: PDFObject | undefined): Verdict {
+  tick(state);
+  const resolved = resolve(state.context, value);
   if (resolved instanceof PDFDict) {
-    // The catalog's URI dictionary only carries a base for relative links.
-    const base = resolved.get(PDFName.of("Base"));
-    return base === undefined ? null : checkUri(context, base);
+    // The catalog's URI dictionary only carries a base for relative links, which must itself be a safe URI.
+    const base = resolve(state.context, resolved.get(PDFName.of("Base")));
+    if (base === undefined) return null;
+    const text = textOf(base);
+    return text !== null && SAFE_URI.test(text.trim()) ? null : active("/URI scheme");
   }
   const uri = textOf(resolved);
   if (uri === null || !SAFE_URI.test(uri.trim())) return active("/URI scheme");
   return null;
 }
 
-/** Actions are allow-listed; a value that should be an action but isn't one fails closed. */
-function checkAction(context: PDFContext, value: PDFObject | undefined, depth: number): Verdict {
-  if (depth > MAX_DEPTH) return { reason: "unreadable", detail: "action chain too deep" };
-  const resolved = resolve(context, value);
-  if (resolved instanceof PDFArray) {
-    for (const item of resolved.asArray()) {
-      const verdict = checkAction(context, item, depth + 1);
+/**
+ * Actions are allow-listed; a value that should be an action but isn't one fails closed. Iterative,
+ * with a per-chain path set so a cycle through /Next or nested arrays fails closed.
+ */
+function checkAction(state: GraphState, value: PDFObject | undefined): Verdict {
+  const stack: { value: PDFObject | undefined; path: Set<PDFObject> }[] = [{ value, path: new Set() }];
+  while (stack.length) {
+    const { value: current, path } = stack.pop()!;
+    tick(state);
+    const resolved = resolve(state.context, current);
+    if (resolved && path.has(resolved)) return { reason: "unreadable", detail: "cycle in action chain" };
+    if (path.size >= MAX_DEPTH) return { reason: "unreadable", detail: "action chain too deep" };
+    if (resolved instanceof PDFArray) {
+      if (state.checkedActions.has(resolved)) continue;
+      state.checkedActions.add(resolved);
+      const childPath = new Set(path).add(resolved);
+      for (const item of resolved.asArray()) stack.push({ value: item, path: childPath });
+      continue;
+    }
+    if (!(resolved instanceof PDFDict)) return active("malformed action");
+    if (state.checkedActions.has(resolved)) continue;
+    state.checkedActions.add(resolved);
+    const type = nameOf(resolve(state.context, resolved.get(PDFName.of("S"))));
+    if (!type || !ALLOWED_ACTIONS.has(type)) return active(`action ${type ?? "without a type"}`);
+    if (type === "URI") {
+      const verdict = checkUri(state, resolved.get(PDFName.of("URI")));
       if (verdict) return verdict;
     }
-    return null;
+    const next = resolved.get(PDFName.of("Next"));
+    if (next !== undefined) stack.push({ value: next, path: new Set(path).add(resolved) });
   }
-  if (!(resolved instanceof PDFDict)) return active("malformed action");
-  const type = nameOf(resolve(context, resolved.get(PDFName.of("S"))));
-  if (!type || !ALLOWED_ACTIONS.has(type)) return active(`action ${type ?? "without a type"}`);
-  if (type === "URI") {
-    const verdict = checkUri(context, resolved.get(PDFName.of("URI")));
-    if (verdict) return verdict;
-  }
-  const next = resolved.get(PDFName.of("Next"));
-  return next === undefined ? null : checkAction(context, next, depth + 1);
+  return null;
 }
 
 function isActionLike(context: PDFContext, value: PDFObject | undefined): boolean {
@@ -131,12 +163,15 @@ function isActionLike(context: PDFContext, value: PDFObject | undefined): boolea
   return resolved instanceof PDFArray || (resolved instanceof PDFDict && resolved.has(PDFName.of("S")));
 }
 
-function walk(context: PDFContext, object: PDFObject, depth: number): Verdict {
+/** Walks one indirect object's direct value tree (references are not followed: every indirect object is walked on its own). */
+function walk(state: GraphState, object: PDFObject, depth: number): Verdict {
+  tick(state);
   if (depth > MAX_DEPTH) return { reason: "unreadable", detail: "object nesting too deep" };
+  const { context } = state;
   const dict = object instanceof PDFStream ? object.dict : object;
   if (dict instanceof PDFDict) {
     if (nameOf(resolve(context, dict.get(PDFName.of("Type")))) === "Action") {
-      const verdict = checkAction(context, dict, 0);
+      const verdict = checkAction(state, dict);
       if (verdict) return verdict;
     }
     for (const [key, value] of dict.entries()) {
@@ -145,12 +180,12 @@ function walk(context: PDFContext, object: PDFObject, depth: number): Verdict {
       if (verdict) return verdict;
       if (name === "OpenAction" && !(resolve(context, value) instanceof PDFArray)) return active("/OpenAction");
       if (name === "URI") {
-        const uri = checkUri(context, value);
+        const uri = checkUri(state, value);
         if (uri) return uri;
       }
       // Structure attributes also use /A, but carry no /S; anything with /S here is an action.
       if ((name === "A" || name === "Next") && isActionLike(context, value)) {
-        const action = checkAction(context, value, 0);
+        const action = checkAction(state, value);
         if (action) return action;
       }
       if (name === "S" || name === "JS" || name === "F") {
@@ -158,14 +193,14 @@ function walk(context: PDFContext, object: PDFObject, depth: number): Verdict {
         const resolved = target ? classify(target) : null;
         if (resolved) return resolved;
       }
-      const nested = walk(context, value, depth + 1);
+      const nested = walk(state, value, depth + 1);
       if (nested) return nested;
     }
     return null;
   }
   if (object instanceof PDFArray) {
     for (const item of object.asArray()) {
-      const nested = walk(context, item, depth + 1);
+      const nested = walk(state, item, depth + 1);
       if (nested) return nested;
     }
     return null;
@@ -178,9 +213,15 @@ function walk(context: PDFContext, object: PDFObject, depth: number): Verdict {
 export function scanParsedDocument(document: PDFDocument): Verdict {
   const { context } = document;
   if (context.trailerInfo.Encrypt) return { reason: "encrypted", detail: "trailer /Encrypt" };
-  for (const [, object] of context.enumerateIndirectObjects()) {
-    const verdict = walk(context, object, 0);
-    if (verdict) return verdict;
+  const state: GraphState = { context, checkedActions: new Set(), nodes: 0 };
+  try {
+    for (const [, object] of context.enumerateIndirectObjects()) {
+      const verdict = walk(state, object, 0);
+      if (verdict) return verdict;
+    }
+  } catch (error) {
+    if (error instanceof GraphLimit) return { reason: "unreadable", detail: error.message };
+    throw error;
   }
   return null;
 }
@@ -227,10 +268,16 @@ class Lexer {
 
   next(): Token | null {
     const { text } = this;
+    // Whitespace, comments and (in lenient mode) stray closing delimiters are skipped iteratively.
     for (;;) {
       while (this.pos < text.length && isWhitespace(text[this.pos])) this.pos += 1;
-      if (text[this.pos] !== "%") break;
-      while (this.pos < text.length && text[this.pos] !== "\n" && text[this.pos] !== "\r") this.pos += 1;
+      const c = text[this.pos];
+      if (c === "%") {
+        while (this.pos < text.length && text[this.pos] !== "\n" && text[this.pos] !== "\r") this.pos += 1;
+      } else if ((c === ">" && text[this.pos + 1] !== ">") || c === ")") {
+        if (this.strict) this.fail(`stray ${c}`);
+        this.pos += 1;
+      } else break;
     }
     if (this.pos >= text.length) return null;
     const start = this.pos;
@@ -274,11 +321,6 @@ class Lexer {
     if (c === "[" || c === "]") {
       this.pos = start + 1;
       return { kind: c, value: c, end: this.pos };
-    }
-    if (c === ">" || c === ")") {
-      if (this.strict) this.fail(`stray ${c}`);
-      this.pos = start + 1;
-      return this.next();
     }
     if (c === "{" || c === "}") {
       this.pos = start + 1;
@@ -372,19 +414,22 @@ function entry(dict: RawDict, key: string): RawValue | undefined {
 }
 
 /** Rejects banned names and open actions in a parsed value; collects `/FontFile*` targets. */
-function inspectValue(value: RawValue, fontFiles: Set<number>): void {
+function inspectValue(value: RawValue, fontFiles: Set<number>, depth = 0): void {
+  if (depth > MAX_DEPTH) throw new Malformed("nesting too deep");
   if (value.kind === "name") {
     const verdict = classify(value.value);
     if (verdict) throw new Rejection(verdict);
   } else if (value.kind === "array") {
-    for (const item of value.items) inspectValue(item, fontFiles);
+    for (const item of value.items) inspectValue(item, fontFiles, depth + 1);
   } else if (value.kind === "dict") {
+    // Font programs are skipped only when a font descriptor points at them.
+    const isFontDescriptor = value.entries.some(([k, v]) => k === "Type" && v.kind === "name" && v.value === "FontDescriptor");
     for (const [key, item] of value.entries) {
       const verdict = classify(key);
       if (verdict) throw new Rejection(verdict);
       if (key === "OpenAction" && item.kind !== "array") throw new Rejection(active("/OpenAction"));
-      if (/^FontFile[23]?$/.test(key) && item.kind === "ref") fontFiles.add(item.num);
-      inspectValue(item, fontFiles);
+      if (isFontDescriptor && /^FontFile[23]?$/.test(key) && item.kind === "ref") fontFiles.add(item.num);
+      inspectValue(item, fontFiles, depth + 1);
     }
   }
 }
@@ -631,22 +676,64 @@ function decodeStream(raw: Buffer, dict: RawDict, budget: Budget): Buffer {
   return data;
 }
 
+/** A direct name value; an indirect /Type or /Subtype could resolve differently between parsers, so it fails closed. */
 function nameEntry(dict: RawDict, key: string): string | null {
   const value = entry(dict, key);
+  if (value?.kind === "ref") throw new Malformed(`indirect /${key}`);
   return value?.kind === "name" ? value.value : null;
 }
 
-/** Scans the raw object structure for encryption, active content and embedded files. */
+function integerEntry(dict: RawDict, key: string): number | null {
+  const value = entry(dict, key);
+  return value?.kind === "number" && value.integer ? value.value : null;
+}
+
+/** Scans the raw object structure for encryption, active content and embedded files. Never throws. */
 export function scanPdfStructure(bytes: Uint8Array): Verdict {
-  const text = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("latin1");
   try {
-    scanRaw(text);
+    scanRaw(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("latin1"));
     return null;
   } catch (error) {
     if (error instanceof Rejection) return error.verdict;
     if (error instanceof Malformed || error instanceof UndecodableStream) return { reason: "unreadable", detail: error.message };
-    throw error;
+    // Anything unexpected (including stack or memory exhaustion) fails closed.
+    return { reason: "unreadable", detail: "inspection failed" };
   }
+}
+
+/** Object numbers that cross-reference streams declare as object-stream containers (type 2 entries). */
+function xrefContainers(decoded: Buffer, dict: RawDict): number[] {
+  const widths = entry(dict, "W");
+  if (widths?.kind !== "array" || widths.items.length !== 3 || !widths.items.every((w) => w.kind === "number" && w.integer && w.value >= 0 && w.value <= 8)) {
+    throw new Malformed("cross-reference stream /W");
+  }
+  const [w0, w1, w2] = widths.items.map((w) => (w as { value: number }).value) as [number, number, number];
+  const rowLength = w0 + w1 + w2;
+  const index = entry(dict, "Index");
+  let rows: number;
+  if (index === undefined) {
+    const size = integerEntry(dict, "Size");
+    if (size === null) throw new Malformed("cross-reference stream /Size");
+    rows = size;
+  } else {
+    if (index.kind !== "array" || index.items.length % 2 !== 0 || !index.items.every((v) => v.kind === "number" && v.integer)) {
+      throw new Malformed("cross-reference stream /Index");
+    }
+    rows = index.items.reduce((sum, v, i) => (i % 2 === 1 ? sum + (v as { value: number }).value : sum), 0);
+  }
+  if (rowLength === 0 || rows * rowLength > decoded.length) throw new Malformed("cross-reference stream is shorter than its /Index");
+  const field = (offset: number, width: number) => {
+    let value = 0;
+    for (let k = 0; k < width; k += 1) value = value * 256 + decoded[offset + k]!;
+    return value;
+  };
+  const containers: number[] = [];
+  for (let r = 0; r < rows; r += 1) {
+    const at = r * rowLength;
+    const type = w0 === 0 ? 1 : field(at, w0);
+    if (type === 2) containers.push(field(at + w0, w1));
+  }
+  return containers;
 }
 
 function scanRaw(text: string): void {
@@ -732,21 +819,36 @@ function scanRaw(text: string): void {
   resolveLengths(false);
 
   const budget = new Budget(MAX_DECODED_BYTES);
-  const decode = (span: StreamSpan) => decodeStream(Buffer.from(text.slice(span.dataStart, span.dataEnd), "latin1"), span.dict, budget);
+  const decode = (span: StreamSpan) => {
+    if (span.pendingLength) throw new Malformed("unresolvable stream /Length");
+    return decodeStream(Buffer.from(text.slice(span.dataStart, span.dataEnd), "latin1"), span.dict, budget);
+  };
+  const hasObjStmKeys = (span: StreamSpan) => entry(span.dict, "N") !== undefined && entry(span.dict, "First") !== undefined;
 
-  // Object streams hold dictionaries (the catalog, actions, annotations), so every one is decoded and parsed.
+  // Cross-reference streams are decoded so every object-stream container they declare is known.
+  const containers = new Set<number>();
   for (const span of spans) {
-    if (nameEntry(span.dict, "Type") !== "ObjStm") continue;
-    if (span.pendingLength) throw new Malformed("object stream with an unresolvable /Length");
-    const decoded = decode(span).toString("latin1");
-    const count = entry(span.dict, "N");
-    const first = entry(span.dict, "First");
-    if (count?.kind !== "number" || !count.integer || first?.kind !== "number" || !first.integer || first.value > decoded.length) {
-      throw new Malformed("object stream without valid /N and /First");
+    if (nameEntry(span.dict, "Type") !== "XRef") continue;
+    if (hasObjStmKeys(span)) throw new Malformed("conflicting stream markers");
+    for (const num of xrefContainers(decode(span), span.dict)) containers.add(num);
+  }
+
+  // Object streams hold dictionaries (the catalog, actions, annotations): any stream that looks like one is decoded and parsed.
+  const isObjectStream = (span: StreamSpan) => nameEntry(span.dict, "Type") === "ObjStm" || containers.has(span.objectNumber) || hasObjStmKeys(span);
+  for (const span of spans) {
+    if (!isObjectStream(span)) continue;
+    const type = nameEntry(span.dict, "Type");
+    if (type !== null && type !== "ObjStm") throw new Malformed("conflicting stream markers");
+    if (nameEntry(span.dict, "Subtype") === "Image" || filtersOf(span.dict).some((f) => IMAGE_ONLY_FILTERS.has(f))) {
+      throw new Malformed("object stream marked as an image");
     }
-    const header = new Lexer(decoded.slice(0, first.value), 0, true);
+    const decoded = decode(span).toString("latin1");
+    const count = integerEntry(span.dict, "N");
+    const first = integerEntry(span.dict, "First");
+    if (count === null || first === null || first > decoded.length) throw new Malformed("object stream without valid /N and /First");
+    const header = new Lexer(decoded.slice(0, first), 0, true);
     const numbers: number[] = [];
-    for (let i = 0; i < count.value; i += 1) {
+    for (let i = 0; i < count; i += 1) {
       const num = header.next();
       const offset = header.next();
       if (num?.kind !== "number" || !INTEGER.test(num.value) || offset?.kind !== "number" || !INTEGER.test(offset.value)) {
@@ -755,7 +857,7 @@ function scanRaw(text: string): void {
       define(Number(num.value), span.revision);
       numbers.push(Number(num.value));
     }
-    const body = new Lexer(decoded, first.value, true);
+    const body = new Lexer(decoded, first, true);
     for (const num of numbers) {
       const value = parseValue(body);
       inspectValue(value, fontFiles);
@@ -767,7 +869,7 @@ function scanRaw(text: string): void {
   resolveLengths(true);
 
   for (const span of spans) {
-    if (nameEntry(span.dict, "Type") === "ObjStm") continue;
+    if (isObjectStream(span)) continue;
     if (nameEntry(span.dict, "Type") === "XRef") continue;
     if (nameEntry(span.dict, "Subtype") === "Image") continue;
     if (fontFiles.has(span.objectNumber)) continue;

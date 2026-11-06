@@ -1,9 +1,9 @@
 import { deflateSync } from "node:zlib";
-import { PDFDocument, PDFName, PDFString } from "pdf-lib";
+import { PDFDocument, PDFName, PDFString, type PDFRef } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { buildInvoiceDocument, DEMO_DATASETS, demoClock, SAMPLE_INVOICES } from "@/lib/demo/catalogue";
 import { renderBrokerageInvoicePdf } from "@/lib/pdf/brokerage-invoice";
-import { inspectPdf, maxPdfPagesFromEnv, scanParsedDocument, scanPdfStructure } from "./pdf-inspect";
+import { inspectPdf, MAX_GRAPH_NODES, maxPdfPagesFromEnv, scanParsedDocument, scanPdfStructure } from "./pdf-inspect";
 
 /** Assembles a classic PDF (objects numbered from 1, cross-reference table with real offsets). */
 function handPdf(objects: (string | Buffer)[], trailerExtra = ""): Uint8Array {
@@ -157,9 +157,16 @@ describe("inspectPdf — parser differentials and fail-closed decoding", () => {
     const decoyObjStm = handPdf([
       CATALOG,
       ...PAGE_TREE,
-      stream("/Type /ObjStm /Image true /Subtype /Image /N 1 /First 4 /Filter /FlateDecode", deflateSync(Buffer.from("5 0 << /S /JavaScript /JS (x) >>", "latin1"))),
+      stream("/Type /ObjStm /Image true /N 1 /First 4 /Filter /FlateDecode", deflateSync(Buffer.from("5 0 << /S /JavaScript /JS (x) >>", "latin1"))),
     ]);
     expect(scanPdfStructure(decoyObjStm)).toEqual({ reason: "active_content", detail: "/JavaScript" });
+
+    const imageObjStm = handPdf([
+      CATALOG,
+      ...PAGE_TREE,
+      stream("/Type /ObjStm /Subtype /Image /N 1 /First 4 /Filter /FlateDecode", deflateSync(Buffer.from("5 0 << /S /JavaScript /JS (x) >>", "latin1"))),
+    ]);
+    expect(scanPdfStructure(imageObjStm)).toEqual({ reason: "unreadable", detail: "object stream marked as an image" });
 
     const decoyContent = handPdf([CATALOG, ...PAGE_TREE, stream("/Image 1 /Length1 2 /Filter /FlateDecode", deflateSync(Buffer.from("/JavaScript", "latin1")))]);
     expect(scanPdfStructure(decoyContent)).toEqual({ reason: "active_content", detail: "/JavaScript" });
@@ -377,6 +384,117 @@ describe("inspectPdf — resolved action values", () => {
   it("checks chained actions", async () => {
     const chained = await PDFDocument.load(await withLink((doc) => ({ S: "GoTo", D: [doc.getPage(0).ref, "Fit"], Next: doc.context.obj({ S: "ResetForm" }) })));
     expect(scanParsedDocument(chained)).toEqual({ reason: "active_content", detail: "action ResetForm" });
+  });
+});
+
+describe("inspectPdf — traversal limits", () => {
+  function linkTo(doc: PDFDocument, action: PDFRef) {
+    return doc.context.obj({ Type: "Annot", Subtype: "Link", Rect: [0, 0, 10, 10], A: action });
+  }
+
+  it("fails closed on a cycle through /Next", async () => {
+    const bytes = await pdfLibDocument((doc) => {
+      const first = doc.context.nextRef();
+      const second = doc.context.nextRef();
+      const destination = [doc.getPage(0).ref, PDFName.of("Fit")];
+      doc.context.assign(first, doc.context.obj({ S: "GoTo", D: destination, Next: second }));
+      doc.context.assign(second, doc.context.obj({ S: "GoTo", D: destination, Next: first }));
+      doc.getPage(0).node.set(PDFName.of("Annots"), doc.context.obj([linkTo(doc, first)]));
+    });
+    expect(scanParsedDocument(await PDFDocument.load(bytes))).toEqual({ reason: "unreadable", detail: "cycle in action chain" });
+    await expect(inspectPdf(bytes)).resolves.toMatchObject({ ok: false, reason: "unreadable" });
+  });
+
+  it("fails closed on a self-referencing /Next array", async () => {
+    const bytes = await pdfLibDocument((doc) => {
+      const list = doc.context.nextRef();
+      doc.context.assign(list, doc.context.obj([list]));
+      const action = doc.context.register(doc.context.obj({ S: "GoTo", D: [doc.getPage(0).ref, PDFName.of("Fit")], Next: list }));
+      doc.getPage(0).node.set(PDFName.of("Annots"), doc.context.obj([linkTo(doc, action)]));
+    });
+    expect(scanParsedDocument(await PDFDocument.load(bytes))).toEqual({ reason: "unreadable", detail: "cycle in action chain" });
+  });
+
+  it("checks a shared action list once however many links use it", async () => {
+    const bytes = await pdfLibDocument((doc) => {
+      const destination = [doc.getPage(0).ref, PDFName.of("Fit")];
+      const actions = Array.from({ length: 2000 }, () => doc.context.register(doc.context.obj({ S: "GoTo", D: destination })));
+      const list = doc.context.register(doc.context.obj(actions));
+      const annots = Array.from({ length: 2000 }, () => doc.context.obj({ Type: "Annot", Subtype: "Link", Rect: [0, 0, 1, 1], A: doc.context.obj({ S: "GoTo", D: destination, Next: list }) }));
+      doc.getPage(0).node.set(PDFName.of("Annots"), doc.context.obj(annots));
+    });
+    expect(scanParsedDocument(await PDFDocument.load(bytes))).toBeNull();
+  });
+
+  it("caps the total work on the object graph", async () => {
+    const bytes = await pdfLibDocument((doc) => {
+      doc.catalog.set(PDFName.of("Filler"), doc.context.obj(Array.from({ length: MAX_GRAPH_NODES + 10 }, (_, i) => i % 7)));
+    });
+    expect(scanParsedDocument(await PDFDocument.load(bytes))).toEqual({ reason: "unreadable", detail: "object graph too large" });
+  });
+});
+
+describe("inspectPdf — tokenizer robustness", () => {
+  it("skips long runs of stray delimiters in content without recursion", () => {
+    const content = Buffer.from(`${")".repeat(1_000_000)}${">".repeat(1_000_000)} /JS`, "latin1");
+    const bytes = handPdf([CATALOG, ...PAGE_TREE, stream("", content)]);
+    expect(scanPdfStructure(bytes)).toEqual({ reason: "active_content", detail: "/JS" });
+  });
+
+  it("fails closed on stray delimiters in the file structure", () => {
+    const bytes = handPdf([CATALOG, ...PAGE_TREE, "<< /Kind /Note >> )))"]);
+    expect(scanPdfStructure(bytes)).toMatchObject({ reason: "unreadable", detail: "stray )" });
+  });
+
+  it("fails closed on deeply nested dictionaries and arrays", async () => {
+    const dicts = handPdf([CATALOG, ...PAGE_TREE, `${"<< /A ".repeat(50_000)}1${" >>".repeat(50_000)}`]);
+    expect(scanPdfStructure(dicts)).toEqual({ reason: "unreadable", detail: "nesting too deep" });
+    const arrays = handPdf([CATALOG, ...PAGE_TREE, `${"[".repeat(200_000)}${"]".repeat(200_000)}`]);
+    expect(scanPdfStructure(arrays)).toEqual({ reason: "unreadable", detail: "nesting too deep" });
+    await expect(inspectPdf(arrays)).resolves.toMatchObject({ ok: false, reason: "unreadable" });
+  });
+});
+
+describe("inspectPdf — object stream candidates", () => {
+  const payload = deflateSync(Buffer.from("5 0 << /S /JavaScript /JS (x) >>", "latin1"));
+
+  it("scans streams with /N and /First as object streams and rejects image markers on them", () => {
+    const untyped = handPdf([CATALOG, ...PAGE_TREE, stream("/N 1 /First 4 /Filter /FlateDecode", payload)]);
+    expect(scanPdfStructure(untyped)).toEqual({ reason: "active_content", detail: "/JavaScript" });
+
+    const image = handPdf([CATALOG, ...PAGE_TREE, stream("/Subtype /Image /N 1 /First 4 /Filter /FlateDecode", payload)]);
+    expect(scanPdfStructure(image)).toEqual({ reason: "unreadable", detail: "object stream marked as an image" });
+
+    const codec = handPdf([CATALOG, ...PAGE_TREE, stream("/N 1 /First 4 /Filter [/FlateDecode /DCTDecode]", payload)]);
+    expect(scanPdfStructure(codec)).toEqual({ reason: "unreadable", detail: "object stream marked as an image" });
+  });
+
+  it("treats type-2 containers in a cross-reference stream as object streams", () => {
+    const rows = Buffer.from([0, 0, 255, 1, 0, 0, 1, 0, 0, 2, 4, 0, 1, 0, 0]);
+    const bytes = handPdf([
+      CATALOG,
+      ...PAGE_TREE,
+      stream("/Subtype /Image /Width 1 /Height 1 /Filter /FlateDecode", payload),
+      stream("/Type /XRef /W [1 1 1] /Size 5", rows),
+    ]);
+    expect(scanPdfStructure(bytes)).toEqual({ reason: "unreadable", detail: "object stream marked as an image" });
+  });
+
+  it("fails closed on indirect or conflicting stream types", () => {
+    const indirect = handPdf([CATALOG, ...PAGE_TREE, stream("/Type 5 0 R /Filter /FlateDecode", payload), "/ObjStm"]);
+    expect(scanPdfStructure(indirect)).toEqual({ reason: "unreadable", detail: "indirect /Type" });
+
+    const conflicting = handPdf([CATALOG, ...PAGE_TREE, stream("/Type /XRef /W [1 1 1] /Size 1 /N 1 /First 4", Buffer.from([1, 0, 0]))]);
+    expect(scanPdfStructure(conflicting)).toEqual({ reason: "unreadable", detail: "conflicting stream markers" });
+  });
+
+  it("skips a font program only when a font descriptor references it", () => {
+    const script = Buffer.from("/JS", "latin1");
+    const orphan = handPdf([CATALOG, ...PAGE_TREE, "<< /FontFile2 5 0 R >>", stream("/Length1 3", script)]);
+    expect(scanPdfStructure(orphan)).toEqual({ reason: "active_content", detail: "/JS" });
+
+    const described = handPdf([CATALOG, ...PAGE_TREE, "<< /Type /FontDescriptor /FontName /X /FontFile2 5 0 R >>", stream("/Length1 3", script)]);
+    expect(scanPdfStructure(described)).toBeNull();
   });
 });
 
