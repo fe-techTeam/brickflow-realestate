@@ -142,6 +142,11 @@ Open <http://localhost:3000>. `npm run demo:reset` deletes the stored invoice PD
 | `DEMO_PASSWORD` | `BrickFlow@2026` | Shared password for the seeded accounts |
 | `DEMO_DATASET` | `standard` | Which demo dataset to seed and offer on the sign-in page (see below) |
 | `APP_URL` | `http://localhost:3000` | Public base URL; `https://` enables secure cookies |
+| `METRICS_TOKEN` | unset (commented out) | Bearer token that enables `GET /api/metrics`; at least 32 characters |
+| `LOG_LEVEL` | `info` (commented out) | JSON log level: `debug`, `info`, `warn`, `error`, `silent` |
+| `APP_VERSION` / `SERVICE_NAME` | package version / `brickflow-web` (commented out) | Stamped on log lines and metrics |
+
+Operational endpoints and the audit chain commands (`npm run audit:verify`, `audit:anchor`, `audit:backfill`) are described in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#health-readiness-and-metrics).
 
 ## Demo datasets
 

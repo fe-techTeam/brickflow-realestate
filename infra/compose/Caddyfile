@@ -8,5 +8,8 @@
 		-Server
 	}
 
-	reverse_proxy app:3000
+	# A fresh request ID per request; the app returns it as x-request-id and logs it on every line.
+	reverse_proxy app:3000 {
+		header_up X-Request-Id {http.request.uuid}
+	}
 }

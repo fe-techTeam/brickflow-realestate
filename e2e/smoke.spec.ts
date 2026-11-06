@@ -74,3 +74,24 @@ for (const account of ACCOUNTS) {
     });
   });
 }
+
+test.describe("operations", () => {
+  test("returns a request ID on every response and reports readiness", async ({ request }) => {
+    const health = await request.get("/api/health", { headers: { "x-request-id": "e2e-request-0001" } });
+    expect(health.headers()["x-request-id"]).toBe("e2e-request-0001");
+    const ready = await request.get("/api/ready");
+    expect(ready.ok()).toBe(true);
+    expect(await ready.json()).toEqual({ status: "ready", checks: { database: "ok", migrations: "ok", storage: "ok" } });
+    expect((await request.get("/login")).headers()["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  test("lets the super admin verify the audit chain", async ({ page }) => {
+    await signIn(page, "admin@brickflow.demo", PASSWORD);
+    await expect(page).toHaveURL(/\/admin$/);
+    await page.goto("/admin/audit");
+    await expect(page.getByRole("heading", { name: "Audit integrity" })).toBeVisible();
+    await expect(page.getByRole("contentinfo").getByText(/support@/)).toBeVisible();
+    await page.getByRole("button", { name: "Verify now" }).click();
+    await expect(page.getByRole("status").filter({ hasText: /Verified through entry \d+/ })).toBeVisible();
+  });
+});

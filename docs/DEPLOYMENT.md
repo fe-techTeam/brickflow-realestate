@@ -32,6 +32,11 @@ No AWS resources exist yet. Every command below is for the AWS account owner to 
 | `HOSTNAME` | No | `0.0.0.0` | Bind address of the standalone server; must be `0.0.0.0` in containers. |
 | `NODE_ENV` | No | `production` | Set by the image. |
 | `NEXT_TELEMETRY_DISABLED` | No | `1` | Disables Next.js telemetry. |
+| `METRICS_TOKEN` | No | — | Enables `GET /api/metrics` (Prometheus) for scrapers sending `Authorization: Bearer <token>`. At least 32 random characters: `openssl rand -hex 32`. Unset (or shorter than 32 characters) the endpoint answers 404. |
+| `LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, `error` or `silent`. Logs are JSON lines on stdout/stderr. |
+| `APP_VERSION` | No | `package.json` version | Version stamped on every log line and on `brickflow_build_info`; set it to the release tag or commit in CI. |
+| `SERVICE_NAME` | No | `brickflow-web` | `service` field on log lines and metrics. |
+| `MIGRATIONS_DIR` | No | `prisma/migrations` | Folder of bundled migrations that `/api/ready` compares with the database. The image ships it at the default path. |
 
 ### Container behaviour
 
@@ -39,10 +44,37 @@ On start, `docker-entrypoint.sh`:
 
 1. checks that `DATABASE_URL` is a `postgresql://` URL and `AUTH_SECRET` is set, then waits up to 60 seconds for the database to accept connections;
 2. runs `prisma migrate deploy` (forward-only migrations) against `DATABASE_URL`;
-3. runs the demo seed only when the database has no users yet (first start) or when `SEED_ON_START=true`, so data persists across restarts and upgrades by default;
-4. starts the Next.js standalone server with `node server.js`.
+3. seals any audit log rows that have no hash yet (`scripts/audit-chain.ts backfill`; a no-op after the first run);
+4. runs the demo seed only when the database has no users yet (first start) or when `SEED_ON_START=true`, so data persists across restarts and upgrades by default;
+5. starts the Next.js standalone server with `node server.js`.
 
 The container runs as a non-root user (uid/gid `1001`) and declares a `HEALTHCHECK` on `GET /api/health`, which returns `{"status":"ok","db":"ok"}` after a `SELECT 1`, or HTTP 503 when the database is unreachable. The endpoint needs no authentication and exposes no configuration.
+
+### Health, readiness and metrics
+
+| Endpoint | Auth | Purpose |
+| --- | --- | --- |
+| `GET /api/health` | none | Liveness: the process serves requests and the database answers `SELECT 1`. |
+| `GET /api/ready` | none | Readiness: database reachable, every migration bundled in the image applied (compared with `_prisma_migrations`; a failed migration blocks readiness), and the document store accepts a write/read/delete probe. Returns `{"status":"ready","checks":{…}}` or HTTP 503 with the failing check; never error details. Results are cached for 2 seconds. Docker Compose (production) uses it as the app healthcheck. |
+| `GET /api/metrics` | `Bearer $METRICS_TOKEN` | Prometheus text format: process and Node.js runtime (`process_*`, `nodejs_*`), `http_requests_total` and `http_request_duration_seconds` by route group, database pool, and business gauges (`brickflow_invoices{status}`, `brickflow_financing_requests{status}`, `brickflow_settlements_overdue`, `brickflow_oldest_pending_approval_age_seconds{queue}`, `brickflow_audit_chain_intact`). 404 when `METRICS_TOKEN` is unset. Metrics are per process; scrape each instance. |
+
+### Logs and request IDs
+
+The app writes one JSON object per line: `level`, `time`, `message`, `service`, `version`, plus `requestId` and `actorId` while a request is handled. Passwords, tokens, cookies, authorisation headers, PAN and similar fields are removed; account numbers, phone numbers and e-mail addresses are masked, and GSTINs keep only the state code and last three characters. Every request gets an `x-request-id` (a well-formed incoming one is kept, otherwise a UUID is generated); it is returned on the response and appears on every log line for that request, including the `http.request` access line. Caddy sets a fresh ID per request in the Compose stack.
+
+### Audit chain
+
+Audit log entries form a single SHA-256 hash chain (see `src/lib/audit-chain.ts` for the exact serialisation). Administrators can check it under **Audit logs → Audit integrity → Verify now**; from a shell:
+
+```bash
+npm run audit:verify     # exit code 1 and the first broken link when the chain is broken
+npm run audit:anchor     # record today's chain head (once per UTC day); run daily from a scheduler
+npm run audit:backfill   # seal rows written before the chain existed (also run by the entrypoint)
+# inside the container:
+docker compose exec app node node_modules/tsx/dist/cli.mjs scripts/audit-chain.ts verify
+```
+
+Anchors let verification detect removal of the newest entries; copy them off the host (for example into the off-site backup) for an independent record.
 
 ---
 
@@ -399,7 +431,7 @@ All images are pinned to exact versions. Update the tags deliberately (and check
 
    On first start the app applies the migrations and seeds the selected demo dataset (the database is empty). Follow progress with `docker compose -f docker-compose.prod.yml logs -f app caddy`.
 
-4. Open `https://<DOMAIN>`. `https://<DOMAIN>/api/health` returns `{"status":"ok","db":"ok"}`.
+4. Open `https://<DOMAIN>`. `https://<DOMAIN>/api/health` returns `{"status":"ok","db":"ok"}` and `https://<DOMAIN>/api/ready` returns `{"status":"ready",…}`.
 
 To save typing, `export COMPOSE_FILE=docker-compose.prod.yml` in the shell; the commands below assume this and are written as plain `docker compose ...`.
 
