@@ -6,6 +6,7 @@ import { recordAudit } from "../audit";
 import { assertOrgType, type Actor } from "../auth/session";
 import { db } from "../db";
 import { conflict, forbidden, invalid, notFound } from "../errors";
+import { notifyInvoiceReviewed, notifyInvoiceSubmitted } from "../notifications/workflow";
 import { nextReference } from "../sequence";
 import { isPdf, MAX_PDF_BYTES, newStorageKey, sha256, storage } from "../storage";
 
@@ -186,6 +187,7 @@ export async function submitInvoice(actor: Actor, rawInput: SubmitInvoiceInput, 
         summary: `Submitted invoice ${invoice.invoiceNumber} (${reference}) to ${relationship.builder.name}`,
         metadata: { reference, amountPaise: invoice.amountPaise, builderId: input.builderId, projectId: project.id },
       });
+      await notifyInvoiceSubmitted(tx, invoice.id, actor);
       return { id: invoice.id, reference };
     });
   } catch (error) {
@@ -260,6 +262,7 @@ export async function resubmitInvoice(actor: Actor, invoiceId: string, raw: { no
         summary: `Responded to clarification on invoice ${invoice.invoiceNumber}`,
         metadata: { replacedDocument: Boolean(file) },
       });
+      await notifyInvoiceSubmitted(tx, invoice.id, actor, { resubmitted: true, note });
     });
   } catch (error) {
     if (storageKey) await storage().delete(storageKey).catch(() => undefined);
@@ -317,6 +320,7 @@ async function transition(
       summary: options.audit.summary(invoice.invoiceNumber),
       metadata: options.audit.metadata,
     });
+    await notifyInvoiceReviewed(tx, options.action, invoice.id, actor, options.comment);
   });
 }
 

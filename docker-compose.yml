@@ -40,8 +40,41 @@ services:
       DEMO_DATASET: ${DEMO_DATASET:-standard}
       APP_URL: ${APP_URL:-http://localhost:3000}
       SEED_ON_START: ${SEED_ON_START:-false}
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-none}
     volumes:
       - app-storage:/app/data/storage
+    restart: unless-stopped
+
+  # Background jobs (notification delivery, reminders). For local use, emails are written to the
+  # worker log; set EMAIL_PROVIDER=smtp and the SMTP_* variables to send real email.
+  worker:
+    image: brickflow:local
+    init: true
+    depends_on:
+      app:
+        condition: service_healthy
+    entrypoint: ["node", "--conditions=react-server", "--import", "tsx", "src/worker/main.ts"]
+    environment:
+      DATABASE_URL: postgresql://brickflow:brickflow@postgres:5432/brickflow
+      DATABASE_POOL_MAX: "5"
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (at least 32 random characters) in your shell or .env}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-log}
+      EMAIL_ALLOW_LOG_IN_PRODUCTION: ${EMAIL_ALLOW_LOG_IN_PRODUCTION:-true}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-none}
+      WORKER_HEARTBEAT_FILE: /tmp/brickflow-worker.alive
+    healthcheck:
+      test: ["CMD", "node", "-e", "const s=require('fs').statSync('/tmp/brickflow-worker.alive');process.exit(Date.now()-s.mtimeMs<120000?0:1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    stop_grace_period: 40s
     restart: unless-stopped
 
 volumes:

@@ -4,7 +4,7 @@ import type { Tx } from "./db";
 
 export interface AuditEntry {
   action: string;
-  entityType: "Organisation" | "User" | "Invoice" | "FinancingProgramme" | "FinancingOffer" | "FinancingRequest" | "Disbursement" | "Settlement" | "PlatformSetting" | "Session";
+  entityType: "Organisation" | "User" | "Invoice" | "FinancingProgramme" | "FinancingOffer" | "FinancingRequest" | "Disbursement" | "Settlement" | "PlatformSetting" | "Session" | "Job" | "NotificationPreference";
   entityId: string;
   summary: string;
   metadata?: Record<string, unknown>;
