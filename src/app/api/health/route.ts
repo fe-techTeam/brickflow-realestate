@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/server/db";
+import { logger } from "@/server/observability/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export async function GET() {
     await db.$queryRaw`SELECT 1`;
     return NextResponse.json({ status: "ok", db: "ok" }, { headers: NO_STORE });
   } catch (error) {
-    console.error("[health] database check failed", error instanceof Error ? error.message : error);
+    logger.error("health.database_unavailable", { err: error });
     return NextResponse.json({ status: "error", db: "unavailable" }, { status: 503, headers: NO_STORE });
   }
 }

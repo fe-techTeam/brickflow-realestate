@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { buildInvoiceDocument, demoClock, resolveDemoDataset } from "@/lib/demo/catalogue";
 import { renderBrokerageInvoicePdf } from "@/lib/pdf/brokerage-invoice";
 import { getActor } from "@/server/auth/session";
+import { logger } from "@/server/observability/logger";
 
 /** Renders one of the fictional sample brokerage invoices on demand for any signed-in user. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       },
     });
   } catch (error) {
-    console.error("[documents] failed to render sample invoice", error);
+    logger.error("documents.sample_render_failed", { err: error });
     return NextResponse.json({ error: "Document unavailable" }, { status: 500 });
   }
 }

@@ -7,6 +7,7 @@ import { recordAudit } from "../audit";
 import { endSession, getActor, startSession } from "../auth/session";
 import { db } from "../db";
 import { DomainError } from "../errors";
+import { logger } from "../observability/logger";
 import { authenticate } from "../services/auth";
 
 export interface LoginState {
@@ -25,7 +26,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message, email };
     if (error instanceof ZodError) return { error: error.issues[0]?.message ?? "Enter your email and password.", email };
-    console.error("[auth] login failed", error);
+    logger.error("auth.login_failed", { err: error });
     return { error: "Sign-in is temporarily unavailable. Please try again.", email };
   }
   redirect(destination);

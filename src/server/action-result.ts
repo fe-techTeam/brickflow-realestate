@@ -1,6 +1,7 @@
 import "server-only";
 import { ZodError } from "zod";
 import { DomainError } from "./errors";
+import { logger } from "./observability/logger";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T; message?: string }
@@ -27,7 +28,7 @@ export async function runAction<T>(fn: () => Promise<T>, message?: string): Prom
     if (error instanceof ZodError) {
       return { ok: false, error: "Please correct the highlighted fields.", fieldErrors: zodFieldErrors(error) };
     }
-    console.error("[action] unexpected failure", error);
+    logger.error("action.unexpected_failure", { err: error });
     return { ok: false, error: "Something went wrong. Please try again." };
   }
 }
