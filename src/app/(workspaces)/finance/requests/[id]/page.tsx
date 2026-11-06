@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
 import type { ApprovalAction, FinancingStatus, SettlementStatus } from "@/generated/prisma/enums";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { describeRate } from "@/lib/key-facts";
 import { formatBps, formatINR } from "@/lib/money";
 import { FINANCING_STATUS } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -290,6 +291,33 @@ export default async function RequestReviewPage({ params }: Params) {
   const nameOf = (userId: string | null | undefined) => (userId ? (names.get(userId) ?? "—") : "—");
   const invoice = request.invoice;
   const reduced = request.approvedAmountPaise < request.offer.invoiceAmountPaise;
+  const settlementDue = request.settlement?.dueDate ?? request.pricedDueDate ?? request.invoice.dueDate;
+  const calculationRows: { label: string; hint?: string; tone?: "deduct"; value: ReactNode }[] = [
+    { label: "Invoice amount", hint: "Gross, including GST", value: <Money paise={request.offer.invoiceAmountPaise} className="font-normal" /> },
+    {
+      label: "Builder-approved amount",
+      hint: reduced ? "Builder approved a reduced amount; financing applies to this figure." : "Approved in full by the builder.",
+      value: <Money paise={request.approvedAmountPaise} />,
+    },
+    ...(request.tdsPaise > 0n
+      ? [
+          { label: "TDS deducted by the builder", hint: "On the taxable value of the brokerage", tone: "deduct" as const, value: <Money paise={request.tdsPaise} sign="−" /> },
+          { label: "Financed amount", hint: "What the builder remits on the settlement date", value: <Money paise={request.financedAmountPaise} /> },
+        ]
+      : []),
+    {
+      label: "Agreed rate",
+      hint: request.pricingMode === "ANNUAL_RATE" ? `Annual rate for ${request.tenorDays ?? "—"} days, ACT/365` : "Fixed rate agreed between Veefin and the builder",
+      value: <span className="tabular text-sm font-medium">{describeRate(request.pricingMode, request.discountRateBps)}</span>,
+    },
+    { label: "Discount amount", tone: "deduct", value: <Money paise={request.discountAmountPaise} sign="−" /> },
+    ...(request.processingFeePaise > 0n
+      ? [
+          { label: "Processing fee", tone: "deduct" as const, value: <Money paise={request.processingFeePaise} sign="−" /> },
+          { label: "GST on processing fee", tone: "deduct" as const, value: <Money paise={request.feeGstPaise} sign="−" /> },
+        ]
+      : [{ label: "Other charges", hint: "No processing fees under this programme", value: <Money paise={request.chargesPaise} className="font-normal" /> }]),
+  ];
   const document = invoice.documents[0];
   const accountMasked = maskAccountNumber(request.cp.bankAccountNumber);
   const summary = toRequestSummary(request);
@@ -398,16 +426,9 @@ export default async function RequestReviewPage({ params }: Params) {
             }
           >
             <div className="border-t border-border/70 pt-2">
-              <StatementRow index="01" label="Invoice amount" hint="Gross, including GST" value={<Money paise={request.offer.invoiceAmountPaise} className="font-normal" />} />
-              <StatementRow
-                index="02"
-                label="Builder-approved amount"
-                hint={reduced ? "Builder approved a reduced amount; financing applies to this figure." : "Approved in full by the builder."}
-                value={<Money paise={request.approvedAmountPaise} />}
-              />
-              <StatementRow index="03" label="Agreed discount rate" hint="Fixed rate agreed between Veefin and the builder" value={<span className="tabular text-sm font-medium">{formatBps(request.discountRateBps)}</span>} />
-              <StatementRow index="04" label="Discount amount" tone="deduct" value={<Money paise={request.discountAmountPaise} sign="−" />} />
-              <StatementRow index="05" label="Other charges" hint="No processing fees under this programme" value={<Money paise={request.chargesPaise} className="font-normal" />} />
+              {calculationRows.map((row, i) => (
+                <StatementRow key={row.label} index={String(i + 1).padStart(2, "0")} label={row.label} hint={row.hint} tone={row.tone} value={row.value} />
+              ))}
             </div>
 
             <div className="relative mt-5 overflow-hidden rounded-xl bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.07))] px-6 py-6 ring-1 ring-line-strong/30 sm:px-7">
@@ -419,12 +440,17 @@ export default async function RequestReviewPage({ params }: Params) {
                 </div>
                 <div className="tabular text-xs leading-relaxed text-muted-foreground sm:text-right">
                   <p>
-                    {formatINR(request.approvedAmountPaise)} − {formatINR(request.discountAmountPaise)}
+                    {formatINR(request.financedAmountPaise)} − {formatINR(request.discountAmountPaise)}
                     {request.chargesPaise > 0n ? ` − ${formatINR(request.chargesPaise)}` : ""}
                   </p>
                   <p className="mt-0.5">
-                    Builder settles <span className="font-medium text-fg">{formatINR(request.approvedAmountPaise)}</span> on {formatDate(invoice.dueDate)}
+                    Builder settles <span className="font-medium text-fg">{formatINR(request.financedAmountPaise)}</span> on {formatDate(settlementDue)}
                   </p>
+                  {request.annualisedRateBps !== null && request.tenorDays !== null && (
+                    <p className="mt-0.5">
+                      {request.tenorDays} days at acceptance · annualised {formatBps(request.annualisedRateBps)}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -433,7 +459,7 @@ export default async function RequestReviewPage({ params }: Params) {
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-leaf" aria-hidden="true" />
               <span>
                 These figures are the snapshot accepted by the channel partner on {formatDateTime(request.acceptedAt)}. Later changes to the programme rate do not affect this
-                request. The builder settles {formatINR(request.approvedAmountPaise)} with Veefin on the invoice due date.
+                request. The builder settles {formatINR(request.financedAmountPaise)} with Veefin on {formatDate(settlementDue)}.
               </span>
             </p>
           </Panel>
