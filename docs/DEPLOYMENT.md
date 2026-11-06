@@ -28,17 +28,35 @@ No AWS resources exist yet. Every command below is for the AWS account owner to 
 | `STORAGE_DIR` | Yes | `/app/data/storage` | Uploaded and seeded invoice PDFs. Must be on a persistent volume. |
 | `APP_URL` | Yes | `https://brickflow.example.com` | Public base URL. When it starts with `https://`, session cookies are marked `Secure`. |
 | `SEED_ON_START` | No | `false` | `true` wipes and reseeds the demo data on every container start. The database is always seeded when it is empty. |
+| `DATA_ENCRYPTION_KEY` | Yes | — | 32 random bytes, base64 or hex: `openssl rand -base64 32`. Encrypts bank account numbers and PAN at rest (AES-256-GCM) and keys the account fingerprints. Store in a secret manager; losing it makes the encrypted values unreadable. |
+| `DATA_ENCRYPTION_KEY_PREVIOUS` | No | — | During a key rotation: the old key, accepted for decryption only. Then run `scripts/migrate-kyc-data.ts --reencrypt` and remove it. |
+| `VERIFICATION_PROVIDER` | Yes | — | `cashfree` for live checks, or `sandbox` with `ALLOW_SANDBOX_VERIFICATION=true` for a non-customer environment. Provider credentials and the e-invoice provider are listed in [INTEGRATIONS.md](INTEGRATIONS.md#configuration). |
+| `ALLOW_SANDBOX_VERIFICATION` | No | `false` | `true` permits the offline sandbox verification provider in production (logs a warning on every use). Demo server only. |
+| `KYC_ENFORCED` | No | `true` in production, `false` elsewhere | When on, a channel partner can accept an early-payment offer only with VERIFIED KYC and a verified payout account outside its cooling-off period. |
+| `KYC_NAME_MATCH_THRESHOLD` | No | `80` | Minimum name-match score (0–100) for automatic approval; lower scores go to the admin KYC review. Per check: `KYC_NAME_MATCH_THRESHOLD_GSTIN`, `_PAN`, `_BANK`, `_UDYAM`. |
+| `KYC_GSTIN_VALIDITY_DAYS` / `KYC_PAN_VALIDITY_DAYS` / `KYC_BANK_VALIDITY_DAYS` / `KYC_UDYAM_VALIDITY_DAYS` | No | `180` / `730` / `365` / `365` | How long a verification stays valid before KYC shows as expired. |
+| `PAYOUT_ACCOUNT_COOLING_OFF_HOURS` | No | `72` | Early payments pause for this long after the payout bank account changes. |
+| `KYC_RERA_REMINDER_DAYS` | No | `30` | Window for RERA registration expiry reminders. |
+| `VERIFICATION_CACHE_TTL_HOURS` | No | `24` | Reuses an identical verification result within this window instead of calling the provider again. |
 | `PORT` | No | `3000` | Port the server listens on. |
 | `HOSTNAME` | No | `0.0.0.0` | Bind address of the standalone server; must be `0.0.0.0` in containers. |
 | `NODE_ENV` | No | `production` | Set by the image. |
 | `NEXT_TELEMETRY_DISABLED` | No | `1` | Disables Next.js telemetry. |
+
+### Verification and KYC data
+
+The verification migration keeps the legacy plaintext columns `Organisation.pan`, `bankAccountNumber`, `bankIfsc` and `bankName` so a rollback stays possible; new code writes PAN to `panEncrypted`/`panMasked` and bank accounts to the encrypted `BankAccount` table. Accounts copied from the legacy columns start as unverified and must pass a penny drop before payouts.
+
+- Once the encrypted copies are confirmed, clear the plaintext with `node node_modules/tsx/dist/cli.mjs scripts/migrate-kyc-data.ts --scrub-legacy` (use `--dry-run` first). A later cleanup migration drops the legacy columns.
+- On an existing environment with `KYC_ENFORCED=true`, organisations start as `NOT_STARTED` until they complete verification, so early-payment acceptance is blocked for channel partners until then. Reseeding a demo environment marks the demo organisations verified.
+- Scheduled jobs to wire once the job runner exists: `recomputeKycStatuses(now)` (daily; applies expiries) and `reraExpiryReminders(now)` (daily; renewal reminders), both in `src/server/services/kyc.ts`. `onPayoutAccountChanged` in `src/server/kyc/events.ts` is the hook for payout-account change notifications.
 
 ### Container behaviour
 
 On start, `docker-entrypoint.sh`:
 
 1. checks that `DATABASE_URL` is a `postgresql://` URL and `AUTH_SECRET` is set, then waits up to 60 seconds for the database to accept connections;
-2. runs `prisma migrate deploy` (forward-only migrations) against `DATABASE_URL`;
+2. runs `prisma migrate deploy` (forward-only migrations) against `DATABASE_URL`, then `scripts/migrate-kyc-data.ts`, which encrypts any plaintext PAN and bank account numbers still in the legacy `Organisation` columns (idempotent; it needs `DATA_ENCRYPTION_KEY`);
 3. runs the demo seed only when the database has no users yet (first start) or when `SEED_ON_START=true`, so data persists across restarts and upgrades by default;
 4. starts the Next.js standalone server with `node server.js`.
 
@@ -96,7 +114,11 @@ All images are pinned to exact versions. Update the tags deliberately (and check
    AUTH_SECRET=<openssl rand -base64 48>
    DEMO_PASSWORD=<shared password for the demo accounts>
    DEMO_DATASET=standard          # or chandak
+   DATA_ENCRYPTION_KEY=<openssl rand -base64 32>
+   VERIFICATION_PROVIDER=sandbox  # cashfree with live keys; see docs/INTEGRATIONS.md
+   ALLOW_SANDBOX_VERIFICATION=true  # demo environments only
    # Optional:
+   # KYC_ENFORCED=true            # default in production
    # BACKUP_HOUR_UTC=21           # 21:00 UTC = 02:30 IST (default)
    # BACKUP_RETENTION_DAYS=14
    # DATABASE_POOL_MAX=10
@@ -222,7 +244,9 @@ ssh -i ~/.ssh/brickflow-app.pem ubuntu@35.154.239.217 \
   "cd ~/brickflow && sed -i 's/^BRICKFLOW_VERSION=.*/BRICKFLOW_VERSION=$SHA/' .env && docker compose -f docker-compose.prod.yml up -d --no-build"
 ```
 
-Migrations run on start. To roll back, set `BRICKFLOW_VERSION` back to the previous tag (older images stay on the instance until pruned) and run `up -d --no-build` again. A rollback across a migration also needs the matching database backup.
+Migrations run on start. Before deploying the release that adds verification and KYC, add `DATA_ENCRYPTION_KEY`, `VERIFICATION_PROVIDER=sandbox` and `ALLOW_SANDBOX_VERIFICATION=true` to `~/brickflow/.env` (and its Secrets Manager copy); the stack refuses to start without them. Then reset the demo data once (see [Resetting the demo data](#resetting-the-demo-data)) so the demo organisations are seeded as verified; otherwise early-payment acceptance stays blocked until each channel partner completes verification.
+
+To roll back, set `BRICKFLOW_VERSION` back to the previous tag (older images stay on the instance until pruned) and run `up -d --no-build` again. A rollback across a migration also needs the matching database backup.
 
 ### Change the domain
 

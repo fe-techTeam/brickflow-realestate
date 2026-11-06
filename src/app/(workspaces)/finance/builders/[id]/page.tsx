@@ -82,7 +82,7 @@ export default async function BuilderDetailPage({ params }: { params: Promise<{ 
               items={[
                 { label: "Legal name", value: org.legalName },
                 { label: "GSTIN", value: <span className="tabular">{org.gstin ?? "—"}</span> },
-                { label: "PAN", value: <span className="tabular">{org.pan ?? "—"}</span> },
+                { label: "PAN", value: <span className="tabular">{org.panMasked ?? "—"}</span> },
                 { label: "RERA registration", value: <span className="text-xs">{org.reraNumber ?? "—"}</span> },
 
                 { label: "Registered address", value: [org.addressLine, org.city, org.state, org.pincode].filter(Boolean).join(", ") || "—" },

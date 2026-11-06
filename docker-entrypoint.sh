@@ -34,6 +34,9 @@ const deadline = Date.now() + 60_000;
 echo "Applying database migrations"
 node node_modules/prisma/build/index.js migrate deploy
 
+echo "Encrypting KYC data (idempotent)"
+node node_modules/tsx/dist/cli.mjs scripts/migrate-kyc-data.ts
+
 user_count=$(node -e '
 const { Client } = require("pg");
 const client = new Client({ connectionString: process.env.DATABASE_URL });

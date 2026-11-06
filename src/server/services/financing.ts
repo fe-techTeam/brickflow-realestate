@@ -15,6 +15,7 @@ import { nextReference } from "../sequence";
 import { idempotencyKeySchema, runIdempotent } from "./financing-idempotency";
 import { invoiceDueDate, matchesQuote, pricingColumns, quoteInvoice, settlementDueDate, storedPricing, type InvoiceQuote } from "./financing-pricing";
 import { assertStepUp } from "./financing-step-up";
+import { assertCpEligibleForPayout } from "./kyc";
 import { settlementStatusFor } from "./settlements";
 
 export { CONSENT_TEXT } from "@/lib/key-facts";
@@ -220,6 +221,8 @@ export async function acceptOffer(actor: Actor, offerId: string, raw: { consent:
     async (claim) => {
       if (offer.status === "ACCEPTED") throw conflict("This offer has already been accepted.");
       if (offer.status !== "OFFERED") throw conflict("This offer is no longer available. Generate a fresh offer.");
+      // KYC payout gate (Verification & KYC area), before any state change; a no-op unless KYC_ENFORCED is on.
+      await assertCpEligibleForPayout(offer.invoice.cpId);
 
       const now = new Date();
       if (offer.validUntil <= now) {
@@ -402,6 +405,8 @@ export async function initiateDisbursement(actor: Actor, requestId: string, raw:
     { actor, scope: "disbursement.initiate", key: idempotencyKey, payload: { requestId: request.id } },
     async (claim) => {
       if (request.status !== "APPROVED") throw conflict("Only approved requests can be disbursed.");
+      // KYC payout gate: no release to an unverified account or during the payout-account cooling-off.
+      await assertCpEligibleForPayout(request.cpId, new Date(), { audience: "financier" });
       const now = new Date();
       return db.$transaction(async (tx) => {
         await moveRequest(tx, request.id, "APPROVED", "DISBURSEMENT_INITIATED");

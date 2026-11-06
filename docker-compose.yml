@@ -40,6 +40,11 @@ services:
       DEMO_DATASET: ${DEMO_DATASET:-standard}
       APP_URL: ${APP_URL:-http://localhost:3000}
       SEED_ON_START: ${SEED_ON_START:-false}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?Set DATA_ENCRYPTION_KEY (openssl rand -base64 32) in your shell or .env}
+      # The container runs in production mode, so the offline verification sandbox must be allowed explicitly.
+      VERIFICATION_PROVIDER: ${VERIFICATION_PROVIDER:-sandbox}
+      ALLOW_SANDBOX_VERIFICATION: ${ALLOW_SANDBOX_VERIFICATION:-true}
+      KYC_ENFORCED: ${KYC_ENFORCED:-true}
     volumes:
       - app-storage:/app/data/storage
     restart: unless-stopped

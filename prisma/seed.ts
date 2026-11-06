@@ -16,6 +16,7 @@ import { calculateDiscount } from "../src/lib/financing";
 import { buildInvoiceDocument, demoClock, GST_RATE_PERCENT, resolveDemoDataset } from "../src/lib/demo/catalogue";
 import { renderBrokerageInvoicePdf, splitGstInclusive } from "../src/lib/pdf/brokerage-invoice";
 import { seedBusinessHolidays } from "../src/lib/demo/holidays";
+import { seedVerification } from "./seed-verification";
 
 try {
   process.loadEnvFile();
@@ -408,6 +409,7 @@ async function main() {
     await db.internalComment.create({ data: { requestId: request.id, body: comment.body, authorId: author.userId, authorName: author.name, createdAt: comment.createdAt } });
   }
 
+  await seedVerification(db, NOW);
   await persistSequences();
   await seedBusinessHolidays(db);
   await db.platformSetting.createMany({
