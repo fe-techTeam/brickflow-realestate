@@ -12,6 +12,7 @@ import path from "node:path";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type FinancingStatus, type InvoiceStatus } from "../src/generated/prisma/client";
+import { appendAuditEntry } from "../src/lib/audit-chain";
 import { calculateDiscount } from "../src/lib/financing";
 import { buildInvoiceDocument, demoClock, GST_RATE_PERCENT, resolveDemoDataset } from "../src/lib/demo/catalogue";
 import { renderBrokerageInvoicePdf, splitGstInclusive } from "../src/lib/pdf/brokerage-invoice";
@@ -39,6 +40,8 @@ const dateOnly = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 async function reset() {
   await db.$transaction([
     db.auditLog.deleteMany(),
+    db.auditAnchor.deleteMany(),
+    db.auditChainCheck.deleteMany(),
     db.internalComment.deleteMany(),
     db.financingEvent.deleteMany(),
     db.settlement.deleteMany(),
@@ -58,6 +61,9 @@ async function reset() {
     db.sequence.deleteMany(),
     db.platformSetting.deleteMany(),
   ]);
+  // The audit log was emptied, so there are no pre-chain rows left to seal.
+  const sealed = { legacyCutoffSeq: 0n, legacySealedAt: new Date() };
+  await db.auditChainState.upsert({ where: { id: 1 }, create: { id: 1, ...sealed }, update: sealed });
   await rm(path.join(STORAGE_ROOT, "invoices"), { recursive: true, force: true });
 }
 
@@ -80,8 +86,8 @@ async function persistSequences() {
 type Actor = { userId: string; name: string; orgId: string; role: string };
 
 async function audit(actor: Actor | null, action: string, entityType: string, entityId: string, summary: string, createdAt: Date, metadata?: object) {
-  await db.auditLog.create({
-    data: {
+  await db.$transaction((tx) =>
+    appendAuditEntry(tx, {
       actorUserId: actor?.userId ?? null,
       actorName: actor?.name ?? "System",
       actorOrgId: actor?.orgId ?? null,
@@ -92,8 +98,8 @@ async function audit(actor: Actor | null, action: string, entityType: string, en
       summary,
       metadata: metadata ? JSON.stringify(metadata, (_k, v) => (typeof v === "bigint" ? v.toString() : v)) : null,
       createdAt,
-    },
-  });
+    }),
+  );
 }
 
 async function main() {

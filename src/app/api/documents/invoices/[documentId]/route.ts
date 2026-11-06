@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getActor } from "@/server/auth/session";
+import { logger } from "@/server/observability/logger";
 import { DomainError } from "@/server/errors";
 import { getDocumentForActor } from "@/server/services/invoices";
 import { storage } from "@/server/storage";
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
   } catch (error) {
     if (error instanceof DomainError) return NextResponse.json({ error: error.message }, { status: 404 });
-    console.error("[documents] failed to serve invoice document", error);
+    logger.error("documents.invoice_serve_failed", { err: error });
     return NextResponse.json({ error: "Document unavailable" }, { status: 500 });
   }
 }

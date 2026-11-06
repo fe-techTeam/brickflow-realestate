@@ -6,6 +6,7 @@ import { Logo } from "@/components/brand/logo";
 import { resolveDemoDataset } from "@/lib/demo/catalogue";
 import { demoAccountsFor, WORKSPACES } from "@/lib/workspaces";
 import { getActor } from "@/server/auth/session";
+import { getSettingString } from "@/server/settings";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -24,6 +25,7 @@ function demoAccounts() {
 export default async function LoginPage() {
   const actor = await getActor();
   if (actor) redirect(WORKSPACES[actor.workspace].basePath);
+  const supportEmail = await getSettingString("platform.supportEmail");
 
   return (
     <div className="grid min-h-dvh bg-background lg:grid-cols-[minmax(0,1.12fr)_minmax(0,1fr)]">
@@ -91,6 +93,13 @@ export default async function LoginPage() {
             <h2 className="display-title mt-4">Welcome back</h2>
             <p className="mt-2.5 mb-9 text-[0.9375rem] leading-relaxed text-muted-foreground">Sign in to your BrickFlow workspace.</p>
             <LoginForm demoPassword={process.env.DEMO_PASSWORD ?? "BrickFlow@2026"} accounts={demoAccounts()} />
+            <p className="mt-8 text-[0.8125rem] leading-relaxed text-muted-foreground">
+              Trouble signing in? Write to{" "}
+              <a href={`mailto:${supportEmail}`} className="text-fg-soft underline decoration-line-strong underline-offset-4 hover:text-fg hover:decoration-fg-muted">
+                {supportEmail}
+              </a>
+              .
+            </p>
           </div>
         </div>
 

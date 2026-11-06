@@ -9,6 +9,7 @@ import { assertOrgType, type Actor } from "../auth/session";
 import { db, type Tx } from "../db";
 import { conflict, forbidden, notFound } from "../errors";
 import { nextReference } from "../sequence";
+import { getSettingNumber } from "../settings";
 
 export const CONSENT_TEXT =
   "I confirm that I wish to receive early payment for this builder-approved invoice at the discount shown. " +
@@ -375,7 +376,7 @@ export async function completeDisbursement(actor: Actor, requestId: string) {
     where: { cpId_builderId: { cpId: request.cpId, builderId: request.builderId } },
   });
   const now = new Date();
-  const dueDate = request.invoice.dueDate ?? addDays(request.invoice.invoiceDate, relationship?.creditPeriodDays ?? 60);
+  const dueDate = request.invoice.dueDate ?? addDays(request.invoice.invoiceDate, relationship?.creditPeriodDays ?? (await getSettingNumber("platform.defaultCreditPeriodDays")));
   const utr = `DEMOUTR${now.getUTCFullYear()}${String(randomInt(0, 1_000_000_000)).padStart(9, "0")}`;
 
   await db.$transaction(async (tx) => {

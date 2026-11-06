@@ -21,6 +21,7 @@ export const ENTITY_LABELS: Record<string, string> = {
   Settlement: "Settlement",
   PlatformSetting: "Platform setting",
   Session: "Session",
+  AuditLog: "Audit log",
 };
 
 export const ROLE_LABELS: Record<string, string> = {

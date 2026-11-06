@@ -17,6 +17,9 @@ env:
   # Test suites recreate brickflow_test / brickflow_e2e on the same service (see scripts/prepare-db.mjs).
   DATABASE_URL: postgresql://brickflow:brickflow@localhost:5432/brickflow
   AUTH_SECRET: ci-only-secret-value-that-is-at-least-32-characters-long
+  # CI-only audit chain key (base64 of a 40-byte throwaway string); never used outside CI.
+  AUDIT_HMAC_KEY: Y2ktb25seS1hdWRpdC1obWFjLWtleS1ub3QtYS1yZWFsLXNlY3JldC0x
+  AUDIT_HMAC_KEY_ID: ci
   DEMO_PASSWORD: BrickFlow@2026
   STORAGE_DIR: ./storage
   NEXT_TELEMETRY_DISABLED: "1"
@@ -57,6 +60,8 @@ jobs:
         run: npm test
       - name: Prepare database
         run: npx prisma migrate deploy && npx prisma db seed
+      - name: Verify the seeded audit chain
+        run: npm run audit:verify
       - name: Check migrations match the schema
         run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
       - run: npm run build

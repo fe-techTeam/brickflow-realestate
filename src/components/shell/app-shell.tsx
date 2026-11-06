@@ -20,11 +20,13 @@ export function AppShell({
   user,
   children,
   sidebarCollapsed = false,
+  supportEmail,
 }: {
   workspace: WorkspaceKey;
   user: ShellUser;
   children: ReactNode;
   sidebarCollapsed?: boolean;
+  supportEmail?: string;
 }) {
   return (
     <BreadcrumbProvider>
@@ -50,7 +52,20 @@ export function AppShell({
                 <span aria-hidden="true" className="h-3 w-px bg-border" />
                 <span>Real Estate Receivables, Made Liquid</span>
               </p>
-              <p>© {new Date().getFullYear()} BrickFlow</p>
+              <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                {supportEmail && (
+                  <>
+                    <span>
+                      Support{" "}
+                      <a href={`mailto:${supportEmail}`} className="text-fg-soft underline decoration-line-strong underline-offset-4 hover:text-fg hover:decoration-fg-muted">
+                        {supportEmail}
+                      </a>
+                    </span>
+                    <span aria-hidden="true" className="h-3 w-px bg-border" />
+                  </>
+                )}
+                <span>© {new Date().getFullYear()} BrickFlow</span>
+              </p>
             </div>
           </footer>
         </div>

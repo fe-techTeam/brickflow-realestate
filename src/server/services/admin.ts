@@ -9,6 +9,7 @@ import { db, type Tx } from "../db";
 import { conflict, forbidden, invalid, notFound } from "../errors";
 import { sortByEnumName } from "../ordering";
 import { nextReference } from "../sequence";
+import { SETTING_DEFINITIONS, SETTING_VALIDATORS, type SettingKey } from "../settings";
 
 const dateString = z
   .string()
@@ -305,29 +306,7 @@ export async function setUserStatus(actor: Actor, userId: string, status: Record
  * Platform settings
  * -------------------------------------------------------------------------------------------- */
 
-export const SETTING_DEFINITIONS = {
-  "platform.supportEmail": { label: "Support email", description: "Shown to users in help text.", default: "support@brickflow.demo" },
-  "platform.defaultCreditPeriodDays": {
-    label: "Default credit period (days)",
-    description: "Used for new CP–builder empanelments when no due date is given on an invoice.",
-    default: "60",
-  },
-} as const;
-
-export type SettingKey = keyof typeof SETTING_DEFINITIONS;
-
-export async function getSettings(): Promise<Record<SettingKey, string>> {
-  const rows = await db.platformSetting.findMany();
-  const map = new Map(rows.map((r) => [r.key, r.value]));
-  return Object.fromEntries(
-    (Object.keys(SETTING_DEFINITIONS) as SettingKey[]).map((key) => [key, map.get(key) ?? SETTING_DEFINITIONS[key].default]),
-  ) as Record<SettingKey, string>;
-}
-
-const settingValidators: Record<SettingKey, z.ZodType<string>> = {
-  "platform.supportEmail": z.email("Enter a valid email"),
-  "platform.defaultCreditPeriodDays": z.string().regex(/^\d{1,3}$/, "Enter a number of days").refine((v) => Number(v) >= 1 && Number(v) <= 365, "Between 1 and 365"),
-};
+export { getSettings, SETTING_DEFINITIONS, type SettingKey } from "../settings";
 
 export async function updateSettings(actor: Actor, values: Partial<Record<SettingKey, string>>) {
   requireSuperAdmin(actor);
@@ -335,7 +314,7 @@ export async function updateSettings(actor: Actor, values: Partial<Record<Settin
   const fieldErrors: Record<string, string[]> = {};
   const parsed: [SettingKey, string][] = [];
   for (const [key, value] of entries) {
-    const result = settingValidators[key].safeParse(value);
+    const result = SETTING_VALIDATORS[key].safeParse(value);
     if (!result.success) fieldErrors[key] = result.error.issues.map((i) => i.message);
     else parsed.push([key, result.data]);
   }

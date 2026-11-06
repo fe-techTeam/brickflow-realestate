@@ -15,7 +15,8 @@ services:
   caddy:
     image: caddy:2.11.7-alpine
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     environment:
       DOMAIN: ${DOMAIN:?Set DOMAIN to the public host name, e.g. demo.example.com}
     ports:
@@ -48,8 +49,22 @@ services:
       DEMO_PASSWORD: ${DEMO_PASSWORD:-BrickFlow@2026}
       DEMO_DATASET: ${DEMO_DATASET:-standard}
       SEED_ON_START: ${SEED_ON_START:-false}
+      AUDIT_HMAC_KEY: ${AUDIT_HMAC_KEY:?Set AUDIT_HMAC_KEY (openssl rand -base64 32)}
+      AUDIT_HMAC_KEY_ID: ${AUDIT_HMAC_KEY_ID:-k1}
+      AUDIT_HMAC_PREVIOUS_KEYS: ${AUDIT_HMAC_PREVIOUS_KEYS:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_VERSION: ${BRICKFLOW_VERSION:-}
     volumes:
       - app-storage:/app/data/storage
+    # Readiness (database, applied migrations, writable storage) rather than liveness, so Caddy only
+    # starts routing once the app can serve requests.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/ready').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 90s
     networks: [edge, backend]
     logging: *logging
     restart: unless-stopped

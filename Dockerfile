@@ -51,7 +51,7 @@ COPY --from=build /app/prisma/schema.prisma /app/prisma/seed.ts ./prisma/
 COPY --from=build /app/prisma/migrations ./prisma/migrations
 COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/src/lib ./src/lib
-COPY --from=build /app/scripts/demo-reset.mjs ./scripts/
+COPY --from=build /app/scripts/demo-reset.mjs /app/scripts/audit-chain.ts ./scripts/
 COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN mkdir -p /app/data/storage /app/.next/cache \

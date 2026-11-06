@@ -90,7 +90,8 @@ Toasts (`sonner`) are already themed: call `toast.success`, `toast.error` and so
 - Authorise in services (organisation ownership + organisation type), not only in the UI.
 - Scope every read with `invoiceScope(actor)` / `requestScope(actor)`; return "not found" rather than "forbidden" for records in another organisation.
 - State changes use conditional `updateMany` with the expected current status to prevent double processing.
-- Record an audit entry for every state change via `recordAudit(tx, actor, …)` inside the same transaction.
+- Record an audit entry for every state change via `recordAudit(tx, actor, …)` inside the same transaction, as late as possible: it appends to the hash chain under a transaction-scoped lock. Never write to `AuditLog` directly.
+- Server code logs through `logger` from `@/server/observability/logger` (JSON lines with request and actor IDs, secrets redacted), not `console`. Use dotted event names, e.g. `logger.error("reports.export_failed", { err })`.
 
 ## Git workflow
 

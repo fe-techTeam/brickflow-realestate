@@ -3,6 +3,7 @@ import { toDateInputValue } from "@/lib/format";
 import { bpsToDecimalString, paiseToDecimalString } from "@/lib/money";
 import { FINANCING_STATUS, SETTLEMENT_STATUS } from "@/lib/status";
 import { getActor } from "@/server/auth/session";
+import { logger } from "@/server/observability/logger";
 import { listFinanceLedger, parseLedgerFilters } from "@/server/queries/finance";
 import { listProgrammes } from "@/server/services/admin";
 
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[finance] CSV export failed", error);
+    logger.error("reports.finance_export_failed", { err: error });
     return NextResponse.json({ error: "Export unavailable" }, { status: 500 });
   }
 }

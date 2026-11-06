@@ -6,6 +6,7 @@ import type { OrganisationType, RoleKey } from "@/generated/prisma/enums";
 import { WORKSPACES, workspaceForOrgType, type WorkspaceKey } from "@/lib/workspaces";
 import { db } from "../db";
 import { forbidden, unauthenticated } from "../errors";
+import { setRequestActor } from "../observability/context";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSessionToken, verifySessionToken } from "./token";
 
 /** The authenticated principal every service call is authorised against. */
@@ -51,6 +52,7 @@ export const getActor = cache(async (): Promise<Actor | null> => {
   });
   if (!membership || membership.userId !== claims.sub) return null;
   if (membership.user.status !== "ACTIVE" || membership.organisation.status !== "ACTIVE") return null;
+  setRequestActor(membership.userId);
 
   return {
     userId: membership.userId,

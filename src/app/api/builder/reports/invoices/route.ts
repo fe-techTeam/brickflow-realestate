@@ -3,6 +3,7 @@ import { toDateInputValue } from "@/lib/format";
 import { formatBps, paiseToDecimalString } from "@/lib/money";
 import { FINANCING_STATUS, INVOICE_STATUS, SETTLEMENT_STATUS } from "@/lib/status";
 import { getActor } from "@/server/auth/session";
+import { logger } from "@/server/observability/logger";
 import { effectiveSettlementStatus } from "@/server/services/financing";
 import { listInvoices, type InvoiceListItem } from "@/server/services/invoices";
 
@@ -103,7 +104,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("[reports] invoice export failed", error);
+    logger.error("reports.invoice_export_failed", { err: error });
     return NextResponse.json({ error: "Export failed" }, { status: 500 });
   }
 }
